@@ -47,6 +47,7 @@ public:
         // Calculate total energy
 
         // Dynamic energy
+        #pragma omp parallel for reduction(+:E)
         for (int i = 1; i < m - 1; i++){
 		    for (int j = 1; j < n - 1; j++){
                 E += pow(vel[i * n + j], 2) / 2;
@@ -54,12 +55,14 @@ public:
 	    }
 
         // Potential energy
+        #pragma omp parallel for reduction(+:E)
         for (int i = 0; i < m - 1; i++){
 		    for (int j = 1; j < n - 1; j++){
                 E += pow((disp[i * n + j] - disp[(i+1) * n + j]), 2) / 4;
 	    	}   	
 	    }
 
+        #pragma omp parallel for reduction(+:E)
         for (int i = 1; i < m - 1; i++){
 		    for (int j = 0; j < n - 1; j++){
                 E += pow((disp[i * n + j] - disp[i * n + j+1]), 2) / 4;
@@ -75,6 +78,7 @@ public:
         const value_type dt = 0.01;
     
         // Update v
+        #pragma omp parallel for
         for (int i = 1; i < m - 1; i++){
 		    for (int j = 1; j < n - 1; j++){
                 value_type L = (disp[(i-1) * n + j] + disp[(i+1) * n + j] + disp[i * n + j-1] + disp[i * n + j+1]) / 2 - 2 * disp[i * n + j];
@@ -83,6 +87,7 @@ public:
 	    }
 
         // Update u
+        #pragma omp parallel for
         for (int i = 1; i < m - 1; i++){
 		    for (int j = 1; j < n - 1; j++){
                 disp[i * n + j] += vel[i * n + j] * dt;

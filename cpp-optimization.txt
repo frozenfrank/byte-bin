@@ -1,0 +1,46 @@
+Eliminating Unnecessary Work
+How much of a speedup do you get? Why do you think it’s so dramatic?
+
+Before changing the laplacian funtion to to x by constant reference, I was getting times around 18 seconds.
+After the change, it only took around 0.13 seconds. That's a huge speed up.
+It's so dramatic because this function is called in a nested for loop. In this case it's called 1600 (40x40) times EACH time step() is called.
+
+
+How much more of a speedup do these changes yield? Why isn’t it as significant?
+
+After setting rows to 800, it takes about 13.6 seconds. With the optimizations, takes around 6 seconds.
+While that is twice as fast, it's not as significant as the first speed up because these optimizations didn't deal with large copies.
+Additionally, the system time in around 0.01s so there's not much more we can do in terms of data access to speed that up.
+
+
+Cache Efficiency
+How much faster does optimize run with this change? Why do you think that is?
+
+It now takes around 2.688s to run (only 40% of the previous time).
+This runs significantly faster because the rows are next to each other in memory and now we aren't jumping around the data.
+We limited the distance we have to go to get data.
+
+
+Vectorization
+How much of a speedup results, and why?
+
+With just the flag set, it took 0m2.281s.
+With the flag and correct for loops, it only took 0m0.978s (about the time).
+This is a big speed up because the check doesn't have to be run each time in the for loop. Each one of those useless checks takes needless computation time if you can just set right in the first place.
+
+
+What sort of speedup do you get when you run with 2 threads? 4? 8? 16? Why do you think the diminishment of returns is so severe?
+
+2 threads => 0m0.527s
+4 threads => 0m0.397s
+8 threads => 0m0.329s
+16 threads => 0m0.370s
+
+The diminishment of returns is so server because the system is spending more time setting up the threads. Since our program is so quick, the set up time takes a large percent of the time.
+
+Other Optimizations
+How much more of a speedup were you able to get? What seemed to help the most, and why do you think that’s the case? 
+Did you find out anything interesting or unexpected during the course of this optimization?
+
+For my wavesolver, there was a large speed up. Being able to multitread gave the largest speed up, because I wasn't dealing with copies beforehand. Multithreading also helped because it was able to do more work in the same amount of time.
+I kept running into a bug where it's faster on the login nodes than on m9 ¯\_(ツ)_/¯
