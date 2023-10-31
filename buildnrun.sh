@@ -6,5 +6,4 @@ cd bld
 echo "Building"
 cmake -DCMAKE_BUILD_TYPE=RelWithDebInfo ..
 cmake --build . --parallel
-echo "Running"
-time ./optimize
+echo "Done building"
