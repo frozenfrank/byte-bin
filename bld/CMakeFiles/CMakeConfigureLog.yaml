@@ -1,0 +1,201 @@
+
+---
+events:
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeDetermineSystem.cmake:211 (message)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      The system is: Linux - 3.10.0-1160.99.1.el7.x86_64 - x86_64
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeDetermineCXXCompiler.cmake:126 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
+      Compiler: /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/bin/nvc++ 
+      Build flags: -tp=haswell
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
+      
+      The CXX compiler identification is NVHPC, found in:
+        /home/paigeid/class/8-phase/scicomp/bld/CMakeFiles/3.27.8/CompilerIdCXX/a.out
+      
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeDetermineCompilerABI.cmake:57 (try_compile)"
+      - "/zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    checks:
+      - "Detecting CXX compiler ABI info"
+    directories:
+      source: "/home/paigeid/class/8-phase/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-OeFcCb"
+      binary: "/home/paigeid/class/8-phase/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-OeFcCb"
+    cmakeVariables:
+      CMAKE_CXX_FLAGS: "-tp=haswell"
+      CMAKE_CXX_FLAGS_DEBUG: "-g -O0"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_CXX_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/home/paigeid/class/8-phase/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-OeFcCb'
+        
+        Run Build Command(s): /zapps7/cmake/3.27.8/bin/cmake -E env VERBOSE=1 /bin/gmake -f Makefile cmTC_1c41b/fast
+        /bin/gmake  -f CMakeFiles/cmTC_1c41b.dir/build.make CMakeFiles/cmTC_1c41b.dir/build
+        gmake[1]: Entering directory `/home/paigeid/class/8-phase/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-OeFcCb'
+        Building CXX object CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o
+        /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/bin/nvc++   -tp=haswell    -v -MD -MT CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o -c /zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeCXXCompilerABI.cpp
+        Export NVCOMPILER=/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7
+        Export PGI=/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2
+        Create file CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o.d
+        
+        /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/bin/tools/cpp1 --llalign -Dunix -D__unix -D__unix__ -Dlinux -D__linux -D__linux__ -D__NO_MATH_INLINES -D__LP64__ -D__x86_64 -D__x86_64__ -D__LONG_MAX__=9223372036854775807L '-D__SIZE_TYPE__=unsigned long int' '-D__PTRDIFF_TYPE__=long int' -D__amd64 -D__amd64__ -D__k8 -D__k8__ -D__MMX__ -D__SSE__ -D__SSE2__ -D__SSE3__ -D__SSSE3__ -D__SSE4_1__ -D__SSE4_2__ -D__AVX__ -D__AVX2__ -D__F16C__ -D__FMA__ -D__XSAVE__ -D__XSAVEOPT__ -D__POPCNT__ -D__AES__ -D__PCLMUL__ -D__FSGSBASE__ -D__RDRND__ -D__BMI__ -D__BMI2__ -D__LZCNT__ -D__FXSR__ -D__PGI -D__NVCOMPILER -D_GNU_SOURCE -D_PGCG_SOURCE -I- -I/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/extras/qd/include/qd -I/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nvshmem/include -I/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nccl/include -I/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/mpi/include -I/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/math_libs/include --sys_include /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/include --sys_include /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/include-stdexec --sys_include /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/extras/qd/include/qd --sys_include /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nvshmem/include --sys_include /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nccl/include --sys_include /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/mpi/include --sys_include /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/math_libs/include --sys_include /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/../../../../include/c++/13.2.0 --sys_include /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/../../../../include/c++/13.2.0/x86_64-pc-linux-gnu --sys_include /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/../../../../include/c++/13.2.0/backward --sys_include /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/include --sys_include /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/include-fixed --sys_include /usr/local/include --sys_include /zapps7/gcc/13.2.0/bin/../lib/gcc/../../include --sys_include /usr/include -D__PGLLVM__ -D__NVCOMPILER_LLVM__ -D__extension__= --preinclude _cplus_preinclude.h --preinclude_macros _cplus_macros.h --gnu_version=130200 -D__pgnu_vsn=130200 --no_fixed_bp --dependencies_target_to_stdout CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o --dependencies_to_file CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o.d -q -o /tmp/nvc++Zygz75sk81Q.il /zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeCXXCompilerABI.cpp
+        
+        /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/bin/tools/cpp2 /zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeCXXCompilerABI.cpp -opt 1 -x 119 0xa10000 -x 122 0x40 -x 123 0x1000 -x 127 4 -x 127 17 -x 19 0x400000 -x 28 0x40000 -x 120 0x10000000 -x 70 0x8000 -x 122 1 -x 125 0x20000 -quad -x 59 4 -tp haswell -x 120 0x1000 -astype 0 -x 121 1 -fn /zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeCXXCompilerABI.cpp -il /tmp/nvc++Zygz75sk81Q.il -x 117 0x200 -x 123 0x80000000 -x 123 4 -x 2 0x400 -x 209 0x10 -x 119 0x20 -def __pgnu_vsn=130200 -x 70 0x40000000 -x 183 4 -x 121 0x800 -x 6 0x20000 -x 249 160 -x 120 0x200000 -x 70 0x40000000 -x 8 0x40000000 -x 164 0x800000 -x 71 0x2000 -x 71 0x4000 -x 34 0x40000000 -x 83 0x1 -x 85 0x1 -x 206 0x02 -x 120 0x1000000 -x 73 0x04 -x 68 0x1 -x 39 4 -x 56 0x10 -x 26 0x10 -x 26 1 -x 56 0x4000 -x 197 0 -x 175 0 -x 203 0 -x 204 0 -y 163 0xc0000000 -x 189 0x10 -y 189 0x4000000 -x 60 512 -gnuvsn 130200 -x 69 0x200 -x 123 0x400 -cmdline '+nvc++ /tmp/nvc++Zygz75sk81Q.il -tp=haswell -v -MD -MT CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o -c' -asm /tmp/nvc++JygPkuEIAeb.ll
+        NVC++/x86-64 Linux 23.7-0: compilation successful
+        
+        /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/share/llvm/bin/llc /tmp/nvc++JygPkuEIAeb.ll -march=x86-64 -mcpu=haswell -mattr=+mmx -mattr=+sse -mattr=+sse2 -mattr=+sse3 -mattr=+ssse3 -mattr=+sse4.1 -mattr=+sse4.2 -mattr=+avx -mattr=+avx2 -mattr=+f16c -mattr=+fma -mattr=+xsave -mattr=+xsaveopt -mattr=+popcnt -mattr=+aes -mattr=+pclmul -mattr=+fsgsbase -mattr=+rdrnd -mattr=+bmi -mattr=+bmi2 -mattr=+lzcnt -mattr=+fxsr -O1 -opaque-pointers -non-global-value-max-name-size=4294967295 -x86-cmov-converter=0 -dwarf-directory=false --align-all-functions=6 -override-aa-for-tbaa=true -filetype=obj --frame-pointer=none -o CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o
+        Unlinking /tmp/nvc++Zygz75sk81Q.il
+        Unlinking /tmp/nvc++lygHwPVcheZ.s
+        Unlinking /tmp/nvc++JygPkuEIAeb.ll
+        Unlinking /tmp/nvc++7ygXFvoXfyJ.llvm
+        Linking CXX executable cmTC_1c41b
+        /zapps7/cmake/3.27.8/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1c41b.dir/link.txt --verbose=1
+        /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/bin/nvc++ -tp=haswell   -v CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_1c41b 
+        Export NVCOMPILER=/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7
+        Export PGI=/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2
+        
+        /bin/ld /usr/lib64/crt1.o /usr/lib64/crti.o /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib/trace_init.o /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//crtbegin.o --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -T /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib/nvhpc.ld -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nvshmem/lib -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nccl/lib -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/mpi/lib -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/math_libs/lib64 -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/extras/qt/lib -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/extras/CUPTI/lib64 -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/lib64 -L/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib -L/usr/lib64 -L/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/ CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o -rpath /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib -rpath /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//../../../../lib64 -o cmTC_1c41b -L/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//../../../../lib64 -latomic -lnvhpcatm -lstdc++ -lnvomp -ldl --as-needed -lnvhpcatm -latomic --no-as-needed -lpthread -lnvcpumath-avx2 -lnsnvc -lnvc -lgcc -lc -lgcc_s -lm /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//crtend.o /usr/lib64/crtn.o
+        gmake[1]: Leaving directory `/home/paigeid/class/8-phase/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-OeFcCb'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeDetermineCompilerABI.cmake:127 (message)"
+      - "/zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed CXX implicit include dir info: rv=start
+        warn: unable to parse implicit include dirs!
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeDetermineCompilerABI.cmake:152 (message)"
+      - "/zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:3 (project)"
+    message: |
+      Parsed CXX implicit link information:
+        link line regex: [^( *|.*[/\\])(ld|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        ignore line: [Change Dir: '/home/paigeid/class/8-phase/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-OeFcCb']
+        ignore line: []
+        ignore line: [Run Build Command(s): /zapps7/cmake/3.27.8/bin/cmake -E env VERBOSE=1 /bin/gmake -f Makefile cmTC_1c41b/fast]
+        ignore line: [/bin/gmake  -f CMakeFiles/cmTC_1c41b.dir/build.make CMakeFiles/cmTC_1c41b.dir/build]
+        ignore line: [gmake[1]: Entering directory `/home/paigeid/class/8-phase/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-OeFcCb']
+        ignore line: [Building CXX object CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/bin/nvc++   -tp=haswell    -v -MD -MT CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o -c /zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Export NVCOMPILER=/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7]
+        ignore line: [Export PGI=/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2]
+        ignore line: [Create file CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o.d]
+        ignore line: []
+        ignore line: [/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/bin/tools/cpp1 --llalign -Dunix -D__unix -D__unix__ -Dlinux -D__linux -D__linux__ -D__NO_MATH_INLINES -D__LP64__ -D__x86_64 -D__x86_64__ -D__LONG_MAX__=9223372036854775807L '-D__SIZE_TYPE__=unsigned long int' '-D__PTRDIFF_TYPE__=long int' -D__amd64 -D__amd64__ -D__k8 -D__k8__ -D__MMX__ -D__SSE__ -D__SSE2__ -D__SSE3__ -D__SSSE3__ -D__SSE4_1__ -D__SSE4_2__ -D__AVX__ -D__AVX2__ -D__F16C__ -D__FMA__ -D__XSAVE__ -D__XSAVEOPT__ -D__POPCNT__ -D__AES__ -D__PCLMUL__ -D__FSGSBASE__ -D__RDRND__ -D__BMI__ -D__BMI2__ -D__LZCNT__ -D__FXSR__ -D__PGI -D__NVCOMPILER -D_GNU_SOURCE -D_PGCG_SOURCE -I- -I/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/extras/qd/include/qd -I/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nvshmem/include -I/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nccl/include -I/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/mpi/include -I/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/math_libs/include --sys_include /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/include --sys_include /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/include-stdexec --sys_include /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/extras/qd/include/qd --sys_include /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nvshmem/include --sys_include /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nccl/include --sys_include /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/mpi/include --sys_include /apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/math_libs/include --sys_include /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/../../../../include/c++/13.2.0 --sys_include /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/../../../../include/c++/13.2.0/x86_64-pc-linux-gnu --sys_include /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/../../../../include/c++/13.2.0/backward --sys_include /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/include --sys_include /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/include-fixed --sys_include /usr/local/include --sys_include /zapps7/gcc/13.2.0/bin/../lib/gcc/../../include --sys_include /usr/include -D__PGLLVM__ -D__NVCOMPILER_LLVM__ -D__extension__= --preinclude _cplus_preinclude.h --preinclude_macros _cplus_macros.h --gnu_version=130200 -D__pgnu_vsn=130200 --no_fixed_bp --dependencies_target_to_stdout CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o --dependencies_to_file CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o.d -q -o /tmp/nvc++Zygz75sk81Q.il /zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: []
+        ignore line: [/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/bin/tools/cpp2 /zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeCXXCompilerABI.cpp -opt 1 -x 119 0xa10000 -x 122 0x40 -x 123 0x1000 -x 127 4 -x 127 17 -x 19 0x400000 -x 28 0x40000 -x 120 0x10000000 -x 70 0x8000 -x 122 1 -x 125 0x20000 -quad -x 59 4 -tp haswell -x 120 0x1000 -astype 0 -x 121 1 -fn /zapps7/cmake/3.27.8/share/cmake-3.27/Modules/CMakeCXXCompilerABI.cpp -il /tmp/nvc++Zygz75sk81Q.il -x 117 0x200 -x 123 0x80000000 -x 123 4 -x 2 0x400 -x 209 0x10 -x 119 0x20 -def __pgnu_vsn=130200 -x 70 0x40000000 -x 183 4 -x 121 0x800 -x 6 0x20000 -x 249 160 -x 120 0x200000 -x 70 0x40000000 -x 8 0x40000000 -x 164 0x800000 -x 71 0x2000 -x 71 0x4000 -x 34 0x40000000 -x 83 0x1 -x 85 0x1 -x 206 0x02 -x 120 0x1000000 -x 73 0x04 -x 68 0x1 -x 39 4 -x 56 0x10 -x 26 0x10 -x 26 1 -x 56 0x4000 -x 197 0 -x 175 0 -x 203 0 -x 204 0 -y 163 0xc0000000 -x 189 0x10 -y 189 0x4000000 -x 60 512 -gnuvsn 130200 -x 69 0x200 -x 123 0x400 -cmdline '+nvc++ /tmp/nvc++Zygz75sk81Q.il -tp=haswell -v -MD -MT CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o -c' -asm /tmp/nvc++JygPkuEIAeb.ll]
+        ignore line: [NVC++/x86-64 Linux 23.7-0: compilation successful]
+        ignore line: []
+        ignore line: [/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/share/llvm/bin/llc /tmp/nvc++JygPkuEIAeb.ll -march=x86-64 -mcpu=haswell -mattr=+mmx -mattr=+sse -mattr=+sse2 -mattr=+sse3 -mattr=+ssse3 -mattr=+sse4.1 -mattr=+sse4.2 -mattr=+avx -mattr=+avx2 -mattr=+f16c -mattr=+fma -mattr=+xsave -mattr=+xsaveopt -mattr=+popcnt -mattr=+aes -mattr=+pclmul -mattr=+fsgsbase -mattr=+rdrnd -mattr=+bmi -mattr=+bmi2 -mattr=+lzcnt -mattr=+fxsr -O1 -opaque-pointers -non-global-value-max-name-size=4294967295 -x86-cmov-converter=0 -dwarf-directory=false --align-all-functions=6 -override-aa-for-tbaa=true -filetype=obj --frame-pointer=none -o CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [Unlinking /tmp/nvc++Zygz75sk81Q.il]
+        ignore line: [Unlinking /tmp/nvc++lygHwPVcheZ.s]
+        ignore line: [Unlinking /tmp/nvc++JygPkuEIAeb.ll]
+        ignore line: [Unlinking /tmp/nvc++7ygXFvoXfyJ.llvm]
+        ignore line: [Linking CXX executable cmTC_1c41b]
+        ignore line: [/zapps7/cmake/3.27.8/bin/cmake -E cmake_link_script CMakeFiles/cmTC_1c41b.dir/link.txt --verbose=1]
+        ignore line: [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/bin/nvc++ -tp=haswell   -v CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_1c41b ]
+        ignore line: [Export NVCOMPILER=/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7]
+        ignore line: [Export PGI=/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2]
+        ignore line: []
+        link line: [/bin/ld /usr/lib64/crt1.o /usr/lib64/crti.o /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib/trace_init.o /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//crtbegin.o --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -T /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib/nvhpc.ld -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nvshmem/lib -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nccl/lib -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/mpi/lib -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/math_libs/lib64 -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/extras/qt/lib -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/extras/CUPTI/lib64 -L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/lib64 -L/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib -L/usr/lib64 -L/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/ CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o -rpath /zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib -rpath /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//../../../../lib64 -o cmTC_1c41b -L/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//../../../../lib64 -latomic -lnvhpcatm -lstdc++ -lnvomp -ldl --as-needed -lnvhpcatm -latomic --no-as-needed -lpthread -lnvcpumath-avx2 -lnsnvc -lnvc -lgcc -lc -lgcc_s -lm /zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//crtend.o /usr/lib64/crtn.o]
+          arg [/bin/ld] ==> ignore
+          arg [/usr/lib64/crt1.o] ==> obj [/usr/lib64/crt1.o]
+          arg [/usr/lib64/crti.o] ==> obj [/usr/lib64/crti.o]
+          arg [/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib/trace_init.o] ==> obj [/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib/trace_init.o]
+          arg [/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//crtbegin.o] ==> obj [/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//crtbegin.o]
+          arg [--eh-frame-hdr] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-T] ==> ignore
+          arg [/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib/nvhpc.ld] ==> ignore
+          arg [-L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nvshmem/lib] ==> dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nvshmem/lib]
+          arg [-L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nccl/lib] ==> dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nccl/lib]
+          arg [-L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/mpi/lib] ==> dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/mpi/lib]
+          arg [-L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/math_libs/lib64] ==> dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/math_libs/lib64]
+          arg [-L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib] ==> dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib]
+          arg [-L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/extras/qt/lib] ==> dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/extras/qt/lib]
+          arg [-L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/extras/CUPTI/lib64] ==> dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/extras/CUPTI/lib64]
+          arg [-L/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/lib64] ==> dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/lib64]
+          arg [-L/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib] ==> dir [/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib]
+          arg [-L/usr/lib64] ==> dir [/usr/lib64]
+          arg [-L/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/] ==> dir [/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/]
+          arg [CMakeFiles/cmTC_1c41b.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-rpath] ==> ignore
+          arg [/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib] ==> ignore
+          arg [-rpath] ==> ignore
+          arg [/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//../../../../lib64] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_1c41b] ==> ignore
+          arg [-L/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//../../../../lib64] ==> dir [/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//../../../../lib64]
+          arg [-latomic] ==> lib [atomic]
+          arg [-lnvhpcatm] ==> lib [nvhpcatm]
+          arg [-lstdc++] ==> lib [stdc++]
+          arg [-lnvomp] ==> lib [nvomp]
+          arg [-ldl] ==> lib [dl]
+          arg [--as-needed] ==> ignore
+          arg [-lnvhpcatm] ==> lib [nvhpcatm]
+          arg [-latomic] ==> lib [atomic]
+          arg [--no-as-needed] ==> ignore
+          arg [-lpthread] ==> lib [pthread]
+          arg [-lnvcpumath-avx2] ==> lib [nvcpumath-avx2]
+          arg [-lnsnvc] ==> lib [nsnvc]
+          arg [-lnvc] ==> lib [nvc]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lm] ==> lib [m]
+          arg [/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//crtend.o] ==> obj [/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//crtend.o]
+          arg [/usr/lib64/crtn.o] ==> obj [/usr/lib64/crtn.o]
+        collapse obj [/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//crtbegin.o] ==> [/zapps7/gcc/13.2.0/lib/gcc/x86_64-pc-linux-gnu/13.2.0/crtbegin.o]
+        collapse obj [/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//crtend.o] ==> [/zapps7/gcc/13.2.0/lib/gcc/x86_64-pc-linux-gnu/13.2.0/crtend.o]
+        collapse library dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nvshmem/lib] ==> [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nvshmem/lib]
+        collapse library dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nccl/lib] ==> [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nccl/lib]
+        collapse library dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/mpi/lib] ==> [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/mpi/lib]
+        collapse library dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/math_libs/lib64] ==> [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/math_libs/lib64]
+        collapse library dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib] ==> [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib]
+        collapse library dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/extras/qt/lib] ==> [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/extras/qt/lib]
+        collapse library dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/extras/CUPTI/lib64] ==> [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/extras/CUPTI/lib64]
+        collapse library dir [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/lib64] ==> [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/lib64]
+        collapse library dir [/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib] ==> [/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib]
+        collapse library dir [/usr/lib64] ==> [/usr/lib64]
+        collapse library dir [/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0/] ==> [/zapps7/gcc/13.2.0/lib/gcc/x86_64-pc-linux-gnu/13.2.0]
+        collapse library dir [/zapps7/gcc/13.2.0/bin/../lib/gcc/x86_64-pc-linux-gnu/13.2.0//../../../../lib64] ==> [/zapps7/gcc/13.2.0/lib64]
+        implicit libs: [atomic;nvhpcatm;stdc++;nvomp;dl;nvhpcatm;atomic;pthread;nvcpumath-avx2;nsnvc;nvc;gcc;c;gcc_s;m]
+        implicit objs: [/usr/lib64/crt1.o;/usr/lib64/crti.o;/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib/trace_init.o;/zapps7/gcc/13.2.0/lib/gcc/x86_64-pc-linux-gnu/13.2.0/crtbegin.o;/zapps7/gcc/13.2.0/lib/gcc/x86_64-pc-linux-gnu/13.2.0/crtend.o;/usr/lib64/crtn.o]
+        implicit dirs: [/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nvshmem/lib;/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/nccl/lib;/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/comm_libs/mpi/lib;/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/math_libs/lib64;/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib;/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/extras/qt/lib;/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/extras/CUPTI/lib64;/apps/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/cuda/lib64;/zapps7/nvidia-hpc-sdk/23.7/gcc-13.2.0_cuda-12.2/Linux_x86_64/23.7/compilers/lib;/usr/lib64;/zapps7/gcc/13.2.0/lib/gcc/x86_64-pc-linux-gnu/13.2.0;/zapps7/gcc/13.2.0/lib64]
+        implicit fwks: []
+      
+      
+...

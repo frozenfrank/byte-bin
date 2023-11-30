@@ -1,6 +1,6 @@
 #!/bin/bash
 rm -rf bld
-module load gcc/latest cmake catch2
+#module load gcc/latest cmake catch2 nvhpc
 mkdir bld
 cd bld
 echo "Building"
