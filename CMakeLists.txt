@@ -27,7 +27,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL NVHPC)
     set(NVCXX_COMPUTE_CAPABILITY "60" CACHE STRING "nvc++ GPU compute capability")
     set(NVCXX_CPU_ARCHITECTURE "haswell" CACHE STRING "CPU architecture that nvc++ will compile for")
     
-    add_executable(wavesolve_gpu WaveOrthotopeGPU.cpp binary_io.hpp WaveSharedMemGPU.hpp WaveGPU.hpp)
+    add_executable(wavesolve_gpu WaveOrthotopeGPU.cpp binary_io.hpp WaveSharedMemGPU.hpp cartesian_product.hpp WaveGPU.hpp)
     
     target_compile_options(wavesolve_gpu PRIVATE
                            "-tp=${NVCXX_CPU_ARCHITECTURE}" "-stdpar=gpu" "-gpu=sm_${NVCXX_COMPUTE_CAPABILITY}")
