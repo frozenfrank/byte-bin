@@ -23,7 +23,7 @@ for file in "$SOURCE_DIRECTORY"/*; do
             continue;
         fi
         echo "Exporting $REAL_PATH"
-        cp "$REAL_PATH" "$DESTINATION_DIRECTORY"
+        cp -p "$REAL_PATH" "$DESTINATION_DIRECTORY"
 #        echo "Copied $file to $DESTINATION_DIRECTORY"
     fi
 done
