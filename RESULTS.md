@@ -1,4 +1,4 @@
-# Mandelbrot Evaluations
+# Mandelbrot Fractal Evaluations
 
 Findings from completing the homework.
 
@@ -36,11 +36,13 @@ Pastings of the runtime results from various runs of the program.
 
 ### Serial program
 
+```txt
 time ./mandelbrot 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
 
 real	0m33.182s
 user	0m28.414s
 sys	0m0.289s
+```
 
 ### Parallel program
 

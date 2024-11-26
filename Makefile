@@ -30,4 +30,4 @@ png: pic.ppm
 
 .PHONY: clean
 clean:
-	rm -f mandelbrot pic*.ppm pic.png
+	rm -f mandelbrot-* pic*.ppm pic.png
