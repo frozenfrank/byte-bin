@@ -131,7 +131,7 @@ TIME: 2.225711
 
 A look at the speedup and efficiency metrics resulting from the experience.
 
-## Speedup and Efficiency
+### Speedup and Efficiency
 
 Definition of **speedup** where $T_n$ represents the running time of the program on $n$ cores.
 For the truest baseline, $T_1$ should be calculated using a raw sequential version of the program.
@@ -159,7 +159,7 @@ Calculated results:
 | 32 | 5.1 | 1.37 |  16.1% | 12.0 | 1.24 | 28.4% |
 | 64 | 5.3 | 1.02 |   8.2% | 12.9 | 1.08 | 30.4% |
 
-### Overall Speedup
+### Algorithmic Limits
 
 Amdahl's Law of Speedup Performance:
 
@@ -201,3 +201,6 @@ $$\lim_{k \to \infty}\frac{pT}{k}+\left(1-p\right)T$$
 $$=\left(1-p\right)T$$
 
 $$\approx6.57\text{ seconds}$$
+
+Interpretation:
+The theoretical minimum bound for evaluating this program with infinite resources is **6.57 seconds**.
