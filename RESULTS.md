@@ -2,6 +2,10 @@
 
 Findings from completing the homework.
 
+Final product sample image:
+
+![Downsized Mandelbrot Fractal Image](./sample_mandelbrot_medium.jpeg)
+
 ## Commands Used
 
 ```shell
