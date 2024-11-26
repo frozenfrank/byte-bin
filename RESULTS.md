@@ -5,15 +5,20 @@ Findings from completing the homework.
 ## Commands Used
 
 ```shell
-# make the binary
+# make the binaries
 make
 
 # Evaluate sequential execution
-time ./mandelbrot 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
-sha1sum pic.ppm
+make sequential
 
 # Convert image for viewing
-MAGICK_CONFIGURE_PATH=. convert -negate -normalize -fill blue -tint 100 pic.ppm pic.png
+make png
+
+# Evaluate parallel execution
+make parallel [THREADS=8]
+
+# Cleanup
+make clan
 ```
 
 Correct answer SHA1SUM:
