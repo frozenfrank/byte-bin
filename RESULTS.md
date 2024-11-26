@@ -114,3 +114,34 @@ TIME: 2.225711
 42.62user 0.29system 0:06.41elapsed 669%CPU (0avgtext+0avgdata 289388maxresident)k
 56inputs+891272outputs (1major+74493minor)pagefaults 0swaps
 ```
+
+## Speedup Analysis
+
+Amdahl's Law of Speedup Performance:
+$$T_{k}=\frac{pT}{k}+\left(1-p\right)T$$
+
+Where:
+* $T$ is the total sequential time
+* $p$ is the fraction of total that can be sped up ($0\le p\le 1$)
+* $k$ is the speedup factor
+
+Homework provided equation:
+$$T_{\alpha}=\frac{pT}{\alpha}+\left(1-p\right)T$$
+
+> [!NOTE] How did we make the leap from discussing $k$ in terms of speedup factor to discussing $\alpha$ which represents a particular instance?
+
+Where
+* $\alpha$ is the speedup of the parallel region only
+  * Substituted with $S_{4}\approx3.4$
+* $p$ is the fraction of original run time that is parallelizable
+  * Our unknown variable
+* $T_{\alpha}$ is the runtime for threads=4
+  * Substituted with $T_{4}\approx14.55$
+* $T$ is the total runtime with threads=1
+  * Substituted with $T_{1}\approx33.70$
+
+Algebraically solved for $p$:
+$$p=\frac{\frac{T_{a}a}{T}-a}{1-a}\approx80.5\%$$
+
+Interpretation:
+Approximately **80.5%** of the Mandelbrot equation is currently parallelizable. The wall time for this portion could be divided by leveraging additional compute cores. The remaining 19.5% of the computational work remains sequential and cannot be sped up by leveraging additional compute resources.
