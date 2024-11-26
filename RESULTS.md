@@ -64,7 +64,7 @@ Overall results are summaried in the following table, and detailed log output is
 
 #### Execution Logs
 
-```txt
+```shell
 #### 1 thread
 
 OMP_NUM_THREADS=1 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
@@ -118,6 +118,7 @@ TIME: 2.225711
 ## Speedup Analysis
 
 Amdahl's Law of Speedup Performance:
+
 $$T_{k}=\frac{pT}{k}+\left(1-p\right)T$$
 
 Where:
@@ -126,9 +127,11 @@ Where:
 * $k$ is the speedup factor
 
 Homework provided equation:
+
 $$T_{\alpha}=\frac{pT}{\alpha}+\left(1-p\right)T$$
 
-> [!NOTE] How did we make the leap from discussing $k$ in terms of speedup factor to discussing $\alpha$ which represents a particular instance?
+> [!NOTE]
+> How did we make the leap from discussing $k$ in terms of speedup factor to discussing $\alpha$ which represents a particular instance?
 
 Where
 * $\alpha$ is the speedup of the parallel region only
@@ -141,6 +144,7 @@ Where
   * Substituted with $T_{1}\approx33.70$
 
 Algebraically solved for $p$:
+
 $$p=\frac{\frac{T_{a}a}{T}-a}{1-a}\approx80.5\%$$
 
 Interpretation:
