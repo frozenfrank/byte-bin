@@ -103,6 +103,7 @@ int main(int argc, char* argv[])
 
   end = omp_get_wtime();
   printf("TIME: %f\n", end-start);
+  fflush(stdout);
 
   for (j = 0; j < yres; j++) {
     for(i = 0; i < xres; i++) {
