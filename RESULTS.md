@@ -9,20 +9,23 @@ Final product sample image:
 ## Commands Used
 
 ```shell
-# make the binaries
+# Make the binaries
 make
 
-# Evaluate sequential execution
-make sequential
+# Draw the picture at specific coordinates
+make draw THREADS=32 SIZE="1000 8192" COORDS="-1.75 0.75 -1.25 1.25"
 
 # Convert image for viewing
 make png
+
+# Evaluate sequential execution
+make sequential
 
 # Evaluate parallel execution
 make parallel [THREADS=8]
 
 # Cleanup
-make clan
+make clean
 ```
 
 Correct answer SHA1SUM:
