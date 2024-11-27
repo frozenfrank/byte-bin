@@ -19,10 +19,6 @@ $$T_{k}=\frac{pT}{k}+\left(1-p\right)T$$
 The results show that **≈80.5%** of this Mandelbrot program can be parallelized which yields a theoretical minimum run time of **6.57 seconds**.
 The algorithm runs with **57.9%** efficiency on 4 threads; this efficiency quickly decreases while approaching and surpassing the processor capacity of 20 cores.
 
-## Details
-
-The remainder of this file contain the raw data and math required to answer questions about the homework exercise.
-
 ## Commands Used
 
 ```shell
@@ -32,14 +28,14 @@ make
 # Evaluate sequential execution
 make sequential
 
+# Evaluate parallel execution
+make parallel THREADS=8
+
 # Convert image for viewing
 make png
 
-# Evaluate parallel execution
-make parallel [THREADS=8]
-
 # Cleanup
-make clan
+make clean
 ```
 
 Correct answer SHA1SUM:
@@ -61,71 +57,6 @@ Extracted performance data from individual program evaluations.
 | 16  | 37.92 | 0.29 | 0:08.96 | 426% |  2.982503 |
 | 32  | 42.21 | 0.27 | 0:06.56 | 647% |  2.399604 |
 | 64  | 42.62 | 0.29 | 0:06.41 | 669% |  2.225711 |
-
-Below are the raw output logs from various runs of the program.
-
-### Serial program
-
-```shell
-time ./mandelbrot 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
-
-real	0m33.182s
-user	0m28.414s
-sys	0m0.289s
-```
-
-### Parallel program
-
-```shell
-#### 1 thread
-
-OMP_NUM_THREADS=1 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
-TIME: 28.808434
-30.05user 0.27system 0:33.70elapsed 89%CPU (0avgtext+0avgdata 298956maxresident)k
-0inputs+891272outputs (0major+74361minor)pagefaults 0swaps
-
-#### 2 threads
-
-OMP_NUM_THREADS=2 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
-TIME: 14.608910
-29.27user 0.30system 0:20.64elapsed 143%CPU (0avgtext+0avgdata 298936maxresident)k
-0inputs+891272outputs (0major+74363minor)pagefaults 0swaps
-
-#### 4 threads
-
-OMP_NUM_THREADS=4 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
-TIME: 8.495725
-30.66user 0.29system 0:14.55elapsed 212%CPU (0avgtext+0avgdata 298680maxresident)k
-0inputs+891272outputs (0major+74367minor)pagefaults 0swaps
-
-#### 8 threads
-
-OMP_NUM_THREADS=8 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
-TIME: 4.519520
-31.92user 0.32system 0:10.52elapsed 306%CPU (0avgtext+0avgdata 297896maxresident)k
-0inputs+891272outputs (0major+74377minor)pagefaults 0swaps
-
-#### 16 threads
-
-OMP_NUM_THREADS=16 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
-TIME: 2.982503
-37.92user 0.29system 0:08.96elapsed 426%CPU (0avgtext+0avgdata 297616maxresident)k
-0inputs+891272outputs (0major+74388minor)pagefaults 0swaps
-
-#### 32 threads
-
-OMP_NUM_THREADS=32 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
-TIME: 2.399604
-42.21user 0.27system 0:06.56elapsed 647%CPU (0avgtext+0avgdata 297704maxresident)k
-136inputs+891272outputs (3major+74425minor)pagefaults 0swaps
-
-#### 64 threads
-
-OMP_NUM_THREADS=64 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
-TIME: 2.225711
-42.62user 0.29system 0:06.41elapsed 669%CPU (0avgtext+0avgdata 289388maxresident)k
-56inputs+891272outputs (1major+74493minor)pagefaults 0swaps
-```
 
 ## Speedup Analysis
 
@@ -204,3 +135,70 @@ $$\approx6.57\text{ seconds}$$
 
 Interpretation:
 The theoretical minimum bound for evaluating this program with infinite resources is **6.57 seconds**.
+
+## Raw Output Logs
+
+Below are the raw output logs from various runs of the program.
+
+### Serial program
+
+```shell
+time ./mandelbrot 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
+
+real	0m33.182s
+user	0m28.414s
+sys	0m0.289s
+```
+
+### Parallel program
+
+```shell
+#### 1 thread
+
+OMP_NUM_THREADS=1 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
+TIME: 28.808434
+30.05user 0.27system 0:33.70elapsed 89%CPU (0avgtext+0avgdata 298956maxresident)k
+0inputs+891272outputs (0major+74361minor)pagefaults 0swaps
+
+#### 2 threads
+
+OMP_NUM_THREADS=2 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
+TIME: 14.608910
+29.27user 0.30system 0:20.64elapsed 143%CPU (0avgtext+0avgdata 298936maxresident)k
+0inputs+891272outputs (0major+74363minor)pagefaults 0swaps
+
+#### 4 threads
+
+OMP_NUM_THREADS=4 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
+TIME: 8.495725
+30.66user 0.29system 0:14.55elapsed 212%CPU (0avgtext+0avgdata 298680maxresident)k
+0inputs+891272outputs (0major+74367minor)pagefaults 0swaps
+
+#### 8 threads
+
+OMP_NUM_THREADS=8 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
+TIME: 4.519520
+31.92user 0.32system 0:10.52elapsed 306%CPU (0avgtext+0avgdata 297896maxresident)k
+0inputs+891272outputs (0major+74377minor)pagefaults 0swaps
+
+#### 16 threads
+
+OMP_NUM_THREADS=16 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
+TIME: 2.982503
+37.92user 0.29system 0:08.96elapsed 426%CPU (0avgtext+0avgdata 297616maxresident)k
+0inputs+891272outputs (0major+74388minor)pagefaults 0swaps
+
+#### 32 threads
+
+OMP_NUM_THREADS=32 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
+TIME: 2.399604
+42.21user 0.27system 0:06.56elapsed 647%CPU (0avgtext+0avgdata 297704maxresident)k
+136inputs+891272outputs (3major+74425minor)pagefaults 0swaps
+
+#### 64 threads
+
+OMP_NUM_THREADS=64 time ./mandelbrot-par 0.27085 0.27100 0.004640 0.004810 1000 8192 pic.ppm
+TIME: 2.225711
+42.62user 0.29system 0:06.41elapsed 669%CPU (0avgtext+0avgdata 289388maxresident)k
+56inputs+891272outputs (1major+74493minor)pagefaults 0swaps
+```
