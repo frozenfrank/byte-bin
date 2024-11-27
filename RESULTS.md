@@ -4,7 +4,7 @@ Findings from completing the homework.
 
 Final product sample image:
 
-![Downsized Mandelbrot Fractal Image](./sample_mandelbrot_medium.jpeg)
+![Downsized Mandelbrot Fractal Image](./img/sample_mandelbrot_medium.jpeg)
 
 ## Commands Used
 
@@ -53,7 +53,7 @@ Overall results are summaried in the following table, and detailed log output is
 
 #### Results Summary
 
-![Mandelbrot Execution Time by Thread Configuration](./results_summary_chart.png)
+![Mandelbrot Execution Time by Thread Configuration](./img/results_summary_chart.png)
 
 | Num <br>Threads | User<br>time | System<br>time | **Real<br> time** | CPU<br>Usage | Parallel<br>section |
 | :- | :---: | :--: | :-----: | :--: | :-------- |
