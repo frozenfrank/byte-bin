@@ -74,7 +74,7 @@ make draw COORDS="0.270920121622 0.270920121676 0.00474992204362 0.0047499221011
 
 ### Black Hole
 
-![Mandelbrot Black Hole Sample](./img/pic-glack-hole_medium.jpeg)
+![Mandelbrot Black Hole Sample](./img/pic-black-hole_medium.jpeg)
 
 ```shell
 make draw COORDS="0.270920121637 0.270920121639 0.00474992207611 0.0047499220779"
