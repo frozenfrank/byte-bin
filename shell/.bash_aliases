@@ -76,6 +76,9 @@ function is-ancestor() {
 }
 
 
+## Non-Git Aliases
+mktouch() { mkdir -p "$(dirname "$1")" && touch "$1" }
+
 ## Other Aliases
 BYTE_BIN="/path/to/root-of/byte-bin"
 alias bb="cd $BYTE_BIN" # Byte Bin
