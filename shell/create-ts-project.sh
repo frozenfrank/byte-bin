@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# This script will create an initialize a typescript project
+# This script will create and initialize a typescript project
 FOLDER=$1
 
 if [ -z "$FOLDER" ]; then
@@ -27,6 +27,8 @@ EOF
 # Add in the npm start script
 ed package.json << EOF
 6i
+    "build": "tsc",
+    "exec": "node dist/index.js",
     "start": "npx ts-node src/index.ts",
 .
 w
@@ -85,6 +87,7 @@ EOF
 echo "Initializing git"
 git init
 echo "node_modules/" >> .gitignore
+echo "dist/" >> .gitignore
 git add .
 git commit -m "Init new project"
 
