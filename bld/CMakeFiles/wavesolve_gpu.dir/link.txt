@@ -1,0 +1,1 @@
+/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/bin/nvc++ -Ofast -DNDEBUG -tp=haswell -stdpar=gpu -gpu=cc60 CMakeFiles/wavesolve_gpu.dir/wavesolve.cpp.o -o wavesolve_gpu 

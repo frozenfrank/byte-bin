@@ -1,4 +1,4 @@
-# Install script for directory: /home/paigeid/class/2024_phase7/scicomp
+# Install script for directory: /home/paigeid/2024ITC/project
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -50,5 +50,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/paigeid/class/2024_phase7/scicomp/bld/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/paigeid/2024ITC/project/bld/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

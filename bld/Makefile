@@ -57,10 +57,10 @@ RM = /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E rm -f
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = /home/paigeid/class/2024_phase7/scicomp
+CMAKE_SOURCE_DIR = /home/paigeid/2024ITC/project
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = /home/paigeid/class/2024_phase7/scicomp/bld
+CMAKE_BINARY_DIR = /home/paigeid/2024ITC/project/bld
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -87,9 +87,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles /home/paigeid/class/2024_phase7/scicomp/bld//CMakeFiles/progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/paigeid/2024ITC/project/bld/CMakeFiles /home/paigeid/2024ITC/project/bld//CMakeFiles/progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start /home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/paigeid/2024ITC/project/bld/CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -117,24 +117,24 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named wavesolve_mpi
+# Target rules for targets named wavesolve_gpu
 
 # Build rule for target.
-wavesolve_mpi: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 wavesolve_mpi
-.PHONY : wavesolve_mpi
+wavesolve_gpu: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 wavesolve_gpu
+.PHONY : wavesolve_gpu
 
 # fast build rule for target.
-wavesolve_mpi/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/wavesolve_mpi.dir/build.make CMakeFiles/wavesolve_mpi.dir/build
-.PHONY : wavesolve_mpi/fast
+wavesolve_gpu/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wavesolve_gpu.dir/build.make CMakeFiles/wavesolve_gpu.dir/build
+.PHONY : wavesolve_gpu/fast
 
 wavesolve.o: wavesolve.cpp.o
 .PHONY : wavesolve.o
 
 # target to build an object file
 wavesolve.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/wavesolve_mpi.dir/build.make CMakeFiles/wavesolve_mpi.dir/wavesolve.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wavesolve_gpu.dir/build.make CMakeFiles/wavesolve_gpu.dir/wavesolve.cpp.o
 .PHONY : wavesolve.cpp.o
 
 wavesolve.i: wavesolve.cpp.i
@@ -142,7 +142,7 @@ wavesolve.i: wavesolve.cpp.i
 
 # target to preprocess a source file
 wavesolve.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/wavesolve_mpi.dir/build.make CMakeFiles/wavesolve_mpi.dir/wavesolve.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wavesolve_gpu.dir/build.make CMakeFiles/wavesolve_gpu.dir/wavesolve.cpp.i
 .PHONY : wavesolve.cpp.i
 
 wavesolve.s: wavesolve.cpp.s
@@ -150,7 +150,7 @@ wavesolve.s: wavesolve.cpp.s
 
 # target to generate assembly for a file
 wavesolve.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/wavesolve_mpi.dir/build.make CMakeFiles/wavesolve_mpi.dir/wavesolve.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/wavesolve_gpu.dir/build.make CMakeFiles/wavesolve_gpu.dir/wavesolve.cpp.s
 .PHONY : wavesolve.cpp.s
 
 # Help Target
@@ -161,7 +161,7 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... wavesolve_mpi"
+	@echo "... wavesolve_gpu"
 	@echo "... wavesolve.o"
 	@echo "... wavesolve.i"
 	@echo "... wavesolve.s"

@@ -15,12 +15,12 @@ namespace {
 
     // Base rwbytes for when Stream is std::istream (data is a pointer to non-const, s.read is used)
     void rwbytes(std::istream &s, auto *const data, const size_t size) {
-        s.read(reinterpret_cast<char *const>(data), sizeof(*data)*size);
+        s.read(reinterpret_cast<char *>(data), sizeof(*data)*size);
     }
 
     // Base rwbytes for when Stream is std::ostream (data is a pointer to const, s.write is used)
     void rwbytes(std::ostream &s, const auto *const data, const size_t size) {
-        s.write(reinterpret_cast<const char *const>(data), sizeof(*data)*size);
+        s.write(reinterpret_cast<const char *>(data), sizeof(*data)*size);
     }
 
     // Read or write size elements of data to or from s

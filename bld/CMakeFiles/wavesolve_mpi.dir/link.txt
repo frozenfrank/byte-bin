@@ -1,1 +1,0 @@
-/apps/gcc/14.1.0/bin/g++ -Ofast -DNDEBUG CMakeFiles/wavesolve_mpi.dir/wavesolve.cpp.o -o wavesolve_mpi  /vapps/rhel9/x86_64/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/libmpi.so 

@@ -17,7 +17,7 @@ events:
       - "CMakeLists.txt:3 (project)"
     message: |
       Compiling the CXX compiler identification source file "CMakeCXXCompilerId.cpp" succeeded.
-      Compiler: /apps/gcc/14.1.0/bin/g++ 
+      Compiler: /apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/bin/nvc++ 
       Build flags: -Ofast;-DNDEBUG
       Id flags:  
       
@@ -27,8 +27,8 @@ events:
       
       Compilation of the CXX compiler identification source "CMakeCXXCompilerId.cpp" produced "a.out"
       
-      The CXX compiler identification is GNU, found in:
-        /home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/3.28.3/CompilerIdCXX/a.out
+      The CXX compiler identification is NVHPC, found in:
+        /home/paigeid/2024ITC/project/bld/CMakeFiles/3.28.3/CompilerIdCXX/a.out
       
   -
     kind: "try_compile-v1"
@@ -39,80 +39,45 @@ events:
     checks:
       - "Detecting CXX compiler ABI info"
     directories:
-      source: "/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-sUbmkd"
-      binary: "/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-sUbmkd"
+      source: "/home/paigeid/2024ITC/project/bld/CMakeFiles/CMakeScratch/TryCompile-wPKDUa"
+      binary: "/home/paigeid/2024ITC/project/bld/CMakeFiles/CMakeScratch/TryCompile-wPKDUa"
     cmakeVariables:
       CMAKE_CXX_FLAGS: "-Ofast -DNDEBUG"
-      CMAKE_CXX_FLAGS_DEBUG: "-g"
+      CMAKE_CXX_FLAGS_DEBUG: "-g -O0"
       CMAKE_EXE_LINKER_FLAGS: ""
     buildResult:
       variable: "CMAKE_CXX_ABI_COMPILED"
       cached: true
       stdout: |
-        Change Dir: '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-sUbmkd'
+        Change Dir: '/home/paigeid/2024ITC/project/bld/CMakeFiles/CMakeScratch/TryCompile-wPKDUa'
         
-        Run Build Command(s): /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_95eb8/fast
-        /usr/bin/gmake  -f CMakeFiles/cmTC_95eb8.dir/build.make CMakeFiles/cmTC_95eb8.dir/build
-        gmake[1]: Entering directory '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-sUbmkd'
-        Building CXX object CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o
-        /apps/gcc/14.1.0/bin/g++   -Ofast -DNDEBUG    -v -o CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o -c /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp
-        Using built-in specs.
-        COLLECT_GCC=/apps/gcc/14.1.0/bin/g++
-        Target: x86_64-pc-linux-gnu
-        Configured with: /apps/src/gcc/14.1.0/gcc-14.1.0/configure --prefix=/apps/gcc/14.1.0 --with-arch=haswell --with-tune=znver3 --with-fpmath=avx --enable-host-shared --enable-threads --enable-__cxa_atexit --enable-valgrind-annotations --disable-multilib --with-dwarf2
-        Thread model: posix
-        Supported LTO compression algorithms: zlib zstd
-        gcc version 14.1.0 (GCC) 
-        COLLECT_GCC_OPTIONS='-Ofast' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=znver3' '-march=haswell' '-dumpdir' 'CMakeFiles/cmTC_95eb8.dir/'
-         /vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/cc1plus -quiet -v -iprefix /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/ -D_GNU_SOURCE -D NDEBUG /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_95eb8.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=znver3 -march=haswell -Ofast -version -o /tmp/ccdYQ1Gn.s
-        GNU C++17 (GCC) version 14.1.0 (x86_64-pc-linux-gnu)
-        	compiled by GNU C version 14.1.0, GMP version 6.2.1, MPFR version 4.1.0, MPC version 1.2.1, isl version isl-0.24-GMP
+        Run Build Command(s): /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_878a7/fast
+        /usr/bin/gmake  -f CMakeFiles/cmTC_878a7.dir/build.make CMakeFiles/cmTC_878a7.dir/build
+        gmake[1]: Entering directory '/home/paigeid/2024ITC/project/bld/CMakeFiles/CMakeScratch/TryCompile-wPKDUa'
+        Building CXX object CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o
+        /apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/bin/nvc++   -Ofast -DNDEBUG    -v -MD -MT CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o -c /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp
+        Export NVCOMPILER=/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5
+        Export PGI=/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4
+        Create file CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o.d
         
-        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
-        ignoring nonexistent directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../x86_64-pc-linux-gnu/include"
-        ignoring duplicate directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0"
-        ignoring duplicate directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/x86_64-pc-linux-gnu"
-        ignoring duplicate directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/backward"
-        ignoring duplicate directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include"
-        ignoring duplicate directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include-fixed"
-        ignoring nonexistent directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../x86_64-pc-linux-gnu/include"
-        #include "..." search starts here:
-        #include <...> search starts here:
-         /apps/mpl/0.3.0/include
-         /apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/include
-         /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0
-         /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/x86_64-pc-linux-gnu
-         /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/backward
-         /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include
-         /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include-fixed
-         /usr/local/include
-         /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../include
-         /usr/include
-        End of search list.
-        Compiler executable checksum: 82d6d6586140951e7b7c051a6bc1b727
-        COLLECT_GCC_OPTIONS='-Ofast' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=znver3' '-march=haswell' '-dumpdir' 'CMakeFiles/cmTC_95eb8.dir/'
-         as -v --64 -o CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccdYQ1Gn.s
-        GNU assembler version 2.35.2 (x86_64-redhat-linux) using BFD version version 2.35.2-43.el9
-        COMPILER_PATH=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/
-        LIBRARY_PATH=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../lib64/:/lib/../lib64/:/usr/lib/../lib64/:/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/openmpi/:/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../:/lib/:/usr/lib/
-        COLLECT_GCC_OPTIONS='-Ofast' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=znver3' '-march=haswell' '-dumpdir' 'CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.'
-        Linking CXX executable cmTC_95eb8
-        /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_95eb8.dir/link.txt --verbose=1
-        /apps/gcc/14.1.0/bin/g++ -Ofast -DNDEBUG   -v CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_95eb8 
-        Using built-in specs.
-        COLLECT_GCC=/apps/gcc/14.1.0/bin/g++
-        COLLECT_LTO_WRAPPER=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/lto-wrapper
-        Target: x86_64-pc-linux-gnu
-        Configured with: /apps/src/gcc/14.1.0/gcc-14.1.0/configure --prefix=/apps/gcc/14.1.0 --with-arch=haswell --with-tune=znver3 --with-fpmath=avx --enable-host-shared --enable-threads --enable-__cxa_atexit --enable-valgrind-annotations --disable-multilib --with-dwarf2
-        Thread model: posix
-        Supported LTO compression algorithms: zlib zstd
-        gcc version 14.1.0 (GCC) 
-        COMPILER_PATH=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/
-        LIBRARY_PATH=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../lib64/:/lib/../lib64/:/usr/lib/../lib64/:/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/openmpi/:/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../:/lib/:/usr/lib/
-        COLLECT_GCC_OPTIONS='-Ofast' '-D' 'NDEBUG' '-v' '-o' 'cmTC_95eb8' '-shared-libgcc' '-mtune=znver3' '-march=haswell' '-dumpdir' 'cmTC_95eb8.'
-         /vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/collect2 -plugin /vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/liblto_plugin.so -plugin-opt=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccCWsBYp.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_95eb8 /lib/../lib64/crt1.o /lib/../lib64/crti.o /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtbegin.o -L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0 -L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc -L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/openmpi -L/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib -L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../.. CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtfastmath.o /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtend.o /lib/../lib64/crtn.o
-        COLLECT_GCC_OPTIONS='-Ofast' '-D' 'NDEBUG' '-v' '-o' 'cmTC_95eb8' '-shared-libgcc' '-mtune=znver3' '-march=haswell' '-dumpdir' 'cmTC_95eb8.'
-        gmake[1]: Leaving directory '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-sUbmkd'
+        /vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/bin/tools/nvcpfe -- --llalign -D__GNUC__=14 -D__GNUC_MINOR__=1 -D__GNUC_PATCHLEVEL__=0 -D__unix -D__unix__ -Dunix -Dlinux -D__linux -D__linux__ -D__NO_MATH_INLINES -D__LP64__ -D__x86_64 -D__x86_64__ -D__LONG_MAX__=9223372036854775807L '-D__SIZE_TYPE__=unsigned long int' '-D__PTRDIFF_TYPE__=long int' -D__amd64 -D__amd64__ -D__k8 -D__k8__ -D__MMX__ -D__SSE_MATH__ -D__MMX_WITH_SSE__ -D__SSE__ -D__SSE2__ -D__SSE2_MATH__ -D__SSE3__ -D__SSSE3__ -D__SSE4_1__ -D__SSE4_2__ -D__ABM__ -D__ADX__ -D__AES__ -D__AVX__ -D__AVX2__ -D__AVX512BW__ -D__AVX512CD__ -D__AVX512DQ__ -D__AVX512F__ -D__AVX512VL__ -D__AVX512VNNI__ -D__BMI__ -D__BMI2__ -D__CLFLUSHOPT__ -D__CLWB__ -D__CX16__ -D__F16C__ -D__FMA__ -D__FSGSBASE__ -D__FXSR__ -D__LZCNT__ -D__MOVBE__ -D__PCLMUL__ -D__PKU__ -D__POPCNT__ -D__PRFCHW__ -D__RDRND__ -D__RDSEED__ -D__LAHF_SAHF__ -D__XSAVE__ -D__XSAVEC__ -D__XSAVEOPT__ -D__XSAVES__ -D__PGI -D__NVCOMPILER -D_GNU_SOURCE -D_PGCG_SOURCE -I- -I/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/extras/qd/include/qd -I/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nvshmem/include -I/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nccl/include -I/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/mpi/include -I/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/math_libs/include --sys_include /vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/include --sys_include /vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/include-stdexec --sys_include /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0 --sys_include /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/x86_64-pc-linux-gnu --sys_include /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/backward --sys_include /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include --sys_include /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include-fixed --sys_include /usr/local/include --sys_include /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../include --sys_include /usr/include -D__PGLLVM__ -D__NVCOMPILER_LLVM__ -D__extension__= -DNDEBUG --preinclude _cplus_preinclude.h --preinclude_macros _cplus_macros.h --gnu_version=140100 -D__pgnu_vsn=140100 --no_fixed_bp --dependencies_target_to_stdout CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o --dependencies_to_file CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o.d -q -o /tmp/nvc++0yZ2CW-NCiO8.il /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -- /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -opt 3 -x 119 0xa10000 -x 122 0x40 -x 123 0x1000 -x 127 4 -x 127 17 -x 19 0x400000 -x 28 0x40000 -x 120 0x10000000 -x 70 0x8000 -x 122 1 -x 125 0x20000 -quad -vect 56 -y 34 16 -x 37 0x480000 -x 34 0x8 -x 32 28835840 -y 19 8 -y 35 0 -x 42 0x30 -x 39 0x40 -x 199 10 -x 39 0x80 -x 59 4 -tp cascadelake -x 120 0x1000 -astype 0 -x 121 1 -fn /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -il /tmp/nvc++0yZ2CW-NCiO8.il -x 117 0x200 -x 123 0x80000000 -x 123 4 -x 119 0x20 -def __pgnu_vsn=140100 -x 70 0x40000000 -x 183 4 -x 121 0x800 -x 6 0x20000 -autoinl 10 -x 168 400 -x 174 128000 -x 14 0x200000 -x 14 0x400000 -autoinl 10 -x 168 400 -x 174 128000 -x 14 0x200000 -x 14 0x400000 -x 249 170 -x 120 0x200000 -x 70 0x40000000 -x 8 0x40000000 -x 164 0x800000 -x 71 0x2000 -x 71 0x4000 -x 34 0x40000000 -x 15 0x2000000 -x 77 0x01 -x 77 0x02 -x 77 0x04 -x 15 0x4 -x 120 0x1000000 -x 73 0x04 -x 231 0x800 -x 68 0x1 -x 39 4 -x 56 0x10 -x 26 0x10 -x 26 1 -x 56 0x4000 -x 197 0 -x 175 0 -x 203 0 -x 204 0 -x 227 0xFFFF -y 163 0xc0000000 -x 189 0x10 -y 189 0x4000000 -x 60 512 -x 9 1 -x 42 0x14200000 -x 136 0x11 -x 15 262164 -x 56 2 -x 187 0x30 -x 206 0x01 -x 15 0x2000 -x 129 2 -y 129 0x8000 -quad -x 119 0x10000000 -x 129 0x40000000 -x 56 0x2 -x 9 1 -x 42 0x14200000 -x 136 0x11 -x 15 262164 -x 56 2 -x 187 0x30 -x 206 0x01 -x 54 0x08 -x 15 0x2000 -gnuvsn 140100 -x 69 0x200 -x 123 0x400 -cmdline '+nvc++ /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -Ofast -O3 -Mvect=simd -Mflushz -Mcache_align -Mrecip-div -Mfactorize -Mno-signed-zeros -Minline_cpu_f -Mfprelaxed -Mrecip-div -Mstack_arrays -Mno-nan -Mno-inf -fcx-limited-range -DNDEBUG -v -MD -MT CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o -c' -asm /tmp/nvc++0yZ2CtSBIGti.ll
+        NVC++/x86-64 Linux 24.5-1: compilation successful
+        
+        /vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/share/llvm/bin/opt '-passes=default<O3>' -slp-vectorize-hor=true -nvhpc-consider-undef=true -nvhpc-unswitch-loops-with-trip-count=2 -mcpu=native --enable-unsafe-fp-math --enable-no-nans-fp-math --enable-no-infs-fp-math --enable-no-signed-zeros-fp-math /tmp/nvc++0yZ2CtSBIGti.ll -S -o /tmp/nvc++uyZ28Uodhb76.llvm
+        
+        /vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/share/llvm/bin/llc /tmp/nvc++uyZ28Uodhb76.llvm -march=x86-64 -mcpu=native -mattr=+mmx -mattr=+sse -mattr=+sse2 -mattr=+sse3 -mattr=+ssse3 -mattr=+sse4.1 -mattr=+sse4.2 -mattr=+avx -mattr=+avx2 -mattr=+avx512f -mattr=+avx512cd -mattr=+avx512vl -mattr=+avx512bw -mattr=+avx512dq -mattr=+avx512vnni -mattr=+f16c -mattr=+fma -mattr=+xsave -mattr=+xsaveopt -mattr=+xsavec -mattr=+xsaves -mattr=+popcnt -mattr=+aes -mattr=+pclmul -mattr=+clflushopt -mattr=+fsgsbase -mattr=+rdrnd -mattr=+bmi -mattr=+bmi2 -mattr=+lzcnt -mattr=+fxsr -mattr=+pku -mattr=+adx -mattr=+clwb -mattr=+cx16 -mattr=+movbe -mattr=+prfchw -mattr=+rdseed -mattr=+sahf -O3 --enable-unsafe-fp-math --enable-no-nans-fp-math --enable-no-infs-fp-math --enable-no-signed-zeros-fp-math -x86-cmov-converter=0 -dwarf-directory=false -non-global-value-max-name-size=4294967295 --align-all-functions=6 -nvhpc-memzero -filetype=obj --frame-pointer=none -o CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o
+        Unlinking /tmp/nvc++0yZ2CW-NCiO8.il
+        Unlinking /tmp/nvc++uyZ28Z9rkbU2.s
+        Unlinking /tmp/nvc++0yZ2CtSBIGti.ll
+        Unlinking /tmp/nvc++uyZ28Uodhb76.llvm
+        Linking CXX executable cmTC_878a7
+        /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_878a7.dir/link.txt --verbose=1
+        /apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/bin/nvc++ -Ofast -DNDEBUG   -v CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_878a7 
+        Export NVCOMPILER=/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5
+        Export PGI=/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4
+        
+        /usr/bin/ld /usr/lib64/crt1.o /usr/lib64/crti.o /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//crtbegin.o --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -T /vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib/nvhpc.ld -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nvshmem/lib -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nccl/lib -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/mpi/lib -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/math_libs/lib64 -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/extras/qt/lib -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/extras/CUPTI/lib64 -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/lib64 -L/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib -L/usr/lib64 -L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/ CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o -rpath /vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib -rpath /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//../../../../lib64 -o cmTC_878a7 -L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//../../../../lib64 -latomic -lnvhpcatm -lstdc++ -lnvomp -ldl --as-needed -lnvhpcatm -latomic --no-as-needed -lpthread -lnvcpumath -lnsnvc -lnvc -lgcc -lc -lgcc_s -lm /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//crtend.o /usr/lib64/crtn.o
+        gmake[1]: Leaving directory '/home/paigeid/2024ITC/project/bld/CMakeFiles/CMakeScratch/TryCompile-wPKDUa'
         
       exitCode: 0
   -
@@ -122,31 +87,8 @@ events:
       - "/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeTestCXXCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
       - "CMakeLists.txt:3 (project)"
     message: |
-      Parsed CXX implicit include dir info: rv=done
-        found start of include info
-        found start of implicit include info
-          add: [/apps/mpl/0.3.0/include]
-          add: [/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/include]
-          add: [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0]
-          add: [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/x86_64-pc-linux-gnu]
-          add: [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/backward]
-          add: [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include]
-          add: [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include-fixed]
-          add: [/usr/local/include]
-          add: [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../include]
-          add: [/usr/include]
-        end of search list found
-        collapse include dir [/apps/mpl/0.3.0/include] ==> [/apps/mpl/0.3.0/include]
-        collapse include dir [/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/include] ==> [/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/include]
-        collapse include dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/include/c++/14.1.0]
-        collapse include dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/x86_64-pc-linux-gnu] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/include/c++/14.1.0/x86_64-pc-linux-gnu]
-        collapse include dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/backward] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/include/c++/14.1.0/backward]
-        collapse include dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/include]
-        collapse include dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include-fixed] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/include-fixed]
-        collapse include dir [/usr/local/include] ==> [/usr/local/include]
-        collapse include dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../include] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/include]
-        collapse include dir [/usr/include] ==> [/usr/include]
-        implicit include dirs: [/apps/mpl/0.3.0/include;/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/include;/vapps/rhel9/x86_64/gcc/14.1.0/include/c++/14.1.0;/vapps/rhel9/x86_64/gcc/14.1.0/include/c++/14.1.0/x86_64-pc-linux-gnu;/vapps/rhel9/x86_64/gcc/14.1.0/include/c++/14.1.0/backward;/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/include;/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/include-fixed;/usr/local/include;/vapps/rhel9/x86_64/gcc/14.1.0/include;/usr/include]
+      Parsed CXX implicit include dir info: rv=start
+        warn: unable to parse implicit include dirs!
       
       
   -
@@ -158,224 +100,101 @@ events:
     message: |
       Parsed CXX implicit link information:
         link line regex: [^( *|.*[/\\])(ld|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
-        ignore line: [Change Dir: '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-sUbmkd']
+        ignore line: [Change Dir: '/home/paigeid/2024ITC/project/bld/CMakeFiles/CMakeScratch/TryCompile-wPKDUa']
         ignore line: []
-        ignore line: [Run Build Command(s): /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_95eb8/fast]
-        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_95eb8.dir/build.make CMakeFiles/cmTC_95eb8.dir/build]
-        ignore line: [gmake[1]: Entering directory '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-sUbmkd']
-        ignore line: [Building CXX object CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o]
-        ignore line: [/apps/gcc/14.1.0/bin/g++   -Ofast -DNDEBUG    -v -o CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o -c /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp]
-        ignore line: [Using built-in specs.]
-        ignore line: [COLLECT_GCC=/apps/gcc/14.1.0/bin/g++]
-        ignore line: [Target: x86_64-pc-linux-gnu]
-        ignore line: [Configured with: /apps/src/gcc/14.1.0/gcc-14.1.0/configure --prefix=/apps/gcc/14.1.0 --with-arch=haswell --with-tune=znver3 --with-fpmath=avx --enable-host-shared --enable-threads --enable-__cxa_atexit --enable-valgrind-annotations --disable-multilib --with-dwarf2]
-        ignore line: [Thread model: posix]
-        ignore line: [Supported LTO compression algorithms: zlib zstd]
-        ignore line: [gcc version 14.1.0 (GCC) ]
-        ignore line: [COLLECT_GCC_OPTIONS='-Ofast' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=znver3' '-march=haswell' '-dumpdir' 'CMakeFiles/cmTC_95eb8.dir/']
-        ignore line: [ /vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/cc1plus -quiet -v -iprefix /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/ -D_GNU_SOURCE -D NDEBUG /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -quiet -dumpdir CMakeFiles/cmTC_95eb8.dir/ -dumpbase CMakeCXXCompilerABI.cpp.cpp -dumpbase-ext .cpp -mtune=znver3 -march=haswell -Ofast -version -o /tmp/ccdYQ1Gn.s]
-        ignore line: [GNU C++17 (GCC) version 14.1.0 (x86_64-pc-linux-gnu)]
-        ignore line: [	compiled by GNU C version 14.1.0  GMP version 6.2.1  MPFR version 4.1.0  MPC version 1.2.1  isl version isl-0.24-GMP]
+        ignore line: [Run Build Command(s): /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_878a7/fast]
+        ignore line: [/usr/bin/gmake  -f CMakeFiles/cmTC_878a7.dir/build.make CMakeFiles/cmTC_878a7.dir/build]
+        ignore line: [gmake[1]: Entering directory '/home/paigeid/2024ITC/project/bld/CMakeFiles/CMakeScratch/TryCompile-wPKDUa']
+        ignore line: [Building CXX object CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/bin/nvc++   -Ofast -DNDEBUG    -v -MD -MT CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o -c /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp]
+        ignore line: [Export NVCOMPILER=/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5]
+        ignore line: [Export PGI=/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4]
+        ignore line: [Create file CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o.d]
         ignore line: []
-        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
-        ignore line: [ignoring nonexistent directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../x86_64-pc-linux-gnu/include"]
-        ignore line: [ignoring duplicate directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0"]
-        ignore line: [ignoring duplicate directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/x86_64-pc-linux-gnu"]
-        ignore line: [ignoring duplicate directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/backward"]
-        ignore line: [ignoring duplicate directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include"]
-        ignore line: [ignoring duplicate directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include-fixed"]
-        ignore line: [ignoring nonexistent directory "/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../x86_64-pc-linux-gnu/include"]
-        ignore line: [#include "..." search starts here:]
-        ignore line: [#include <...> search starts here:]
-        ignore line: [ /apps/mpl/0.3.0/include]
-        ignore line: [ /apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/include]
-        ignore line: [ /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0]
-        ignore line: [ /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/x86_64-pc-linux-gnu]
-        ignore line: [ /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/backward]
-        ignore line: [ /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include]
-        ignore line: [ /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include-fixed]
-        ignore line: [ /usr/local/include]
-        ignore line: [ /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../include]
-        ignore line: [ /usr/include]
-        ignore line: [End of search list.]
-        ignore line: [Compiler executable checksum: 82d6d6586140951e7b7c051a6bc1b727]
-        ignore line: [COLLECT_GCC_OPTIONS='-Ofast' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=znver3' '-march=haswell' '-dumpdir' 'CMakeFiles/cmTC_95eb8.dir/']
-        ignore line: [ as -v --64 -o CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o /tmp/ccdYQ1Gn.s]
-        ignore line: [GNU assembler version 2.35.2 (x86_64-redhat-linux) using BFD version version 2.35.2-43.el9]
-        ignore line: [COMPILER_PATH=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/]
-        ignore line: [LIBRARY_PATH=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../lib64/:/lib/../lib64/:/usr/lib/../lib64/:/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/openmpi/:/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../:/lib/:/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-Ofast' '-D' 'NDEBUG' '-v' '-o' 'CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o' '-c' '-shared-libgcc' '-mtune=znver3' '-march=haswell' '-dumpdir' 'CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.']
-        ignore line: [Linking CXX executable cmTC_95eb8]
-        ignore line: [/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_95eb8.dir/link.txt --verbose=1]
-        ignore line: [/apps/gcc/14.1.0/bin/g++ -Ofast -DNDEBUG   -v CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_95eb8 ]
-        ignore line: [Using built-in specs.]
-        ignore line: [COLLECT_GCC=/apps/gcc/14.1.0/bin/g++]
-        ignore line: [COLLECT_LTO_WRAPPER=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/lto-wrapper]
-        ignore line: [Target: x86_64-pc-linux-gnu]
-        ignore line: [Configured with: /apps/src/gcc/14.1.0/gcc-14.1.0/configure --prefix=/apps/gcc/14.1.0 --with-arch=haswell --with-tune=znver3 --with-fpmath=avx --enable-host-shared --enable-threads --enable-__cxa_atexit --enable-valgrind-annotations --disable-multilib --with-dwarf2]
-        ignore line: [Thread model: posix]
-        ignore line: [Supported LTO compression algorithms: zlib zstd]
-        ignore line: [gcc version 14.1.0 (GCC) ]
-        ignore line: [COMPILER_PATH=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/]
-        ignore line: [LIBRARY_PATH=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../lib64/:/lib/../lib64/:/usr/lib/../lib64/:/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/openmpi/:/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/:/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../:/lib/:/usr/lib/]
-        ignore line: [COLLECT_GCC_OPTIONS='-Ofast' '-D' 'NDEBUG' '-v' '-o' 'cmTC_95eb8' '-shared-libgcc' '-mtune=znver3' '-march=haswell' '-dumpdir' 'cmTC_95eb8.']
-        link line: [ /vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/collect2 -plugin /vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/liblto_plugin.so -plugin-opt=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/lto-wrapper -plugin-opt=-fresolution=/tmp/ccCWsBYp.res -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc_s -plugin-opt=-pass-through=-lgcc --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -o cmTC_95eb8 /lib/../lib64/crt1.o /lib/../lib64/crti.o /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtbegin.o -L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0 -L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc -L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/openmpi -L/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib -L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../.. CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o -lstdc++ -lm -lgcc_s -lgcc -lc -lgcc_s -lgcc /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtfastmath.o /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtend.o /lib/../lib64/crtn.o]
-          arg [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/collect2] ==> ignore
-          arg [-plugin] ==> ignore
-          arg [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/liblto_plugin.so] ==> ignore
-          arg [-plugin-opt=/vapps/rhel9/x86_64/gcc/14.1.0/bin/../libexec/gcc/x86_64-pc-linux-gnu/14.1.0/lto-wrapper] ==> ignore
-          arg [-plugin-opt=-fresolution=/tmp/ccCWsBYp.res] ==> ignore
-          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
-          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
-          arg [-plugin-opt=-pass-through=-lc] ==> ignore
-          arg [-plugin-opt=-pass-through=-lgcc_s] ==> ignore
-          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+        ignore line: [/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/bin/tools/nvcpfe -- --llalign -D__GNUC__=14 -D__GNUC_MINOR__=1 -D__GNUC_PATCHLEVEL__=0 -D__unix -D__unix__ -Dunix -Dlinux -D__linux -D__linux__ -D__NO_MATH_INLINES -D__LP64__ -D__x86_64 -D__x86_64__ -D__LONG_MAX__=9223372036854775807L '-D__SIZE_TYPE__=unsigned long int' '-D__PTRDIFF_TYPE__=long int' -D__amd64 -D__amd64__ -D__k8 -D__k8__ -D__MMX__ -D__SSE_MATH__ -D__MMX_WITH_SSE__ -D__SSE__ -D__SSE2__ -D__SSE2_MATH__ -D__SSE3__ -D__SSSE3__ -D__SSE4_1__ -D__SSE4_2__ -D__ABM__ -D__ADX__ -D__AES__ -D__AVX__ -D__AVX2__ -D__AVX512BW__ -D__AVX512CD__ -D__AVX512DQ__ -D__AVX512F__ -D__AVX512VL__ -D__AVX512VNNI__ -D__BMI__ -D__BMI2__ -D__CLFLUSHOPT__ -D__CLWB__ -D__CX16__ -D__F16C__ -D__FMA__ -D__FSGSBASE__ -D__FXSR__ -D__LZCNT__ -D__MOVBE__ -D__PCLMUL__ -D__PKU__ -D__POPCNT__ -D__PRFCHW__ -D__RDRND__ -D__RDSEED__ -D__LAHF_SAHF__ -D__XSAVE__ -D__XSAVEC__ -D__XSAVEOPT__ -D__XSAVES__ -D__PGI -D__NVCOMPILER -D_GNU_SOURCE -D_PGCG_SOURCE -I- -I/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/extras/qd/include/qd -I/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nvshmem/include -I/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nccl/include -I/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/mpi/include -I/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/math_libs/include --sys_include /vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/include --sys_include /vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/include-stdexec --sys_include /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0 --sys_include /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/x86_64-pc-linux-gnu --sys_include /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../include/c++/14.1.0/backward --sys_include /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include --sys_include /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/include-fixed --sys_include /usr/local/include --sys_include /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/../../include --sys_include /usr/include -D__PGLLVM__ -D__NVCOMPILER_LLVM__ -D__extension__= -DNDEBUG --preinclude _cplus_preinclude.h --preinclude_macros _cplus_macros.h --gnu_version=140100 -D__pgnu_vsn=140100 --no_fixed_bp --dependencies_target_to_stdout CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o --dependencies_to_file CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o.d -q -o /tmp/nvc++0yZ2CW-NCiO8.il /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -- /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -opt 3 -x 119 0xa10000 -x 122 0x40 -x 123 0x1000 -x 127 4 -x 127 17 -x 19 0x400000 -x 28 0x40000 -x 120 0x10000000 -x 70 0x8000 -x 122 1 -x 125 0x20000 -quad -vect 56 -y 34 16 -x 37 0x480000 -x 34 0x8 -x 32 28835840 -y 19 8 -y 35 0 -x 42 0x30 -x 39 0x40 -x 199 10 -x 39 0x80 -x 59 4 -tp cascadelake -x 120 0x1000 -astype 0 -x 121 1 -fn /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -il /tmp/nvc++0yZ2CW-NCiO8.il -x 117 0x200 -x 123 0x80000000 -x 123 4 -x 119 0x20 -def __pgnu_vsn=140100 -x 70 0x40000000 -x 183 4 -x 121 0x800 -x 6 0x20000 -autoinl 10 -x 168 400 -x 174 128000 -x 14 0x200000 -x 14 0x400000 -autoinl 10 -x 168 400 -x 174 128000 -x 14 0x200000 -x 14 0x400000 -x 249 170 -x 120 0x200000 -x 70 0x40000000 -x 8 0x40000000 -x 164 0x800000 -x 71 0x2000 -x 71 0x4000 -x 34 0x40000000 -x 15 0x2000000 -x 77 0x01 -x 77 0x02 -x 77 0x04 -x 15 0x4 -x 120 0x1000000 -x 73 0x04 -x 231 0x800 -x 68 0x1 -x 39 4 -x 56 0x10 -x 26 0x10 -x 26 1 -x 56 0x4000 -x 197 0 -x 175 0 -x 203 0 -x 204 0 -x 227 0xFFFF -y 163 0xc0000000 -x 189 0x10 -y 189 0x4000000 -x 60 512 -x 9 1 -x 42 0x14200000 -x 136 0x11 -x 15 262164 -x 56 2 -x 187 0x30 -x 206 0x01 -x 15 0x2000 -x 129 2 -y 129 0x8000 -quad -x 119 0x10000000 -x 129 0x40000000 -x 56 0x2 -x 9 1 -x 42 0x14200000 -x 136 0x11 -x 15 262164 -x 56 2 -x 187 0x30 -x 206 0x01 -x 54 0x08 -x 15 0x2000 -gnuvsn 140100 -x 69 0x200 -x 123 0x400 -cmdline '+nvc++ /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeCXXCompilerABI.cpp -Ofast -O3 -Mvect=simd -Mflushz -Mcache_align -Mrecip-div -Mfactorize -Mno-signed-zeros -Minline_cpu_f -Mfprelaxed -Mrecip-div -Mstack_arrays -Mno-nan -Mno-inf -fcx-limited-range -DNDEBUG -v -MD -MT CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o -MF CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o.d -o CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o -c' -asm /tmp/nvc++0yZ2CtSBIGti.ll]
+        ignore line: [NVC++/x86-64 Linux 24.5-1: compilation successful]
+        ignore line: []
+        ignore line: [/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/share/llvm/bin/opt '-passes=default<O3>' -slp-vectorize-hor=true -nvhpc-consider-undef=true -nvhpc-unswitch-loops-with-trip-count=2 -mcpu=native --enable-unsafe-fp-math --enable-no-nans-fp-math --enable-no-infs-fp-math --enable-no-signed-zeros-fp-math /tmp/nvc++0yZ2CtSBIGti.ll -S -o /tmp/nvc++uyZ28Uodhb76.llvm]
+        ignore line: []
+        ignore line: [/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/share/llvm/bin/llc /tmp/nvc++uyZ28Uodhb76.llvm -march=x86-64 -mcpu=native -mattr=+mmx -mattr=+sse -mattr=+sse2 -mattr=+sse3 -mattr=+ssse3 -mattr=+sse4.1 -mattr=+sse4.2 -mattr=+avx -mattr=+avx2 -mattr=+avx512f -mattr=+avx512cd -mattr=+avx512vl -mattr=+avx512bw -mattr=+avx512dq -mattr=+avx512vnni -mattr=+f16c -mattr=+fma -mattr=+xsave -mattr=+xsaveopt -mattr=+xsavec -mattr=+xsaves -mattr=+popcnt -mattr=+aes -mattr=+pclmul -mattr=+clflushopt -mattr=+fsgsbase -mattr=+rdrnd -mattr=+bmi -mattr=+bmi2 -mattr=+lzcnt -mattr=+fxsr -mattr=+pku -mattr=+adx -mattr=+clwb -mattr=+cx16 -mattr=+movbe -mattr=+prfchw -mattr=+rdseed -mattr=+sahf -O3 --enable-unsafe-fp-math --enable-no-nans-fp-math --enable-no-infs-fp-math --enable-no-signed-zeros-fp-math -x86-cmov-converter=0 -dwarf-directory=false -non-global-value-max-name-size=4294967295 --align-all-functions=6 -nvhpc-memzero -filetype=obj --frame-pointer=none -o CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o]
+        ignore line: [Unlinking /tmp/nvc++0yZ2CW-NCiO8.il]
+        ignore line: [Unlinking /tmp/nvc++uyZ28Z9rkbU2.s]
+        ignore line: [Unlinking /tmp/nvc++0yZ2CtSBIGti.ll]
+        ignore line: [Unlinking /tmp/nvc++uyZ28Uodhb76.llvm]
+        ignore line: [Linking CXX executable cmTC_878a7]
+        ignore line: [/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_878a7.dir/link.txt --verbose=1]
+        ignore line: [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/bin/nvc++ -Ofast -DNDEBUG   -v CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o -o cmTC_878a7 ]
+        ignore line: [Export NVCOMPILER=/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5]
+        ignore line: [Export PGI=/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4]
+        ignore line: []
+        link line: [/usr/bin/ld /usr/lib64/crt1.o /usr/lib64/crti.o /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//crtbegin.o --eh-frame-hdr -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -T /vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib/nvhpc.ld -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nvshmem/lib -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nccl/lib -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/mpi/lib -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/math_libs/lib64 -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/extras/qt/lib -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/extras/CUPTI/lib64 -L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/lib64 -L/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib -L/usr/lib64 -L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/ CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o -rpath /vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib -rpath /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//../../../../lib64 -o cmTC_878a7 -L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//../../../../lib64 -latomic -lnvhpcatm -lstdc++ -lnvomp -ldl --as-needed -lnvhpcatm -latomic --no-as-needed -lpthread -lnvcpumath -lnsnvc -lnvc -lgcc -lc -lgcc_s -lm /vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//crtend.o /usr/lib64/crtn.o]
+          arg [/usr/bin/ld] ==> ignore
+          arg [/usr/lib64/crt1.o] ==> obj [/usr/lib64/crt1.o]
+          arg [/usr/lib64/crti.o] ==> obj [/usr/lib64/crti.o]
+          arg [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//crtbegin.o] ==> obj [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//crtbegin.o]
           arg [--eh-frame-hdr] ==> ignore
           arg [-m] ==> ignore
           arg [elf_x86_64] ==> ignore
           arg [-dynamic-linker] ==> ignore
           arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-T] ==> ignore
+          arg [/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib/nvhpc.ld] ==> ignore
+          arg [-L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nvshmem/lib] ==> dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nvshmem/lib]
+          arg [-L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nccl/lib] ==> dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nccl/lib]
+          arg [-L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/mpi/lib] ==> dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/mpi/lib]
+          arg [-L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/math_libs/lib64] ==> dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/math_libs/lib64]
+          arg [-L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib] ==> dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib]
+          arg [-L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/extras/qt/lib] ==> dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/extras/qt/lib]
+          arg [-L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/extras/CUPTI/lib64] ==> dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/extras/CUPTI/lib64]
+          arg [-L/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/lib64] ==> dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/lib64]
+          arg [-L/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib] ==> dir [/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib]
+          arg [-L/usr/lib64] ==> dir [/usr/lib64]
+          arg [-L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/] ==> dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/]
+          arg [CMakeFiles/cmTC_878a7.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [-rpath] ==> ignore
+          arg [/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib] ==> ignore
+          arg [-rpath] ==> ignore
+          arg [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//../../../../lib64] ==> ignore
           arg [-o] ==> ignore
-          arg [cmTC_95eb8] ==> ignore
-          arg [/lib/../lib64/crt1.o] ==> obj [/lib/../lib64/crt1.o]
-          arg [/lib/../lib64/crti.o] ==> obj [/lib/../lib64/crti.o]
-          arg [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtbegin.o] ==> obj [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtbegin.o]
-          arg [-L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0] ==> dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0]
-          arg [-L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc] ==> dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc]
-          arg [-L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../lib64] ==> dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../lib64]
-          arg [-L/lib/../lib64] ==> dir [/lib/../lib64]
-          arg [-L/usr/lib/../lib64] ==> dir [/usr/lib/../lib64]
-          arg [-L/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/openmpi] ==> dir [/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/openmpi]
-          arg [-L/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib] ==> dir [/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib]
-          arg [-L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../..] ==> dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../..]
-          arg [CMakeFiles/cmTC_95eb8.dir/CMakeCXXCompilerABI.cpp.o] ==> ignore
+          arg [cmTC_878a7] ==> ignore
+          arg [-L/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//../../../../lib64] ==> dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//../../../../lib64]
+          arg [-latomic] ==> lib [atomic]
+          arg [-lnvhpcatm] ==> lib [nvhpcatm]
           arg [-lstdc++] ==> lib [stdc++]
-          arg [-lm] ==> lib [m]
-          arg [-lgcc_s] ==> lib [gcc_s]
+          arg [-lnvomp] ==> lib [nvomp]
+          arg [-ldl] ==> lib [dl]
+          arg [--as-needed] ==> ignore
+          arg [-lnvhpcatm] ==> lib [nvhpcatm]
+          arg [-latomic] ==> lib [atomic]
+          arg [--no-as-needed] ==> ignore
+          arg [-lpthread] ==> lib [pthread]
+          arg [-lnvcpumath] ==> lib [nvcpumath]
+          arg [-lnsnvc] ==> lib [nsnvc]
+          arg [-lnvc] ==> lib [nvc]
           arg [-lgcc] ==> lib [gcc]
           arg [-lc] ==> lib [c]
           arg [-lgcc_s] ==> lib [gcc_s]
-          arg [-lgcc] ==> lib [gcc]
-          arg [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtfastmath.o] ==> obj [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtfastmath.o]
-          arg [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtend.o] ==> obj [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtend.o]
-          arg [/lib/../lib64/crtn.o] ==> obj [/lib/../lib64/crtn.o]
-        collapse obj [/lib/../lib64/crt1.o] ==> [/lib64/crt1.o]
-        collapse obj [/lib/../lib64/crti.o] ==> [/lib64/crti.o]
-        collapse obj [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtbegin.o] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtbegin.o]
-        collapse obj [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtfastmath.o] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtfastmath.o]
-        collapse obj [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtend.o] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtend.o]
-        collapse obj [/lib/../lib64/crtn.o] ==> [/lib64/crtn.o]
-        collapse library dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0]
-        collapse library dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc]
-        collapse library dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../../../lib64] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib64]
-        collapse library dir [/lib/../lib64] ==> [/lib64]
-        collapse library dir [/usr/lib/../lib64] ==> [/usr/lib64]
-        collapse library dir [/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/openmpi] ==> [/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/openmpi]
-        collapse library dir [/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib] ==> [/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib]
-        collapse library dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/../../..] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib]
-        implicit libs: [stdc++;m;gcc_s;gcc;c;gcc_s;gcc]
-        implicit objs: [/lib64/crt1.o;/lib64/crti.o;/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtbegin.o;/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtfastmath.o;/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtend.o;/lib64/crtn.o]
-        implicit dirs: [/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0;/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc;/vapps/rhel9/x86_64/gcc/14.1.0/lib64;/lib64;/usr/lib64;/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/openmpi;/apps/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib;/vapps/rhel9/x86_64/gcc/14.1.0/lib]
+          arg [-lm] ==> lib [m]
+          arg [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//crtend.o] ==> obj [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//crtend.o]
+          arg [/usr/lib64/crtn.o] ==> obj [/usr/lib64/crtn.o]
+        collapse obj [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//crtbegin.o] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtbegin.o]
+        collapse obj [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//crtend.o] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtend.o]
+        collapse library dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nvshmem/lib] ==> [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nvshmem/lib]
+        collapse library dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nccl/lib] ==> [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nccl/lib]
+        collapse library dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/mpi/lib] ==> [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/mpi/lib]
+        collapse library dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/math_libs/lib64] ==> [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/math_libs/lib64]
+        collapse library dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib] ==> [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib]
+        collapse library dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/extras/qt/lib] ==> [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/extras/qt/lib]
+        collapse library dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/extras/CUPTI/lib64] ==> [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/extras/CUPTI/lib64]
+        collapse library dir [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/lib64] ==> [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/lib64]
+        collapse library dir [/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib] ==> [/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib]
+        collapse library dir [/usr/lib64] ==> [/usr/lib64]
+        collapse library dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0/] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0]
+        collapse library dir [/vapps/rhel9/x86_64/gcc/14.1.0/bin/../lib/gcc/x86_64-pc-linux-gnu/14.1.0//../../../../lib64] ==> [/vapps/rhel9/x86_64/gcc/14.1.0/lib64]
+        implicit libs: [atomic;nvhpcatm;stdc++;nvomp;dl;nvhpcatm;atomic;pthread;nvcpumath;nsnvc;nvc;gcc;c;gcc_s;m]
+        implicit objs: [/usr/lib64/crt1.o;/usr/lib64/crti.o;/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtbegin.o;/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0/crtend.o;/usr/lib64/crtn.o]
+        implicit dirs: [/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nvshmem/lib;/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/nccl/lib;/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/comm_libs/mpi/lib;/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/math_libs/lib64;/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib;/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/extras/qt/lib;/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/extras/CUPTI/lib64;/apps/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/cuda/lib64;/vapps/rhel9/x86_64/nvhpc/24.5/gcc-14.1.0_cuda-12.4/Linux_x86_64/24.5/compilers/lib;/usr/lib64;/vapps/rhel9/x86_64/gcc/14.1.0/lib/gcc/x86_64-pc-linux-gnu/14.1.0;/vapps/rhel9/x86_64/gcc/14.1.0/lib64]
         implicit fwks: []
       
       
-  -
-    kind: "try_compile-v1"
-    backtrace:
-      - "/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/FindMPI.cmake:1278 (try_compile)"
-      - "/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/FindMPI.cmake:1322 (_MPI_try_staged_settings)"
-      - "/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/FindMPI.cmake:1645 (_MPI_check_lang_works)"
-      - "CMakeLists.txt:26 (find_package)"
-    description: "The MPI test test_mpi for CXX in mode normal"
-    directories:
-      source: "/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-DJReW6"
-      binary: "/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-DJReW6"
-    cmakeVariables:
-      CMAKE_CXX_FLAGS: "-Ofast -DNDEBUG"
-      CMAKE_CXX_FLAGS_DEBUG: "-g"
-      CMAKE_EXE_LINKER_FLAGS: ""
-    buildResult:
-      variable: "MPI_RESULT_CXX_test_mpi_normal"
-      cached: true
-      stdout: |
-        Change Dir: '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-DJReW6'
-        
-        Run Build Command(s): /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_e59c9/fast
-        /usr/bin/gmake  -f CMakeFiles/cmTC_e59c9.dir/build.make CMakeFiles/cmTC_e59c9.dir/build
-        gmake[1]: Entering directory '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-DJReW6'
-        Building CXX object CMakeFiles/cmTC_e59c9.dir/test_mpi.cpp.o
-        /apps/gcc/14.1.0/bin/g++  -isystem /vapps/rhel9/x86_64/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/include -Ofast -DNDEBUG  -std=c++20 -o CMakeFiles/cmTC_e59c9.dir/test_mpi.cpp.o -c /home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-DJReW6/test_mpi.cpp
-        Linking CXX executable cmTC_e59c9
-        /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_e59c9.dir/link.txt --verbose=1
-        /apps/gcc/14.1.0/bin/g++ -Ofast -DNDEBUG  CMakeFiles/cmTC_e59c9.dir/test_mpi.cpp.o -o cmTC_e59c9  /vapps/rhel9/x86_64/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/libmpi.so 
-        gmake[1]: Leaving directory '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-DJReW6'
-        
-      exitCode: 0
-  -
-    kind: "try_compile-v1"
-    backtrace:
-      - "/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/FindMPI.cmake:1278 (try_compile)"
-      - "/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/FindMPI.cmake:1672 (_MPI_try_staged_settings)"
-      - "CMakeLists.txt:26 (find_package)"
-    description: "The MPI test test_mpi for CXX in mode MPICXX"
-    directories:
-      source: "/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-QmevdV"
-      binary: "/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-QmevdV"
-    cmakeVariables:
-      CMAKE_CXX_FLAGS: "-Ofast -DNDEBUG"
-      CMAKE_CXX_FLAGS_DEBUG: "-g"
-      CMAKE_EXE_LINKER_FLAGS: ""
-    buildResult:
-      variable: "MPI_RESULT_CXX_test_mpi_MPICXX"
-      cached: true
-      stdout: |
-        Change Dir: '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-QmevdV'
-        
-        Run Build Command(s): /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_d93e9/fast
-        /usr/bin/gmake  -f CMakeFiles/cmTC_d93e9.dir/build.make CMakeFiles/cmTC_d93e9.dir/build
-        gmake[1]: Entering directory '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-QmevdV'
-        Building CXX object CMakeFiles/cmTC_d93e9.dir/test_mpi.cpp.o
-        /apps/gcc/14.1.0/bin/g++  -isystem /vapps/rhel9/x86_64/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/include -Ofast -DNDEBUG  -std=c++20 -o CMakeFiles/cmTC_d93e9.dir/test_mpi.cpp.o -c /home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-QmevdV/test_mpi.cpp
-        Linking CXX executable cmTC_d93e9
-        /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_d93e9.dir/link.txt --verbose=1
-        /apps/gcc/14.1.0/bin/g++ -Ofast -DNDEBUG  CMakeFiles/cmTC_d93e9.dir/test_mpi.cpp.o -o cmTC_d93e9  /vapps/rhel9/x86_64/openmpi/5.0.3/gcc-14.1.0_cuda-12.5_ucx-1.17.0/lib/libmpi.so 
-        gmake[1]: Leaving directory '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-QmevdV'
-        
-      exitCode: 0
-  -
-    kind: "try_compile-v1"
-    backtrace:
-      - "/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/Internal/CheckSourceCompiles.cmake:101 (try_compile)"
-      - "/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CheckCXXSourceCompiles.cmake:52 (cmake_check_source_compiles)"
-      - "/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/FindThreads.cmake:99 (CHECK_CXX_SOURCE_COMPILES)"
-      - "/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/FindThreads.cmake:163 (_threads_check_libc)"
-      - "/vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/share/cmake-3.28/Modules/CMakeFindDependencyMacro.cmake:76 (find_package)"
-      - "/apps/mpl/0.3.0/lib64/cmake/mpl/mplConfig.cmake:3 (find_dependency)"
-      - "CMakeLists.txt:28 (find_package)"
-    checks:
-      - "Performing Test CMAKE_HAVE_LIBC_PTHREAD"
-    directories:
-      source: "/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-IvQXn0"
-      binary: "/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-IvQXn0"
-    cmakeVariables:
-      CMAKE_CXX_FLAGS: "-Ofast -DNDEBUG"
-      CMAKE_CXX_FLAGS_DEBUG: "-g"
-      CMAKE_EXE_LINKER_FLAGS: ""
-    buildResult:
-      variable: "CMAKE_HAVE_LIBC_PTHREAD"
-      cached: true
-      stdout: |
-        Change Dir: '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-IvQXn0'
-        
-        Run Build Command(s): /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile cmTC_bea3c/fast
-        /usr/bin/gmake  -f CMakeFiles/cmTC_bea3c.dir/build.make CMakeFiles/cmTC_bea3c.dir/build
-        gmake[1]: Entering directory '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-IvQXn0'
-        Building CXX object CMakeFiles/cmTC_bea3c.dir/src.cxx.o
-        /apps/gcc/14.1.0/bin/g++ -DCMAKE_HAVE_LIBC_PTHREAD  -Ofast -DNDEBUG  -std=c++20 -o CMakeFiles/cmTC_bea3c.dir/src.cxx.o -c /home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-IvQXn0/src.cxx
-        Linking CXX executable cmTC_bea3c
-        /vapps/rhel9/x86_64/cmake/3.28.3/gcc-11.3.1/bin/cmake -E cmake_link_script CMakeFiles/cmTC_bea3c.dir/link.txt --verbose=1
-        /apps/gcc/14.1.0/bin/g++ -Ofast -DNDEBUG  CMakeFiles/cmTC_bea3c.dir/src.cxx.o -o cmTC_bea3c 
-        gmake[1]: Leaving directory '/home/paigeid/class/2024_phase7/scicomp/bld/CMakeFiles/CMakeScratch/TryCompile-IvQXn0'
-        
-      exitCode: 0
 ...
