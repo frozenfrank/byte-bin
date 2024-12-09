@@ -32,6 +32,10 @@ make draw COORDS="-5 5 -5 5"
 
 A journey beginning at the given class starter range.
 
+### Starter
+
+![Class Defined Mandelbrot Fractal Image](./img/sample_mandelbrot_medium.jpeg)
+
 ### Zoomed In
 
 ![Mandelbrot Zoomed In Sample](./img/pic-zoomed-in_medium.jpeg)
