@@ -1,3 +1,0 @@
-/home/paigeid/2024ITC/project/bld/CMakeFiles/wavesolve_gpu.dir
-/home/paigeid/2024ITC/project/bld/CMakeFiles/edit_cache.dir
-/home/paigeid/2024ITC/project/bld/CMakeFiles/rebuild_cache.dir
