@@ -1,6 +1,6 @@
 # Phase 7 Performance Testing
 
-An exploration of the runtime performance of the WaveSolveMPI (phase 7) code on different storage mediums available on the BYU  SuperComputer.
+An exploration of the runtime performance of the [WaveSolveMPI (phase 7)](https://byuhpc.github.io/sci-comp-course/project/phase7.html) code on different storage mediums available on the BYU  SuperComputer.
 
 We researched the following performance on the following storage locations:
 
