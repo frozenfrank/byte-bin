@@ -7,21 +7,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_EXTENSIONS FALSE)
 set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
-# Build wavesolve_serial
-#add_executable(wavesolve_serial wavesolve.cpp Wave.hpp)
-
-#find_package(OpenMP REQUIRED)
-#add_executable(optimize optimize.cpp)
-#target_link_libraries(optimize PRIVATE OpenMP::OpenMP_CXX)
-
-#find_package(OpenMP REQUIRED)
-#add_executable(wavesolve_openmp wavesolve.cpp Wave.hpp)
-#target_link_libraries(wavesolve_openmp PRIVATE OpenMP::OpenMP_CXX)
-
-#find_package(Threads REQUIRED)
-#add_executable(wavesolve_thread blah.cpp)
-#target_link_libraries(blah PRIVATE Threads::Threads)
-
 # wavesolve_mpi
 find_package(MPI)
 if(MPI_CXX_FOUND)
