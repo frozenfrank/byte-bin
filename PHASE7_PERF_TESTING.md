@@ -120,40 +120,23 @@ done;
 mv results.log ..
 cd ..
 
-awk '/^RES: / {sub(/^RES: /, ""); print}' results.log > data.log
+awk 'BEGIN {print "storage npernode wall_secs sys_secs usr_secs"} /^RES: / {sub(/^RES: /, ""); print}' results.log > data.csv
 ```
 
 ```shell
 ## Manually clean results
 cp results.log results_cleaned.log
 echo "TODO: Manually remove early termination results, etc..."
-awk '/^RES: / {sub(/^RES: /, ""); print}' results_cleaned.log > data_cleaned.log
+awk 'BEGIN {print "storage npernode wall_secs sys_secs usr_secs"} /^RES: / {sub(/^RES: /, ""); print}' results_cleaned.log > data_cleaned.csv
 ```
 
 ## Results
 
-```csv
-storage npernode wall_secs sys_secs usr_secs
-STD (4) 16.67 1.53 47.19
-STD (4) 11.76 1.47 32.12
-STD (4) 17.06 1.59 47.39
-STD (4) 16.88 1.44 46.67
-STD (4) 16.94 1.61 52.49
-STD (4) 24.83 1.44 70.78
-STD (4) 16.63 1.46 51.23
-STD (4) 24.78 1.36 86.83
-STD (4) 26.61 1.50 82.21
-STD (4) 25.60 1.56 65.39
-AUTODELETE (4) 17.50 1.54 49.06
-AUTODELETE (4) 17.86 1.31 48.03
-AUTODELETE (4) 16.79 1.40 48.78
-AUTODELETE (4) 16.81 1.42 54.42
-AUTODELETE (4) 16.80 1.58 45.71
-AUTODELETE (4) 18.03 1.41 49.02
-ARCHIVE (4) 10.33 1.48 31.87
-ARCHIVE (4) 10.82 1.42 31.08
-ARCHIVE (4) 10.49 1.46 30.55
-ARCHIVE (4) 10.72 1.47 30.52
-ARCHIVE (4) 10.71 1.50 30.28
-ARCHIVE (4) 10.74 1.55 30.60
-```
+The following files contain the research results. CSV files are delimited with a space character.
+
+| File | Description |
+| ---- | :---------- |
+| [`results.log`](./results.log) | Raw evaluation output from processes |
+| [`data.csv`](./data.csv) | Extracted run times from `results.log` |
+| [`results_cleaned.log`](./results_cleaned.log) | Raw evaluation output, manually cleaned to error times |
+| [`data_cleaned.csv`](./data_cleaned.csv) | Extracted run times from `results_cleaned.log` |
