@@ -1,5 +1,71 @@
 # Phase 7 Performance Testing
 
+An exploration of the runtime performance of the WaveSolveMPI (phase 7) code on different storage mediums available on the BYU  SuperComputer.
+
+We researched the following performance on the following storage locations:
+
+* SHM (`/dev/shm`)
+* TMP (`/tmp`)
+* ARCHIVE (`/nobackup/archive`)
+* AUTODELETE (`/nobackup/autodelete`)
+
+After analyzing all the data, **ARCHIVE** is clearly the most performant storage system to use for this MPI task.
+
+## Results
+
+No trial of SHM or TMP ever completed successfully. Intuitively, both of these storage locations are node-local, which means they cannot be used to share information between different nodes.
+
+### Median Wall Time
+
+The median time required to run a single trial for each storage medium and node count.
+
+Notably, on the ARCHIVE system, total performance improved (wall time decreased) as the number of processes increased. However, on both the AUTODELETE and STD systems, total performance significantly decreased due to I/O bottlenecking.
+
+![Median Wall Time](./img/median_wall_time.png)
+
+| npernode | ARCHIVE | AUTODELETE | STD |
+| --- | --- | --- | --- |
+| 4 | 9.66 | 17.54 | 17.66 |
+| 8 | 7.41 | 27.70 | 43.83 |
+| 16 | 7.46 | 54.54 | 53.21 |
+| Grand Total | 9.35 | 25.44 | 25.33 |
+
+### Result Distribution
+
+This chart visualizes the run times on a common statistical distribution.
+
+It shows that all the ARCHIVE trials are significantly faster than all of the AUTODELETE and STD trials.
+
+![Result Distribution](./img/result_distribution.png)
+
+### Count of Trials
+
+A total of **179 successful trials** were completed, with a total combined wall time of **66.9 minutes**.
+
+An even number of trials were performed for each storage medium.
+
+![Number of Trials](./img/number_of_trials.png)
+
+| npernode | ARCHIVE | AUTODELETE | STD | Grand Total |
+| --- | --- | --- | --- | --- |
+| 4 | 34 | 34 | 39 | 107 |
+| 8 | 16 | 16 | 16 | 48 |
+| 16 | 8 | 8 | 8 | 24 |
+| Grand Total | 58 | 58 | 63 | 179 |
+
+### Raw Results
+
+The following files contain the research results. CSV files are delimited with a space character.
+
+| File | Description |
+| ---- | :---------- |
+| [`results.log`](./results.log) | Raw evaluation output from processes |
+| [`data.csv`](./data.csv) | Extracted run times from `results.log` |
+| [`results_cleaned.log`](./results_cleaned.log) | Raw evaluation output, manually cleaned to error times |
+| [`data_cleaned.csv`](./data_cleaned.csv) | Extracted run times from `results_cleaned.log` |
+
+These charts and data were analyzed with [this Google Sheet](https://docs.google.com/spreadsheets/d/1woxD0QlrEMhaNHeGzPmCn2BFTa4VjtQ_CSDahKwh5DI/edit?usp=sharing).
+
 ## Process
 
 ### Setup
@@ -129,14 +195,3 @@ cp results.log results_cleaned.log
 echo "TODO: Manually remove early termination results, etc..."
 awk 'BEGIN {print "storage npernode wall_secs sys_secs usr_secs"} /^RES: / {sub(/^RES: /, ""); print}' results_cleaned.log > data_cleaned.csv
 ```
-
-## Results
-
-The following files contain the research results. CSV files are delimited with a space character.
-
-| File | Description |
-| ---- | :---------- |
-| [`results.log`](./results.log) | Raw evaluation output from processes |
-| [`data.csv`](./data.csv) | Extracted run times from `results.log` |
-| [`results_cleaned.log`](./results_cleaned.log) | Raw evaluation output, manually cleaned to error times |
-| [`data_cleaned.csv`](./data_cleaned.csv) | Extracted run times from `results_cleaned.log` |
