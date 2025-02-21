@@ -164,6 +164,7 @@ N_PER_NODE=4
 N_PER_NODE=8
 N_PER_NODE=16
 
+# Include process output
 for i in {1..8}; do
   echo "Starting iteration $i" `date`;
   evaluate STD >> results.log 2>&1;
@@ -171,6 +172,7 @@ for i in {1..8}; do
   evaluate ARCHIVE >> results.log 2>&1;
 done;
 
+# Silence process output
 for i in {1..8}; do
   echo "Starting iteration $i" `date`;
   evaluate STD 2>> results.log > /dev/null
