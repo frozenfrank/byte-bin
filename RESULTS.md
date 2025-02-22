@@ -1,5 +1,8 @@
 # Mandelbrot Fractal Evaluations
 
+> [!NOTE]
+> Are you just looking for the pretty pictures? Those can be found in [IMAGE-EXPLORATION.md](./IMAGE-EXPLORATION.md).
+
 The Mandelbrot set is a complex and infinitely intricate mathematical fractal defined by the iterative function $z_{n+1}=z_n^2+c$, where $z$ and $c$ are complex numbers. Visualizing it with C++ involves calculating whether each point on a grid of complex numbers remains bounded under iteration, and translating these results into color values to render a captivating fractal image.
 
 ## Overview
