@@ -8,7 +8,7 @@ A low-resolution sample image is provided below. The original file size occupies
 
 ![Downsized Mandelbrot Fractal Image](./img/sample_mandelbrot_medium.jpeg)
 
-In this exercise, we were interested in optimizing the performance of `C++` code to produce the correct result in a timely manner. The yellow line with stars represents the real time a human would spend waiting for the program to finish. Dividing the problem into smaller chunks (threads) which could run concurrently improved performance, with severely dimishing returns after maxing out the hardware capabilities of the lab machines.
+In this exercise, we were interested in optimizing the performance of `C++` code to produce the correct result in a timely manner. The yellow line with stars represents the real time a human would spend waiting for the program to finish. Dividing the problem into smaller chunks (threads) which could run concurrently improved performance, with severely diminishing returns after maxing out the hardware capabilities of the lab machines.
 
 ![Mandelbrot Execution Time by Thread Configuration](./img/results_summary_chart.png)
 
@@ -78,7 +78,7 @@ Since each $p$ value is _double_ the value before it, we would also expect _doub
 
 $$G_p=\frac{S_p}{S_{p-1}}$$
 
-Definintion of **efficiency** which measures the overhead due to parallelization and is reported as a percentage.
+Definition of **efficiency** which measures the overhead due to parallelization and is reported as a percentage.
 
 $$E_p=\frac{S_p}{p}=\frac{T_1}{pT_p}$$
 
