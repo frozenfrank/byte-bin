@@ -15,9 +15,11 @@ After analyzing all the data, **ARCHIVE** is clearly the most performant storage
 
 No trial of SHM or TMP ever completed successfully. Intuitively, both of these storage locations are node-local, which means they cannot be used to share information between different nodes.
 
+The runtime for rach trial is reported in seconds.
+
 ### Median Wall Time
 
-The median time required to run a single trial for each storage medium and node count.
+The median time required to run a single trial for each storage medium and node count in seconds.
 
 Notably, on the ARCHIVE system, total performance improved (wall time decreased) as the number of processes increased. However, on both the AUTODELETE and STD systems, total performance significantly decreased due to I/O bottlenecking.
 
@@ -153,7 +155,7 @@ evaluate() {
   local in_var="MEDIUM_${storage_code}_IN"
   local out_var="MEDIUM_${storage_code}_OUT"
 
-  echo /bin/time -f "RES: $storage_code ($npernode) %e %S %U" mpirun --npernode "$npernode" ./wavesolve_mpi "${!in_var}" "${!out_var}"
+  echo /bin/time -f "$storage_code ($npernode) %e %S %U" mpirun --npernode "$npernode" ./wavesolve_mpi "${!in_var}" "${!out_var}"
   /bin/time -f "RES: $storage_code ($npernode) %e %S %U" mpirun --npernode "$npernode" ./wavesolve_mpi "${!in_var}" "${!out_var}"
 }
 ```
