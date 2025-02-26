@@ -82,6 +82,7 @@ git show
 # Date:   Wed Feb 19 12:19:19 2025 -0700
 #
 #     Exclude build directors from git going forward
+
 # commit 9ce2d35bd293d74a89ac747c0572f71ae86d5524 (tag: phase7, origin/updated-phase7)
 # Author: Paige Despain <paigeid@byu.edu>
 # Date:   Wed Dec 4 12:58:55 2024 -0700
