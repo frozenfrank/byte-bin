@@ -1,7 +1,7 @@
 # Architecture Diagram
 
 This [Architecture Diagram](https://mermaid.js.org/syntax/architecture.html) visualizes the relationships between entities and services involved in this project.
-It also describies and justifies each of the particular architecture choices in the context of the broader application.
+It also describes and justifies each of the particular architecture choices in the context of the broader application.
 
 ## Diagram
 

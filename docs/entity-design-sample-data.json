@@ -1,0 +1,189 @@
+{
+  "id": "969cd9e4-4044-4f96-b708-9d372064ac38",
+  "active": true,
+  "name": "Zwick / Foothill Main",
+  "created_at": "2025-02-13T17:45:22.876Z",
+  "last_updated_at": "2025-02-28T07:31:42.000Z",
+  "last_imported_at": "2025-03-13T20:09:30.951Z",
+  "start_date": "2025-02-14T00:00:00.000Z",
+  "due_date": null,
+  "rp": {
+    "status": "active",
+    "due_date": null,
+    "updated_at": "2025-02-28T07:31:42.000Z",
+    "project_id": "969cd9e4-4044-4f96-b708-9d372064ac38",
+    "group_ids": [
+      "6a14800c-e3d3-4a64-8599-8a8f7de661f2"
+    ],
+    "categories": [
+      {
+        "name": "Phase 03 Area B Main Bldg",
+        "id": "4f669cd7-56cc-4eef-9746-498f1f146e87",
+        "labeled_request_cards": [],
+        "subcategories": [],
+        "request_count": null
+      },
+      {
+        "name": "Phase 04 Area C Main Bldg",
+        "labeled_request_cards": [],
+        "subcategories": [],
+        "id": "b45b3bd7-e8cf-484d-9770-11ee9ac6d29a",
+        "request_count": null
+      },
+      {
+        "labeled_request_cards": [],
+        "subcategories": [],
+        "id": "3efd97e5-10bc-49a3-9427-16f3fbcff98e",
+        "name": "Phase 05 Area A Facade",
+        "request_count": null
+      },
+      {
+        "id": "a85ba414-d78f-42a5-a6aa-aa97f3828ebe",
+        "subcategories": [],
+        "request_count": null,
+        "labeled_request_cards": [],
+        "name": "Phase 06 Area D Main Bldg"
+      },
+      {
+        "name": "Shell",
+        "id": "04cd6a69-e3e7-4376-b941-3aa898b1f5f8",
+        "labeled_request_cards": [],
+        "subcategories": [],
+        "request_count": null
+      },
+      {
+        "subcategories": [
+          {
+            "name": "Brick",
+            "id": "224b4cf3-2c82-411f-9681-75dee2cf2721"
+          },
+          {
+            "id": "de9e3035-7549-4651-bab3-166c8c807329",
+            "name": "Stucco"
+          }
+        ],
+        "name": "Phase 02 Area ?? East Bldg",
+        "labeled_request_cards": [],
+        "request_count": null,
+        "id": "827784ae-0f96-4cfd-8cf0-26238e8d0159"
+      }
+    ],
+    "roles": [
+      {
+        "job_title_id": "505bc7f6-3915-4e5f-b273-79d781b8c508",
+        "id": "2a64ee12-0936-4759-a2c5-591ae2f00f21",
+        "person_id": "521868b9-04dc-4556-a757-cc8cd9881410"
+      },
+      {
+        "person_id": "1fa4e53e-2657-4311-a844-5e1e16374fbb",
+        "id": "3a2c6911-d142-4dc9-9a7b-a29b031ea968",
+        "job_title_id": "505bc7f6-3915-4e5f-b273-79d781b8c508"
+      }
+    ],
+    "start_date": "2025-02-14T00:00:00.000Z",
+    "color": "#79A3EC"
+  },
+  "tasks": {
+    "HJyvhU8oTK5xDrNePrXo": {
+      "start_date": "2025-03-24T00:00:00.000Z",
+      "job_title_id": "6fa69589-2bb9-4261-868b-278b50502be0",
+      "predefined_task_id": "thin-brick-installation",
+      "name": "Thin Brick & Stone",
+      "percent_complete": 75,
+      "square_feet": 1860,
+      "predefined_task_group_id": "mason",
+      "created_at": "2025-03-18T21:31:24.367Z",
+      "predefined_task_material_id": "thin-brick",
+      "predefined_task_job_id": "installation",
+      "sqft_man_day": 45,
+      "num_employees": 4
+    },
+    "IYZnABCMp1jYSXC9DTBv": {
+      "square_feet": 650,
+      "created_at": "2025-03-18T21:32:17.444Z",
+      "num_employees": 4,
+      "name": "Long Board & James Hardie siding",
+      "percent_complete": 0,
+      "start_date": "2025-04-10T00:00:00.000Z",
+      "job_title_id": "f7514154-010d-4282-a528-e09919a0ce5b"
+    },
+    "82w1ieSIh8704rmwaHsY": {
+      "predefined_task_material_id": null,
+      "predefined_task_job_id": null,
+      "square_feet": 150,
+      "start_date": "2025-04-07T00:00:00.000Z",
+      "percent_complete": 0,
+      "job_title_id": "6fa69589-2bb9-4261-868b-278b50502be0",
+      "num_employees": 2,
+      "sqft_man_day": 45,
+      "created_at": "2025-03-18T21:31:48.480Z",
+      "name": "Cast Stone Bases",
+      "predefined_task_group_id": null
+    },
+    "GxbeGJTvdw3W1Takq83s": {
+      "num_employees": 6,
+      "created_at": "2025-03-18T21:30:55.325Z",
+      "name": "Stucco",
+      "job_title_id": "145e82e3-f876-459d-9fe4-dcbe904f07a2",
+      "start_date": "2025-03-29T00:00:00.000Z",
+      "square_feet": 4570,
+      "percent_complete": 0
+    },
+    "0lPYRp8dFdRFnmU2heH8": {
+      "percent_complete": 0,
+      "job_title_id": "28a164db-df1e-47df-b221-88c09c83a1cd",
+      "predefined_task_job_id": null,
+      "start_date": "2025-03-28T00:00:00.000Z",
+      "predefined_task_material_id": null,
+      "created_at": "2025-03-18T21:29:47.901Z",
+      "num_employees": 3,
+      "predefined_task_group_id": null,
+      "predefined_task_id": "++custom-task++",
+      "square_feet": 4750,
+      "sqft_man_day": 41,
+      "name": "Stucco Prep (Lath)"
+    },
+    "pVtwK6l46EwhlE8366mn": {
+      "square_feet": 1572.5,
+      "num_employees": 3,
+      "percent_complete": 20,
+      "start_date": "2025-03-24T00:00:00.000Z",
+      "predefined_task_id": "thin-brick-installation",
+      "predefined_task_group_id": "mason",
+      "predefined_task_material_id": "thin-brick",
+      "name": "Thin Brick (Durock)",
+      "predefined_task_job_id": "installation",
+      "job_title_id": "6fa69589-2bb9-4261-868b-278b50502be0",
+      "sqft_man_day": 50,
+      "created_at": "2025-03-18T21:30:31.941Z"
+    },
+    "XxfvqLCfWHhgcZf7WdVw": {
+      "square_feet": 650,
+      "start_date": "2025-04-14T00:00:00.000Z",
+      "percent_complete": 0,
+      "sqft_man_day": 300,
+      "job_title_id": "ccf24b89-a813-417f-942a-3ee99c50571f",
+      "created_at": "2025-03-18T21:32:44.537Z",
+      "num_employees": 8,
+      "name": "Scaffolding Down",
+      "predefined_task_job_id": "scaffolding",
+      "predefined_task_id": "general-scaffolding",
+      "predefined_task_group_id": "general",
+      "predefined_task_material_id": "general"
+    },
+    "l9I10sWrpwXZL7MlwjSq": {
+      "predefined_task_group_id": "general",
+      "predefined_task_material_id": "general",
+      "num_employees": 8,
+      "percent_complete": 30,
+      "predefined_task_job_id": "scaffolding",
+      "predefined_task_id": "general-scaffolding",
+      "start_date": "2025-03-24T00:00:00.000Z",
+      "job_title_id": "ccf24b89-a813-417f-942a-3ee99c50571f",
+      "name": "General Scaffolding",
+      "sqft_man_day": 300,
+      "created_at": "2025-03-18T21:29:07.454Z",
+      "square_feet": 4900
+    }
+  }
+}
