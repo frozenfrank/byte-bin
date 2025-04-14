@@ -116,61 +116,59 @@ F14 -- "Throw the bag in the ocean" --> F19["Crew cannot open the bag"]
 F19 --> F20{"Chance of sea monster disturbing bag"}
 F20 -- "Any sea creature opens it" --> F18
 F20 -- "No sea creature opens it" --> F22["Permitted to sail home safely"]
-%% F1 -- "Tarry" --> F2{"Bag of winds: stay awake or tell crew?"}
-%% F2 -- "Stay awake 9 days" --> F3["Crew opens bag, blown off course"]
-%% F3 --> M
 class F8,F11,F22 gain
 class F3,F4,F12,F18,F24 loss
 FL["Sail on"] --> M
 
 %% Circe's Island
-M["Circe's Island"]:::episode --> N{"Visit Circe or pass?"}
-N -- "Visit" --> N1{"Leave or tarry?"}
-N1 -- "Tarry" --> N2["Stay 1 year"]
-N2 --> O["Quest to Tiresias"]
+M["Circe's Island"]:::episode
+%% M["Circe's Island"]:::episode --> N{"Visit Circe or pass?"}
+%% N -- "Visit" --> N1{"Leave or tarry?"}
+%% N1 -- "Tarry" --> N2["Stay 1 year"]
+%% N2 --> O["Quest to Tiresias"]
 
-O --> P{"Visit Tiresias or skip?"}
-P -- "Visit" --> P1["Sees mother, earns prophecy"]
-P1 --> Q["Sirens"]
+%% O --> P{"Visit Tiresias or skip?"}
+%% P -- "Visit" --> P1["Sees mother, earns prophecy"]
+%% P1 --> Q["Sirens"]
 
-Q --> R{"Sirens: ears plugged?"}
-R -- "Only crew plugged" --> R1["Odysseus hears sirens"]
-R1 --> S["Scylla vs Charybdis"]
+%% Q --> R{"Sirens: ears plugged?"}
+%% R -- "Only crew plugged" --> R1["Odysseus hears sirens"]
+%% R1 --> S["Scylla vs Charybdis"]
 
-S --> T{"Steer toward?"}
-T -- "Scylla" --> T1{"Fight or run?"}
-T1 -- "Run" --> T2["Lose 6 men"]
-T2 --> U["Island of Helios"]
+%% S --> T{"Steer toward?"}
+%% T -- "Scylla" --> T1{"Fight or run?"}
+%% T1 -- "Run" --> T2["Lose 6 men"]
+%% T2 --> U["Island of Helios"]
 
-U --> V{"Row past or stop?"}
-V -- "Stop" --> V1{"Eat cows?"}
-V1 -- "Wait then eat cows" --> V2["Zeus kills crew"]
-V2 --> W["Odysseus reaches Calypso"]
+%% U --> V{"Row past or stop?"}
+%% V -- "Stop" --> V1{"Eat cows?"}
+%% V1 -- "Wait then eat cows" --> V2["Zeus kills crew"]
+%% V2 --> W["Odysseus reaches Calypso"]
 
-W --> X{"Stay or build raft?"}
-X -- "Build raft" --> Y["Phaeacians"]
+%% W --> X{"Stay or build raft?"}
+%% X -- "Build raft" --> Y["Phaeacians"]
 
-Y --> Z{"Be kind to Nausicaa?"}
-Z -- "Kind" --> Z1{"Approach Queen or King?"}
-Z1 -- "Queen" --> Z2{"Stay or return?"}
-Z2 -- "Return" --> Z3["Returned to Ithaca"]
+%% Y --> Z{"Be kind to Nausicaa?"}
+%% Z -- "Kind" --> Z1{"Approach Queen or King?"}
+%% Z1 -- "Queen" --> Z2{"Stay or return?"}
+%% Z2 -- "Return" --> Z3["Returned to Ithaca"]
 
-Z3 --> AA{"Return or plan?"}
-AA -- "Plan" --> AB{"Reveal to Eumaeus?"}
-AB -- "Disguise" --> AC{"Reveal to Telemachus?"}
-AC -- "Reveal" --> AD{"Approach suitors?"}
-AD -- "Beg" --> AE["Suitors insult him"]
+%% Z3 --> AA{"Return or plan?"}
+%% AA -- "Plan" --> AB{"Reveal to Eumaeus?"}
+%% AB -- "Disguise" --> AC{"Reveal to Telemachus?"}
+%% AC -- "Reveal" --> AD{"Approach suitors?"}
+%% AD -- "Beg" --> AE["Suitors insult him"]
 
-AE --> AF{"Bow contest or battle?"}
-AF -- "Contest" --> AG{"Spare suitors?"}
-AG -- "Spare none" --> AH{"Spare servants?"}
-AH -- "Spare loyal" --> AI["Hang traitors"]
+%% AE --> AF{"Bow contest or battle?"}
+%% AF -- "Contest" --> AG{"Spare suitors?"}
+%% AG -- "Spare none" --> AH{"Spare servants?"}
+%% AH -- "Spare loyal" --> AI["Hang traitors"]
 
-AI --> AJ{"Tell town?"}
-AJ -- "Delay news" --> AK{"Visit father?"}
-AK -- "Send word" --> AL{"Wait or go?"}
-AL -- "Visit" --> AM{"Resolve with townspeople?"}
-AM -- "Fight" --> AN["Gods intervene to stop war"]
+%% AI --> AJ{"Tell town?"}
+%% AJ -- "Delay news" --> AK{"Visit father?"}
+%% AK -- "Send word" --> AL{"Wait or go?"}
+%% AL -- "Visit" --> AM{"Resolve with townspeople?"}
+%% AM -- "Fight" --> AN["Gods intervene to stop war"]
 
 %% Styles
 classDef default fill:#f1faee,stroke:#333,stroke-width:2px
