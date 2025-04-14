@@ -1,0 +1,179 @@
+flowchart TD
+
+%% Trojan War Ends
+A["Trojan War Ends"]:::episode --> A1{"Return home or loot longer?"}
+A1 -- "Loot Troy" --> A2["Gain minimal loot"]
+A2 --> A3["Delay return"]
+A3 --> A1
+A1 -- "Head towards Ithaca" --> B
+class A2 gain
+class A3 loss
+
+%% Cicones — City Sacking
+B["Pass Cicones"]:::episode --> B1{"Loot Cicones or pass?"}
+B1 -- "Sack the City" --> B3["Gain money, food, and girls"]
+B1 -- "Pass" --> BL
+B3 --> B4{"Leave now or sleep on beach?"}
+B4 -- "Sleep" --> B5["Gain rest"]
+B5 --> B6["Lose one man to reinforcements"]
+B4 -- "Leave" --> BL
+B6 --> BL
+class B6 loss
+class B3,B5 gain
+BL["Sail on"] --> C
+
+%% Laestrygonians — Giants
+C["Pass Laestrygonians"]:::episode --> C1{"Laestrygonians: stop or pass?"}
+C1 -- "Pass" --> CL
+C1 -- "Stop" --> C2{"Harbor: inside or outside?"}
+C2 -- "Encounter inhabitants" --> C6{"Visit: scout, sack, or shout"}
+C2 -- "Abort plans and leave" --> CL
+C6 -- "Scout" --> C7["Scouts are eaten by giants"]
+C7 --> C8["Everyone else flees"]
+C8 -- "Harbored Inside" --> C5["Ships destroyed"]
+C8 -- "Harbored Outside" --> CL
+C6 -- "Sack" --> C9["Battle the giants. Many died to powerful foes."]
+C9 --> C8
+C6 -- "Shout" --> C10["Giants are away hunting."]
+C10 --> C6
+class C5,C7,C9 loss
+CL["Sail on"] --> D
+
+%% Lotus-Eaters
+D["Pass Lotus-Eaters"]:::episode --> D1{"Lotus-Eaters: visit or pass?"}
+D1 -- "Pass" --> D4["Go hungry"]
+D4 --> DL
+D1 -- "Visit" --> D2{"Scouts: eat fruit or go hungry?"}
+D2 --> D4
+D2 -- "Eat" --> D3["Scouts forget home and fail to return"]
+D3 --> D5{"Odysseus can retreive them or leave them behind"}
+D5 -- "Leave them behind" --> D6["Lose some men"]
+D6 --> DL
+D5 -- "Attempt to rescue them" --> D7["Lose time"]
+D7 --> D8{"Chance at rescuing men"}
+D8 -- "Men are convinced" --> D9["Rescue men"]
+D8 -- "Men are not convinced" --> D6
+D9 --> DL
+class D4,D6,D7 loss
+class D9 gain
+DL["Sail on"] --> E
+
+%% Cyclops
+E["Pass Cyclops Island"]:::episode --> E1{"Cyclops: stop or bypass?"}
+E1 -- "Stop" --> E2{"What do we do?"}
+E2 -- "Cook a feast" --> E3["Gain food"]
+E3 --> E2
+E2 -- "Go Exploring" --> E4["Lose time"]
+E4 --> E5["Discover Cyclops cave"]
+E5 --> E6{"Decide to explore cave?"}
+E6 -- "Leave it alone" --> E2
+E6 -- "Look for food/gifts" --> E7["Discover sheep and living quarters of Polyphemus"]
+E7 --> E8{"Decide how to treat discoveries?"}
+E8 -- "Stay to meet the guest" --> E10["Encounter Polyphemus"]
+E10 --> E11["Lose men to cyclops"]
+E11 -- "Craft tricky 'nobody' plan" --> E12["Narrowly escape cyclops"]
+E11 -- "Continue fighting" --> E10
+E12 --> E13{"Decide how to flee the scene?"}
+E13 -- "Taunt the Cyclops" --> E14["Reveal true name"]
+E14 --> E15["Sail away"]
+E15 -- "Polyphemus is the son of Poseidon" --> E16["Poseidon is angry"]
+E16 --> EL
+E13 -- "Run like the wind!" --> EL
+E8 -- "Loot the goods" --> E9["Gain food"]
+E9 -- "Leave" --> EL
+E2 -- "Leave the island" --> EL
+class E3,E9 gain
+class E4,E11,E16 loss
+EL["Sail on"] --> F
+
+%% Wind God Aeolus
+F["Aeolia"]:::episode --> F1["Encounter massive windstorm"]
+F1 --> F2{"How to navigate storm?"}
+F2 -- "Sail through" --> F3["Lose ships to waves"]
+F2 -- "Turn away" --> F4["Lose time"]
+F4 --> F5["Discover the home of the wind god"]
+F5 --> F6{"Visit the Wind God, or pass?"}
+F6 -- "Hope for friendliness" --> F7{"Chance at divine blessing"}
+F7 -- "Aeolus is friendly" --> F8["Aeolus gifts you the winds in a bag"]
+F7 -- "Aeolus is antagonistic" --> F9["Leave immediately"]
+F9 --> F1
+F8 --> F10{"Island of Wind God: tarry or leave?"}
+F10 -- "Accept the hospitality" --> F11["Feast lavishly"]
+F11 --> F12["Lose time"]
+F12 --> F13
+F10 -- "Head home" --> F13
+F6 -- "Avoid the risk" --> F1
+F13["Sail through calm waters"] --> F14{"How to handle the wind bag?"}
+F14 -- "Tell the crew exactly what it contains" --> F15["They suspect lies and seek to open it anyways"]
+F15 --> F14
+F14 -- "Stay awake for 9 days to guard it" --> F16["Fall asleep on the 10th day"]
+F16 --> F17["Crew opens the bag"]
+F17 --> F18["Wind storm blows you far off course"]
+F18 --> FL
+F14 -- "Stay awake for 10 days until Ithaca" --> F24["Not physically possible"]
+F14 -- "Entrust the bag to Eurylochus" --> F17
+F14 -- "Throw the bag in the ocean" --> F19["Crew cannot open the bag"]
+F19 --> F20{"Chance of sea monster disturbing bag"}
+F20 -- "Any sea creature opens it" --> F18
+F20 -- "No sea creature opens it" --> F22["Permitted to sail home safely"]
+%% F1 -- "Tarry" --> F2{"Bag of winds: stay awake or tell crew?"}
+%% F2 -- "Stay awake 9 days" --> F3["Crew opens bag, blown off course"]
+%% F3 --> M
+class F8,F11,F22 gain
+class F3,F4,F12,F18,F24 loss
+FL["Sail on"] --> M
+
+%% Circe's Island
+M["Circe's Island"]:::episode --> N{"Visit Circe or pass?"}
+N -- "Visit" --> N1{"Leave or tarry?"}
+N1 -- "Tarry" --> N2["Stay 1 year"]
+N2 --> O["Quest to Tiresias"]
+
+O --> P{"Visit Tiresias or skip?"}
+P -- "Visit" --> P1["Sees mother, earns prophecy"]
+P1 --> Q["Sirens"]
+
+Q --> R{"Sirens: ears plugged?"}
+R -- "Only crew plugged" --> R1["Odysseus hears sirens"]
+R1 --> S["Scylla vs Charybdis"]
+
+S --> T{"Steer toward?"}
+T -- "Scylla" --> T1{"Fight or run?"}
+T1 -- "Run" --> T2["Lose 6 men"]
+T2 --> U["Island of Helios"]
+
+U --> V{"Row past or stop?"}
+V -- "Stop" --> V1{"Eat cows?"}
+V1 -- "Wait then eat cows" --> V2["Zeus kills crew"]
+V2 --> W["Odysseus reaches Calypso"]
+
+W --> X{"Stay or build raft?"}
+X -- "Build raft" --> Y["Phaeacians"]
+
+Y --> Z{"Be kind to Nausicaa?"}
+Z -- "Kind" --> Z1{"Approach Queen or King?"}
+Z1 -- "Queen" --> Z2{"Stay or return?"}
+Z2 -- "Return" --> Z3["Returned to Ithaca"]
+
+Z3 --> AA{"Return or plan?"}
+AA -- "Plan" --> AB{"Reveal to Eumaeus?"}
+AB -- "Disguise" --> AC{"Reveal to Telemachus?"}
+AC -- "Reveal" --> AD{"Approach suitors?"}
+AD -- "Beg" --> AE["Suitors insult him"]
+
+AE --> AF{"Bow contest or battle?"}
+AF -- "Contest" --> AG{"Spare suitors?"}
+AG -- "Spare none" --> AH{"Spare servants?"}
+AH -- "Spare loyal" --> AI["Hang traitors"]
+
+AI --> AJ{"Tell town?"}
+AJ -- "Delay news" --> AK{"Visit father?"}
+AK -- "Send word" --> AL{"Wait or go?"}
+AL -- "Visit" --> AM{"Resolve with townspeople?"}
+AM -- "Fight" --> AN["Gods intervene to stop war"]
+
+%% Styles
+classDef default fill:#f1faee,stroke:#333,stroke-width:2px
+classDef episode fill:#9b5de5,stroke-width:4px,color:#f1faee
+classDef loss fill:#e63946
+classDef gain fill:#2a9d8f
