@@ -12,6 +12,7 @@ The decision tree maps out many of the key decisions Odysseus made during his jo
 ## Links to Published Documents
 - [Final Paper | PDF](./ENGL%20201%20Final%20Paper.pdf)
 - [Odyssey Decision Tree | GitHub](odyssey-decision-tree.mermaid)
+- [Final Presentation Slides | PDF](./ENGL%20201%20Final%20Presentation.pdf)
 
 ### Links to Working Documents
 - [Final Paper | Google Docs](https://docs.google.com/document/d/1PcHA_jXHP2kOTG1t6B8m_cn13SAp9F14I3fHdXtuQBw/edit?tab=t.jl6jk6ay5ck)
