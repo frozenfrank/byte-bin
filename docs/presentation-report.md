@@ -36,8 +36,7 @@ graph TD
     classDef bottleneck fill:#ff9999,stroke:#333,stroke-width:2px
     classDef normal fill:#99ff99,stroke:#333,stroke-width:2px
 
-    class DB,CF normal
-    class RP bottleneck
+    class DB,CF,RP bottleneck
     class UI,Auth,MS,Gantt,AuthUI normal
 ```
 
