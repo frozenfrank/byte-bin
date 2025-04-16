@@ -2,6 +2,90 @@
 
 This diagram illustrates the structure of our Firestore database, modeling the relationships between `Project`, `Task`, and `Config` entities. Unlike traditional relational databases, Firestore leverages embedded documents for optimized read performance.
 
+See the [sample database data](./entity-design-sample-data.json) to see how this data lives in the database.
+
+## Diagrams
+
+Each of the following diagrams represents a portion of the overall system. The diagram shows the related data entities and suggests the data structure used to store it.
+
+Each diagram represents one collection, or a few closely related collections of documents in the database.
+
+### Auth
+
+The relevant fields and associations that enable the authorization of users to projects.
+
+This data is stored in four collections:
+- **users**: Required for the security rules to be able to read critical information about accesses.
+- **projects**: Contains the interesting data. Only the auth-related fields are illustrated here.
+- **guests**: The guests which are granted access to zero or more projects. **InviteKeys** are embedded in these documents.
+- **RpPeople**: Raw data from the external system for ID matching.
+
+```mermaid
+---
+title: Nicolson PCO — Firestore — Authorization System
+---
+erDiagram
+
+User {
+    uuid id PK
+    boolean active
+    enum type "ADMIN, MANAGER, STANDARD, GUEST"
+    text name
+    text email
+    boolean isAnon
+    uuid rpUserId FK
+    uuid guestId FK
+    uuid guestKeyId
+    timestamp createdAt
+    timestamp lastUpdatedAt
+    timestamp lastLogin
+}
+
+Project {
+    uuid id PK
+    text name
+    uuid[] assignedRpPeopleIds FK
+    uuid[] guestIds FK
+}
+
+RpPerson {
+    uuid id PK
+    text first_name
+    text last_name
+    text email
+    enum status "active, inactive"
+    timestamp lastUpdatedAt
+}
+
+Guest {
+    uuid id PK
+    boolean active
+    text name
+    Map~InviteKey~ keys FK
+    timestamp lastLogin
+    timestamp createdAt
+    uuid createdBy
+}
+
+InviteKey {
+    uuid id PK
+    timestamp validUntil
+    uuid createdByUserId FK
+    timestamp createdAt
+}
+
+User }o--o| RpPerson : "linked to"
+User }o--o| Guest : "has access to"
+Guest ||--o{ InviteKey : "contains"
+Project }o--o{ RpPerson : "assigned to"
+Project }o--o{ Guest : "gives access to"
+InviteKey ||--o| User : "joined with"
+```
+
+### Projects
+
+The format and organization of the `projects` collection.
+
 - **Projects** serve as the primary entities, containing an embedded list of **Tasks** instead of using a separate collection.
 - **RpProjectData** is embedded within each **Project**, capturing additional metadata from external systems.
 - **Tasks** store key details such as job assignments, completion status, and predefined template references.
@@ -16,11 +100,11 @@ The diagram below visually represents these relationships and data structures ([
 
 ```mermaid
 ---
-title: Nicolson PCO Database ERD with Embedded Data
+title: Nicolson PCO — Firestore — Projects Collection
 ---
 erDiagram
 
-PROJECT {
+Project {
     string id PK "Project ID"
     boolean active "Is the project active?"
     string name "Project Name"
@@ -30,10 +114,15 @@ PROJECT {
     date start_date "Start Date"
     date due_date "Due Date (Optional)"
     RpProjectData rp "Embedded Resource Planning Data (Optional)"
-    Map~TaskId, TaskData~ tasks "Embedded List of Tasks"
+
+    %% NOTE: The GitHub version (11.4.1) is not rendering this generic type properly.
+    %% Mermaid.live on version (11.5.0) does render it properly.
+    %% Hopefully, we can restore it once GitHub upgrades to the latest version
+    %% Map~TaskId, TaskData~ tasks "Embedded List of Tasks"
+    Map tasks "Embedded List of Tasks"
 }
 
-RPProjectData {
+RpProjectData {
     string project_id PK "RP Project ID"
     string status "Status (active, pending, inactive)"
     date updated_at "Last Updated Timestamp"
@@ -41,11 +130,30 @@ RPProjectData {
     date due_date "Due Date (Optional)"
     string[] group_ids "Associated Group IDs"
     string color "Hex Color Code"
-    RPProjectCategory[] categories "Project Categories"
-    RPProjectRole[] roles "Project Roles"
+    RpProjectCategory[] categories "Project Categories"
+    RpProjectRole[] roles "Project Roles"
 }
 
-TASK {
+RpProjectCategory {
+  RpProjectCategoryId id PK
+  string name
+  number request_count
+  unknown[] labeled_request_cards
+  RpProjectSubcategory[] subcategories
+}
+
+RpProjectSubcategory {
+  RpProjectSubcategoryId id PK
+  string name
+}
+
+RpProjectRole {
+  RpProjectRoleId id PK
+  RP_UUID person_id
+  RpJobTitleId job_title_id
+}
+
+Task {
     string id PK "Task ID"
     string name "Task Name"
     string job_title_id "Associated Job Title ID (Optional)"
@@ -63,7 +171,28 @@ TASK {
     date date_completed "Completion Date (Optional)"
 }
 
-CONFIG {
+Project ||--o| RpProjectData : "has"
+Project ||--o{ Task : "contains"
+RpProjectData || --o{ RpProjectCategory : "has"
+RpProjectCategory || --o{ RpProjectSubcategory : "has"
+RpProjectData || --o{ RpProjectRole : "has"
+```
+
+### Config
+
+The organization of the `config` collection.
+
+Here, we have only three named documents, and each document has its own set of possible keys. No key is required. Any missing data will be filled in with default values by the appropriate client.
+
+- **Config** holds structured configuration settings for the system, including `ClientConfig`, `SharedConfig`, and `ServerConfig`.
+
+```mermaid
+---
+title: Nicolson PCO — Firestore — Config Collection
+---
+erDiagram
+
+Config {
     ClientConfig client "Client Configuration"
     SharedConfig shared "Shared Configuration"
     ServerConfig server "Server Configuration"
@@ -84,9 +213,7 @@ ServerConfig {
     number rpRefreshBackoffMinutes
 }
 
-PROJECT ||--o| RPProjectData : "has"
-PROJECT ||--o{ TASK : "contains"
-CONFIG ||--o{ ClientConfig : "includes"
-CONFIG ||--o{ SharedConfig : "includes"
-CONFIG ||--o{ ServerConfig : "includes"
+Config ||--o{ ClientConfig : "includes"
+Config ||--o{ SharedConfig : "includes"
+Config ||--o{ ServerConfig : "includes"
 ```

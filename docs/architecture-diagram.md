@@ -17,6 +17,9 @@ service hosting(cloud)[Firebase Hosting] in firebase
 service syncApi(server)[Cloud Functions] in firebase
 service auth(server)[Firebase Auth] in firebase
 
+group microsoft(internet)[Microsoft]
+service msAuth(server)[Microsoft Auth] in microsoft
+
 group   rpAPI(internet)[Resource Planning API]
 service rpAuth(cloud)[OAuth API] in rpAPI
 service rpProjects(cloud)[Projects API] in rpAPI
@@ -28,9 +31,9 @@ junction rpJunc2 in rpAPI
 
 group   frontend(server)[Web App]
 service ui(server)[User Interface] in frontend
-service ganttChart(ic:baseline-waterfall-chart)[Gantt Chart] in frontend
+service ganttChart(ic:baseline-waterfall-chart)[Highcharts Gantt] in frontend
 service webAwesome(ic:baseline-smart-button)[Web Awesome] in frontend
-service firebaseUI(user)[FirebaseUI Auth] in frontend
+service firebaseUI(user)[Auth UI] in frontend
 junction frontendJunc in frontend
 junction frontBottomRight in frontend
 junction frontBottomLeft in frontend
@@ -51,6 +54,7 @@ ui:B <-- T:database
 database:R <-- L:syncApi
 frontBottomRight:B --> T:syncApi
 hosting:T -- B:frontBottomLeft
+auth:B <-- T:msAuth
 
 %% Resource Planning API Relationships
 syncApi:R <-- L:rpJunc1
@@ -79,6 +83,11 @@ Currently, we read only from most of the endpoints since we don't need to duplic
 However, we do write to the Requests API. In the future, we may write to the Projects API in order to edit some details.
 Though it would be more complicated, we may consider the active assignments on each project since it could allow us to visualize current data.
 
+The [Firestore Authentication](https://firebase.google.com/docs/auth/web/start) software connects directly to Microsoft to perform the sign in flow.
+The Microsoft application is configured to allow only *authorized* users from the Nicolson directory.
+Each user must be individually granted access to this app, and the access can be revoked;
+this revocation of access will only be effective if the individual is forced to re-authenticate in our app.
+
 ## Resources
 
 Lists of documentation for each of the key entities in the project. This list is grouped to mirror the diagram above.
@@ -86,8 +95,8 @@ Lists of documentation for each of the key entities in the project. This list is
 * Frontend Packages
     * [Web Awesome](https://backers.webawesome.com/)
     * [High Charts Gantt](https://www.highcharts.com/products/gantt/)
-    * [Google Charts Gantt](https://developers.google.com/chart/interactive/docs/gallery/ganttchart)
-    * [React Google Charts](https://www.npmjs.com/package/react-google-charts)
+    * [Highcharts Gantt Demos](https://www.highcharts.com/demo/gantt/project-management)
+    * [Highcharts React](https://github.com/highcharts/highcharts-react?tab=readme-ov-file#highcharts-react)
 * Google Cloud Resources
     * [Cloud Firestore _Database_](https://firebase.google.com/docs/firestore)
     * [Firebase Authentication](https://firebase.google.com/docs/auth)
@@ -98,3 +107,6 @@ Lists of documentation for each of the key entities in the project. This list is
     * [Projects API](https://wfp-quickconnect.readme.io/docs/read-2)
     * [Job Titles API](https://wfp-quickconnect.readme.io/docs/positions)
     * [Requests API](https://wfp-quickconnect.readme.io/docs/create-6)
+* Microsoft Auth Resources
+    * [Firebase Authentication with Microsoft](https://firebase.google.com/docs/auth/web/microsoft-oauth)
+    * [Microsoft Authorization Code parameters](https://learn.microsoft.com/en-us/entra/identity-platform/v2-oauth2-auth-code-flow#request-an-authorization-code)
