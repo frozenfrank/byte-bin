@@ -1,5 +1,7 @@
 # Nicolson PCO - Database Design Presentation
 
+![Nicolson PCO Screenshot](./img/sample-screenshot.png)
+
 ## Project Summary
 Nicolson PCO is a web-based project management tool that extends Procore's Resource Management capabilities, focusing on task tracking and workforce planning. The system uses Firebase Firestore as its primary database, with a React-based frontend that visualizes project timelines using Highcharts Gantt charts. The application integrates with Microsoft authentication and a Resource Planning API to manage project data and user access.
 
