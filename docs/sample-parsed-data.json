@@ -1,0 +1,52 @@
+{
+  "data": [
+    {
+      "Description": "14 Testing Utility DLG 2267720",
+      "Billable": "Yes",
+      "Duration": "0:27:12",
+      "Member": "James Finlinson",
+      "Email": "the30clues@gmail.com",
+      "Project": "PRJ348252 Access Context Table",
+      "Tags": "tlp00014",
+      "Start date": "2025-11-28",
+      "Start time": "20:03:58",
+      "Stop date": "2025-11-28",
+      "Stop time": "20:31:10"
+    },
+    {
+      "Description": "13 Update Programming Points DLG 2266854",
+      "Billable": "Yes",
+      "Duration": "0:06:14",
+      "Member": "James Finlinson",
+      "Email": "the30clues@gmail.com",
+      "Project": "PRJ348252 Access Context Table",
+      "Tags": "tlp00013",
+      "Start date": "2025-11-28",
+      "Start time": "19:57:31",
+      "Stop date": "2025-11-28",
+      "Stop time": "20:03:45"
+    }
+  ],
+  "errors": [],
+  "meta": {
+    "delimiter": ",",
+    "linebreak": "\n",
+    "aborted": false,
+    "truncated": false,
+    "cursor": 195556,
+    "renamedHeaders": null,
+    "fields": [
+      "Description",
+      "Billable",
+      "Duration",
+      "Member",
+      "Email",
+      "Project",
+      "Tags",
+      "Start date",
+      "Start time",
+      "Stop date",
+      "Stop time"
+    ]
+  }
+}

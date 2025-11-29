@@ -3,15 +3,55 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>My Page Title</title>
+  <title>Toggl to DeLorean</title>
+
   <script src="https://kit.webawesome.com/381cfdad10d64aac.js" crossorigin="anonymous"></script>
 </head>
 <body>
-  <h1>My Heading</h1>
-  <wa-button variant="neutral">Neutral</wa-button>
-  <wa-button variant="brand">Brand</wa-button>
-  <wa-button variant="success">Success</wa-button>
-  <wa-button variant="warning">Warning</wa-button>
-  <wa-button variant="danger">Danger</wa-button>
+  <wa-page disable-sticky="header aside">
+    <header slot="header"></header>
+
+    <header slot="header" class="wa-split">
+      <div class="wa-cluster">
+        <wa-icon name="stopwatch" style="color: var(--wa-color-brand-fill-loud); font-size: 1.5em"></wa-icon>
+        <span id="brand-name" class="wa-heading-m wa-desktop-only">Toggl Transfer Report</span>
+        <!-- <a href="#">Our Work</a>
+        <a href="#">About Us</a>
+        <a href="#">Discover</a>
+        <a href="#">Get Involved</a> -->
+      </div>
+      <!--
+      <div class="wa-cluster wa-gap-xs">
+        <wa-button size="small" variant="brand" appearance="outlined">Find Your Local Audubon</wa-button>
+        <wa-button size="small" variant="brand">Donate</wa-button>
+      </div>
+      -->
+    </header>
+
+    <!-- Main body content -->
+    <main class="wa-body-l">
+      <h2>Step 1: Choose a Toggl Export File</h2>
+      <input type="file" id="togglFileInput" accept=".csv" />
+      <br/>
+
+      <h2>Step 2: Choose a Day</h2>
+      <wa-select id="daySelect" label="Select a Day">
+        <wa-option value="" disabled>-- Choose One --</wa-option>
+        <wa-option value="2025-11-03">2025-11-03</wa-option>
+        <wa-option value="2025-11-04">2025-11-04</wa-option>
+      </wa-select>
+      <br/>
+
+      <h2>Step 3: View Results</h2>
+      <pre id="timecardReport">
+Waiting for report output...
+      </pre>
+      <br/>
+
+    </main>
+  </wa-page>
+
+  <script src="./papaparse.min.js"></script>
+  <script src="./script.js"></script>
 </body>
 </html>
