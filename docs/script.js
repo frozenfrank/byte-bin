@@ -56,6 +56,8 @@ function handleDataParsed(results) {
     uniqueDates: Array.from(allDates).sort(),
     allData: results.data,
   }
+
+  populateDaySelect(interpretedTimeData.uniqueDates);
 }
 
 // Respond to day selection change
@@ -76,6 +78,33 @@ function handleDayChange(e) {
     console.log('No day selected or no data available');
   }
 }
+
+function populateDaySelect(dates) {
+  const select = document.getElementById(DAY_SELECT_ID);
+  if (!select) {
+    console.error(`Day select element with ID '${DAY_SELECT_ID}' not found.`);
+    return;
+  }
+
+  select.innerHTML = '';
+
+  if (!dates.length) {
+    const opt = document.createElement('wa-option');
+    opt.setAttribute('value', '');
+    opt.textContent = 'No available dates';
+    select.appendChild(opt);
+    return;
+  }
+
+  dates.forEach(dateString => {
+    const opt = document.createElement('wa-option');
+    opt.setAttribute('value', dateString);
+
+    opt.textContent = parseDateString(dateString).toLocaleDateString();
+    select.appendChild(opt);
+  });
+}
+
 
 // ### Extract and Prepare Timecard Entries ###
 
@@ -175,7 +204,7 @@ function formatTimecardEntries(entries) {
 
   // Header line
   const minWidths = [5,8,8,8,5,40];
-  const headerLine=formatTimecardLine(minWidths, ["TLP", "Dev Log", "QAN", "PRJ", "Hours", "Description (Sample)"], true);
+  const headerLine=formatTimecardLine(minWidths, ["TLP", "Dev Log", "QAN", "PRJ", "Hours", "Descriptions (All Unique)"], true);
   message += headerLine + '\n';
   message += '='.repeat(headerLine.length) + '\n';
 
