@@ -80,22 +80,32 @@ function handleDayChange(e) {
 }
 
 function populateDaySelect(dates) {
+  // Get select element
   const select = document.getElementById(DAY_SELECT_ID);
   if (!select) {
     console.error(`Day select element with ID '${DAY_SELECT_ID}' not found.`);
     return;
   }
 
+  // Reset options
   select.innerHTML = '';
 
+  // Empty state
   if (!dates.length) {
     const opt = document.createElement('wa-option');
     opt.setAttribute('value', '');
-    opt.textContent = 'No available dates';
+    opt.textContent = '-- No available dates --';
     select.appendChild(opt);
     return;
   }
 
+  // Add a default prompt option
+  const opt = document.createElement('wa-option');
+  opt.setAttribute('value', '');
+  opt.textContent = '-- Choose a date --';
+  select.appendChild(opt);
+
+  // Populate options
   dates.forEach(dateString => {
     const opt = document.createElement('wa-option');
     opt.setAttribute('value', dateString);
