@@ -51,6 +51,7 @@ function handleDataParsed(results) {
   }
 
   populateDaySelect(interpretedTimeData.uniqueDates);
+  setDaySelectValue(interpretedTimeData.uniqueDates[0]);
 }
 
 // Respond to day selection change
@@ -93,6 +94,12 @@ function createOptionElement(value,text) {
   opt.setAttribute('value', value);
   opt.textContent = text;
   return opt;
+}
+
+function setDaySelectValue(value) {
+  const daySelect = document.getElementById(DAY_SELECT_ID);
+  daySelect.value = value;
+  daySelect.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
 
