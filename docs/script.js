@@ -3,6 +3,7 @@ console.log("Hello from script.js");
 const INPUT_FILE_ID = 'togglFileInput';
 const DAY_SELECT_ID = 'daySelect';
 const OUTPUT_PRE_ID = 'timecardReport';
+const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
 
 const TLP_REGEX = /tlp(\d{5})/i;
 const PRJ_REGEX = /PRJ\s*(\d+)/i;
@@ -21,8 +22,8 @@ let interpretedTimeData = {
 // ### Handle File Input and Data Parsing ###
 
 // Respond to file input change
-const input = document.getElementById(INPUT_FILE_ID);
-input.addEventListener('change', handleInputFileChange);
+const fileInput = document.getElementById(INPUT_FILE_ID);
+fileInput.addEventListener('change', handleInputFileChange);
 function handleInputFileChange(e) {
   const files = e.target.files;
   if (files && files.length) {
@@ -48,9 +49,6 @@ function handleDataParsed(results) {
     allDates.add(entry["Start date"]);
   });
 
-  console.log('All projects:', Array.from(allProjects).sort());
-  console.log('All dates:', Array.from(allDates).sort());
-
   interpretedTimeData = {
     uniqueProjects: Array.from(allProjects).sort(),
     uniqueDates: Array.from(allDates).sort(),
@@ -67,16 +65,7 @@ function handleDayChange(e) {
   const selectedDay = e.target.value;
   console.log('Selected day:', selectedDay);
 
-  if (selectedDay && interpretedTimeData.allData) {
-    const entries = prepareTimecardEntries(selectedDay, interpretedTimeData.allData);
-    const report = formatTimecardEntries(entries);
-
-    const outputPre = document.getElementById(OUTPUT_PRE_ID);
-    outputPre.textContent = report;
-    console.log('Prepared timecard entries:', entries);
-  } else {
-    console.log('No day selected or no data available');
-  }
+  renderTimecardReport(selectedDay);
 }
 
 function populateDaySelect(dates) {
@@ -114,7 +103,28 @@ function createOptionElement(value,text) {
 }
 
 
+// Allow toggling display of all descriptions
+const showAllDescSwitch = document.getElementById(SHOW_ALL_DESC_ID);
+showAllDescSwitch.addEventListener('change', handleShowAllDescChange);
+function handleShowAllDescChange(e) {
+  const showAll = e.target.checked;
+  console.log('Show all descriptions:', showAll);
+
+  renderTimecardReport(null,null,showAll);
+}
+
 // ### Extract and Prepare Timecard Entries ###
+
+function renderTimecardReport(forDay=null,timeData=null,showAllDescriptions=null) {
+  if (forDay === null) forDay = daySelect.value;
+  if (timeData === null) timeData = interpretedTimeData.allData;
+  if (showAllDescriptions === null) showAllDescriptions = showAllDescSwitch.checked;
+
+  const entries = prepareTimecardEntries(forDay, timeData);
+  const report = formatTimecardEntries(entries, showAllDescriptions);
+  const outputPre = document.getElementById(OUTPUT_PRE_ID);
+  outputPre.textContent = report;
+}
 
 function prepareTimecardEntries(forDay,timeData) {
   const entriesForDay = timeData.filter(entry =>
@@ -190,7 +200,7 @@ function calculateDurationInSeconds(entry) {
 
 // ### Printing and Output Functions ###
 
-function formatTimecardEntries(entries) {
+function formatTimecardEntries(entries,displayAllDescriptions=false) {
   let message = '',introduction='',footer='';
 
   const uniqueTLPs = new Set();
@@ -212,7 +222,8 @@ function formatTimecardEntries(entries) {
 
   // Header line
   const minWidths = [5,8,8,8,5,40];
-  const headerLine=formatTimecardLine(minWidths, ["TLP", "Dev Log", "QAN", "PRJ", "Hours", "Descriptions (All Unique)"], true);
+  const descHeader = `Descriptions ${(displayAllDescriptions ? '(All Distinct)' : '(Sample)')}`;
+  const headerLine=formatTimecardLine(minWidths, ["TLP", "Dev Log", "QAN", "PRJ", "Hours", descHeader], true);
   message += headerLine + '\n';
   message += '='.repeat(headerLine.length) + '\n';
 
@@ -264,16 +275,18 @@ function formatTimecardEntries(entries) {
 
     // Represent each unique description on its own line
     representedEntries += entry.entries.length || 0;
-    for (let i=1; i<lineEntriesArr.length; i++) {
-      message += formatTimecardLine(minWidths, [
-        // Carets indicate continuation lines
-        '^',
-        entry.dlgNumber ? '^' : '',
-        entry.qanNumber ? '^' : '',
-        entry.prjNumber ? '^' : '',
-        '^',
-        lineEntriesArr[i]
-      ],false,true) + "\n";
+    if (displayAllDescriptions) {
+      for (let i=1; i<lineEntriesArr.length; i++) {
+        message += formatTimecardLine(minWidths, [
+          // Carets indicate continuation lines
+          '^',
+          entry.dlgNumber ? '^' : '',
+          entry.qanNumber ? '^' : '',
+          entry.prjNumber ? '^' : '',
+          '^',
+          lineEntriesArr[i]
+        ],false,true) + "\n";
+      }
     }
   }
 
