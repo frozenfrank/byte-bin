@@ -92,27 +92,25 @@ function populateDaySelect(dates) {
 
   // Empty state
   if (!dates.length) {
-    const opt = document.createElement('wa-option');
-    opt.setAttribute('value', '');
-    opt.textContent = '-- No available dates --';
-    select.appendChild(opt);
+    select.appendChild(createOptionElement('', '-- No available dates --'));
     return;
   }
 
   // Add a default prompt option
-  const opt = document.createElement('wa-option');
-  opt.setAttribute('value', '');
-  opt.textContent = '-- Choose a date --';
-  select.appendChild(opt);
+  select.appendChild(createOptionElement('', '-- Choose a date --'));
 
   // Populate options
   dates.forEach(dateString => {
-    const opt = document.createElement('wa-option');
-    opt.setAttribute('value', dateString);
-
-    opt.textContent = parseDateString(dateString).toLocaleDateString();
-    select.appendChild(opt);
+    const formattedDate = parseDateString(dateString).toLocaleDateString();
+    select.appendChild(createOptionElement(dateString, formattedDate));
   });
+}
+
+function createOptionElement(value,text) {
+  const opt = document.createElement('wa-option');
+  opt.setAttribute('value', value);
+  opt.textContent = text;
+  return opt;
 }
 
 
