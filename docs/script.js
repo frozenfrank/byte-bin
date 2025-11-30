@@ -277,36 +277,46 @@ function formatTimecardEntries(entries) {
     }
   }
 
-  // Summary lines
-  message += '-'.repeat(headerLine.length) + '\n';
-  message += formatTimecardLine(minWidths, [
-    uniqueTLPs.size,
-    uniquePRJs.size,
-    uniqueDLGs.size,
-    uniqueQANs.size,
-    totalRoundedHours,
-    uniqueDescriptions.size + " unique descriptions"
-  ]) + "\n";
+  if (timecardLines <= 0) {
+    message = ""; // Wipe out blank message
+    message += "No loggable time entries.\n";
+  } else {
+    // Summary lines
+    message += '-'.repeat(headerLine.length) + '\n';
+    message += formatTimecardLine(minWidths, [
+      uniqueTLPs.size,
+      uniquePRJs.size,
+      uniqueDLGs.size,
+      uniqueQANs.size,
+      totalRoundedHours,
+      uniqueDescriptions.size + " unique descriptions"
+    ]) + "\n";
 
-  // Footer message
-  footer += `Total Rounded hours: ${totalRoundedHours.toFixed(2)} hrs\n`;
-  footer += `Total Actual hours: ${totalHours.toFixed(2)} hrs`;
-  if (totalRoundedHours !== totalHours) {
-    footer += `  (Gap: ${((totalRoundedHours-totalHours)*60).toFixed(1)} mins)`;
+    // Report Detail
+    message += '\n\n';
+    message += `Total Rounded hours: ${totalRoundedHours.toFixed(2)} hrs\n`;
+    message += `Total Actual hours: ${totalHours.toFixed(2)} hrs`;
+    if (totalRoundedHours !== totalHours) {
+      message += `  (Gap: ${((totalRoundedHours-totalHours)*60).toFixed(1)} mins)`;
+    }
+    message += `\n\n`;
+
+    message += `Total Timecard Lines: ${timecardLines}\n`;
+    message += `Total Represented Entries: ${representedEntries}\n`;
   }
-  footer += `\n\n`;
 
-  footer += `Total Timecard Lines: ${timecardLines}\n`;
-  footer += `Total Represented Entries: ${representedEntries}\n`;
-  footer += "\n";
-  footer += `Generated on: ${new Date().toLocaleString()}\n`;
-
+  // ### Finalization of Report ###
 
   // Prepare introductory summaries
   introduction += "DeLorean Transfer Timecard Report\n";
-  introduction += `Report date: ${minDate.toLocaleDateString()}`
-  if (maxDate != minDate) introduction += ` to ${maxDate.toLocaleDateString()}`;
+  if (timecardLines > 0) {
+    introduction += `Report date: ${minDate.toLocaleDateString()}`
+    if (maxDate != minDate) introduction += ` to ${maxDate.toLocaleDateString()}`;
+  }
   introduction += `\n`;
+
+  // Prepare footer
+  footer += `Generated on: ${new Date().toLocaleString()}\n`;
 
 
   // Combine introduction and message
