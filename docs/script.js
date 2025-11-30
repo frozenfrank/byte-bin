@@ -1,5 +1,3 @@
-console.log("Hello from script.js");
-
 const INPUT_FILE_ID = 'togglFileInput';
 const DAY_SELECT_ID = 'daySelect';
 const OUTPUT_PRE_ID = 'timecardReport';
@@ -26,21 +24,18 @@ const fileInput = document.getElementById(INPUT_FILE_ID);
 fileInput.addEventListener('change', handleInputFileChange);
 function handleInputFileChange(e) {
   const files = e.target.files;
-  if (files && files.length) {
-    console.log('File selected:', files[0].name, '-', files[0].size, 'bytes');
-    Papa.parse(files[0], {
-      header: true,
-      complete: handleDataParsed,
-    });
-  } else {
-    console.log('No file selected');
+  if (!files?.length) {
+    return;
   }
+
+  Papa.parse(files[0], {
+    header: true,
+    complete: handleDataParsed,
+  });
 }
 
 // Respond to data parsing
 function handleDataParsed(results) {
-  console.log('Parsed data:', results);
-
   const allProjects = new Set();
   const allDates = new Set();
 
@@ -63,8 +58,6 @@ const daySelect = document.getElementById(DAY_SELECT_ID);
 daySelect.addEventListener('change', handleDayChange);
 function handleDayChange(e) {
   const selectedDay = e.target.value;
-  console.log('Selected day:', selectedDay);
-
   renderTimecardReport(selectedDay);
 }
 
@@ -108,8 +101,6 @@ const showAllDescSwitch = document.getElementById(SHOW_ALL_DESC_ID);
 showAllDescSwitch.addEventListener('change', handleShowAllDescChange);
 function handleShowAllDescChange(e) {
   const showAll = e.target.checked;
-  console.log('Show all descriptions:', showAll);
-
   renderTimecardReport(null,null,showAll);
 }
 
@@ -130,7 +121,6 @@ function prepareTimecardEntries(forDay,timeData) {
   const entriesForDay = timeData.filter(entry =>
     (entry["Start date"] === forDay) &&
     (entry["Billable"] === "Yes"));
-  console.log(`Entries for ${forDay}:`, entriesForDay);
 
   // Group entries by project and TLP and DLG/QAN code
   const groupedEntries = {};
@@ -302,7 +292,7 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
       uniqueDLGs.size,
       uniqueQANs.size,
       totalRoundedHours,
-      uniqueDescriptions.size + " unique descriptions"
+      uniqueDescriptions.size + "   (distinct entities)"
     ]) + "\n";
 
     // Report Detail
