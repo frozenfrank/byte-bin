@@ -7,6 +7,7 @@
 - [ ] Constrain horizontal width of content
 - [ ] Add a splash of color, maybe with a colored header
 - [ ] Show distinct descriptions sorted by total duration
+- [ ] Move into sub-folder
 
 ## Big Upgrades
 - [ ] File data automatically into DeLorean

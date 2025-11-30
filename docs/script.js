@@ -288,9 +288,9 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
     message += '-'.repeat(headerLine.length) + '\n';
     message += formatTimecardLine(minWidths, [
       uniqueTLPs.size,
-      uniquePRJs.size,
       uniqueDLGs.size,
       uniqueQANs.size,
+      uniquePRJs.size,
       totalRoundedHours,
       uniqueDescriptions.size + "   (distinct entities)"
     ]) + "\n";
