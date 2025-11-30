@@ -2,6 +2,8 @@ const INPUT_FILE_ID = 'togglFileInput';
 const DAY_SELECT_ID = 'daySelect';
 const OUTPUT_PRE_ID = 'timecardReport';
 const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
+const NEXT_DAY_BUTTON_ID = 'nextDayButton';
+const PREV_DAY_BUTTON_ID = 'prevDayButton';
 
 const TLP_REGEX = /tlp(\d{5})/i;
 const PRJ_REGEX = /PRJ\s*(\d+)/i;
@@ -102,6 +104,31 @@ function setDaySelectValue(value) {
   daySelect.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
+// Attach event listeners to next/prev buttons
+document.getElementById(NEXT_DAY_BUTTON_ID)
+.addEventListener('click', () => incrementSelectedDay(false));
+
+document.getElementById(PREV_DAY_BUTTON_ID)
+.addEventListener('click', () => incrementSelectedDay(true));
+
+function incrementSelectedDay(backward=false) {
+  const numValues = interpretedTimeData.uniqueDates.length;
+  if (!numValues) return;
+  if (!daySelect) {
+    console.error(`Day select element with ID '${DAY_SELECT_ID}' not found.`);
+    return;
+  }
+
+  const currentValue = daySelect.value;
+  let currentIndex = currentValue ? interpretedTimeData.uniqueDates.indexOf(currentValue) : 0;  // O(n) operation
+  if (currentIndex < 0) currentIndex = 0;
+
+  const direction = backward ? -1 : 1;
+  const nextIndex = (currentIndex + direction + numValues) % numValues;
+  const nextValue = interpretedTimeData.uniqueDates[nextIndex];
+  setDaySelectValue(nextValue);
+}
+
 
 // Allow toggling display of all descriptions
 const showAllDescSwitch = document.getElementById(SHOW_ALL_DESC_ID);
@@ -125,6 +152,10 @@ function renderTimecardReport(forDay=null,timeData=null,showAllDescriptions=null
 }
 
 function prepareTimecardEntries(forDay,timeData) {
+  if (!forDay || !timeData?.length) {
+    return [];
+  }
+
   const entriesForDay = timeData.filter(entry =>
     (entry["Start date"] === forDay) &&
     (entry["Billable"] === "Yes"));
