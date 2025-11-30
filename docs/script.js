@@ -106,10 +106,31 @@ function setDaySelectValue(value) {
 
 // Attach event listeners to next/prev buttons
 document.getElementById(NEXT_DAY_BUTTON_ID)
-.addEventListener('click', () => incrementSelectedDay(false));
+  .addEventListener('click', () => incrementSelectedDay(false));
 
 document.getElementById(PREV_DAY_BUTTON_ID)
-.addEventListener('click', () => incrementSelectedDay(true));
+  .addEventListener('click', () => incrementSelectedDay(true));
+
+// Keyboard shortcuts: N = next, P = previous
+document.addEventListener('keydown', (e) => {
+  // ignore when modifier keys are held
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+  // don't interfere while typing in inputs/textareas/contenteditable
+  const active = document.activeElement;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
+
+  const key = e.key.toLowerCase();
+  switch (key) {
+    case 'n':  incrementSelectedDay(false);   break;
+    case 'p':  incrementSelectedDay(true);    break;
+    case 'd':  showAllDescSwitch.click();     break;
+
+    default:
+      return; // ignore other keys
+  }
+  e.preventDefault();
+});
 
 function incrementSelectedDay(backward=false) {
   const numValues = interpretedTimeData.uniqueDates.length;
