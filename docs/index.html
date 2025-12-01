@@ -6,9 +6,25 @@
   <title>Toggl to DeLorean</title>
 
   <script src="https://kit.webawesome.com/381cfdad10d64aac.js" crossorigin="anonymous"></script>
+
+  <style type="text/css">
+  [slot='banner'] {
+    --wa-color-text-link: var(--wa-color-neutral-on-loud);
+    background-color: var(--wa-color-neutral-fill-loud);
+  }
+  [slot='header'] {
+    background-color: var(--wa-color-brand-fill-normal);
+  }
+  </style>
 </head>
 <body>
   <wa-page disable-sticky="aside">
+    <div slot="banner" class="wa-body-s">
+      <a href="https://webawesome.com/" class="wa-cluster wa-align-items-baseline wa-gap-xs" style="flex-wrap: nowrap;">
+        <wa-icon name="crown" style="color: var(--wa-color-orange-60)"></wa-icon>
+        <span>Proudly developed with WebAwesome</span>
+      </a>
+    </div>
     <header slot="header" class="wa-split">
       <div class="wa-cluster">
         <wa-icon name="stopwatch" style="color: var(--wa-color-brand-fill-loud); font-size: 1.5em"></wa-icon>
