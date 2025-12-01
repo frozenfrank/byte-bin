@@ -2,12 +2,13 @@
 
 ## Easy Fixes
 - [ ] Format "Report date" with the day of the week
-- [ ] Add next/prev buttons for switching days
-- [ ] Add keyboard shortcuts for key workflows (next/prev/toggle switch)
+- [x] Add next/prev buttons for switching days
+- [x] Add keyboard shortcuts for key workflows (next/prev/toggle switch)
 - [ ] Constrain horizontal width of content
-- [ ] Add a splash of color, maybe with a colored header
+- [x] Add a splash of color, maybe with a colored header
 - [ ] Show distinct descriptions sorted by total duration
-- [ ] Move into sub-folder
+- [x] Move into sub-folder
+- [ ] Show all data (even those without TLPs)
 
 ## Big Upgrades
 - [ ] File data automatically into DeLorean
