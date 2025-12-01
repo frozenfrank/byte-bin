@@ -3,44 +3,43 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Toggl to DeLorean</title>
+  <title>Byte Bin</title>
 
   <script src="https://kit.webawesome.com/381cfdad10d64aac.js" crossorigin="anonymous"></script>
+
+  <style type="text/css">
+  [slot='banner'] {
+    --wa-color-text-link: var(--wa-color-neutral-on-loud);
+    background-color: var(--wa-color-neutral-fill-loud);
+  }
+  [slot='header'] {
+    background-color: var(--wa-color-brand-fill-normal);
+  }
+  </style>
 </head>
 <body>
-  <wa-page disable-sticky="header aside">
-    <header slot="header"></header>
-
+  <wa-page disable-sticky="aside">
+    <div slot="banner" class="wa-body-s">
+      <a href="https://webawesome.com/" class="wa-cluster wa-align-items-baseline wa-gap-xs" style="flex-wrap: nowrap;">
+        <wa-icon name="crown" style="color: var(--wa-color-orange-60)"></wa-icon>
+        <span>Proudly developed with WebAwesome</span>
+      </a>
+    </div>
     <header slot="header" class="wa-split">
       <div class="wa-cluster">
-        <wa-icon name="stopwatch" style="color: var(--wa-color-brand-fill-loud); font-size: 1.5em"></wa-icon>
-        <span id="brand-name" class="wa-heading-m wa-desktop-only">Toggl Transfer Report</span>
+        <wa-icon name="square-binary" style="color: var(--wa-color-brand-fill-loud); font-size: 1.5em"></wa-icon>
+        <span id="brand-name" class="wa-heading-m wa-desktop-only">Frozenfrank's Byte Bin</span>
       </div>
     </header>
 
     <!-- Main body content -->
     <main class="wa-body-l">
-      <h2>Step 1: Choose a Toggl Export File</h2>
-      <input type="file" id="togglFileInput" accept=".csv" />
-      <br/>
-
-      <h2>Step 2: Choose a Day</h2>
-      <wa-select id="daySelect" label="Select a Day">
-        <wa-option value="" selected disabled>-- Choose data source first --</wa-option>
-      </wa-select>
-      <br/>
-
-      <h2>Step 3: View Results</h2>
-      <wa-switch id="showAllDescriptionsSwitch">Show All Descriptions</wa-switch>
-      <pre id="timecardReport">
-Waiting for report output...
-      </pre>
-      <br/>
+      <h2>List of projects</h2>
+      <ul>
+        <li><a href="./delorean/index.html">Toggl to DeLorean Transfer Report</a></li>
+      </ul>
 
     </main>
   </wa-page>
-
-  <script src="./papaparse.min.js"></script>
-  <script src="./script.js"></script>
 </body>
 </html>

@@ -2,6 +2,8 @@ const INPUT_FILE_ID = 'togglFileInput';
 const DAY_SELECT_ID = 'daySelect';
 const OUTPUT_PRE_ID = 'timecardReport';
 const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
+const NEXT_DAY_BUTTON_ID = 'nextDayButton';
+const PREV_DAY_BUTTON_ID = 'prevDayButton';
 
 const TLP_REGEX = /tlp(\d{5})/i;
 const PRJ_REGEX = /PRJ\s*(\d+)/i;
@@ -51,6 +53,7 @@ function handleDataParsed(results) {
   }
 
   populateDaySelect(interpretedTimeData.uniqueDates);
+  setDaySelectValue(interpretedTimeData.uniqueDates[0]);
 }
 
 // Respond to day selection change
@@ -95,6 +98,58 @@ function createOptionElement(value,text) {
   return opt;
 }
 
+function setDaySelectValue(value) {
+  const daySelect = document.getElementById(DAY_SELECT_ID);
+  daySelect.value = value;
+  daySelect.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+// Attach event listeners to next/prev buttons
+document.getElementById(NEXT_DAY_BUTTON_ID)
+  .addEventListener('click', () => incrementSelectedDay(false));
+
+document.getElementById(PREV_DAY_BUTTON_ID)
+  .addEventListener('click', () => incrementSelectedDay(true));
+
+// Keyboard shortcuts: N = next, P = previous
+document.addEventListener('keydown', (e) => {
+  // ignore when modifier keys are held
+  if (e.ctrlKey || e.altKey || e.metaKey) return;
+
+  // don't interfere while typing in inputs/textareas/contenteditable
+  const active = document.activeElement;
+  if (active && (active.id !== INPUT_FILE_ID) && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
+
+  const key = e.key.toLowerCase();
+  switch (key) {
+    case 'n':  incrementSelectedDay(false);   break;
+    case 'p':  incrementSelectedDay(true);    break;
+    case 'd':  showAllDescSwitch.click();     break;
+
+    default:
+      return; // ignore other keys
+  }
+  e.preventDefault();
+});
+
+function incrementSelectedDay(backward=false) {
+  const numValues = interpretedTimeData.uniqueDates.length;
+  if (!numValues) return;
+  if (!daySelect) {
+    console.error(`Day select element with ID '${DAY_SELECT_ID}' not found.`);
+    return;
+  }
+
+  const currentValue = daySelect.value;
+  let currentIndex = currentValue ? interpretedTimeData.uniqueDates.indexOf(currentValue) : 0;  // O(n) operation
+  if (currentIndex < 0) currentIndex = 0;
+
+  const direction = backward ? -1 : 1;
+  const nextIndex = (currentIndex + direction + numValues) % numValues;
+  const nextValue = interpretedTimeData.uniqueDates[nextIndex];
+  setDaySelectValue(nextValue);
+}
+
 
 // Allow toggling display of all descriptions
 const showAllDescSwitch = document.getElementById(SHOW_ALL_DESC_ID);
@@ -118,6 +173,10 @@ function renderTimecardReport(forDay=null,timeData=null,showAllDescriptions=null
 }
 
 function prepareTimecardEntries(forDay,timeData) {
+  if (!forDay || !timeData?.length) {
+    return [];
+  }
+
   const entriesForDay = timeData.filter(entry =>
     (entry["Start date"] === forDay) &&
     (entry["Billable"] === "Yes"));
@@ -288,9 +347,9 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
     message += '-'.repeat(headerLine.length) + '\n';
     message += formatTimecardLine(minWidths, [
       uniqueTLPs.size,
-      uniquePRJs.size,
       uniqueDLGs.size,
       uniqueQANs.size,
+      uniquePRJs.size,
       totalRoundedHours,
       uniqueDescriptions.size + "   (distinct entities)"
     ]) + "\n";
