@@ -118,7 +118,7 @@ document.addEventListener('keydown', (e) => {
 
   // don't interfere while typing in inputs/textareas/contenteditable
   const active = document.activeElement;
-  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
+  if (active && (active.id !== INPUT_FILE_ID) && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
 
   const key = e.key.toLowerCase();
   switch (key) {
