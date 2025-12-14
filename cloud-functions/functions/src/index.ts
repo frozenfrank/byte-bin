@@ -28,5 +28,6 @@ setGlobalOptions({maxInstances: 10});
 
 export const helloWorld = onRequest((request, response) => {
   // logger.info("Hello logs!", {structuredData: true});
-  response.send("Hello from Firebase!");
+  response.set("Access-Control-Allow-Origin", "*");
+  response.send(`Hello from Firebase!<br>${new Date().toISOString()}`);
 });
