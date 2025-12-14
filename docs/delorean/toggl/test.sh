@@ -11,7 +11,7 @@ fi
 
 # Test Toggl API access, reusing cached me.json if it exists
 if [ ! -f "me.json" ]; then
-  echo "Retrieving user info from Toggl API..."
+  echo "Retrieving user info from Toggl API into me.json..."
   curl -u $TOKEN:api_token https://api.track.toggl.com/api/v9/me > me.json
   if [ $? -ne 0 ]; then
     >&2 echo "Error: Unable to access Toggl API. Please check your TOKEN."
@@ -33,13 +33,13 @@ echo "Using WORKSPACE_ID: $WORKSPACE_ID"
 
 # Test fetching time entries
 # Including meta=true to get readable info like project names and client names
->&2 echo -e "\nFetching time entries into time_entries.json..."
+echo -e "\nFetching time entries into time_entries.json..."
 curl  "https://api.track.toggl.com/api/v9/me/time_entries?meta=true&start_date=2025-11-01&end_date=2025-12-01" \
   -H "Content-Type: application/json" \
   -u $TOKEN:api_token > time_entries.json
 
 # Test fetching projects
->&2 echo -e "\nFetching active projects for workspace $WORKSPACE_ID into projects.json..."
+echo -e "\nFetching active projects for workspace $WORKSPACE_ID into projects.json..."
 curl  https://api.track.toggl.com/api/v9/workspaces/$WORKSPACE_ID/projects?active=true \
   -H "Content-Type: application/json" \
   -u $TOKEN:api_token > projects.json
