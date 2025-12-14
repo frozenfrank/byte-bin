@@ -55,18 +55,36 @@ export const proxy = onRequest(async (req, res) => {
     return;
   }
 
-  res.status(206).send(`Proxying request to: ${targetUrl}\n\n`);
-  return;
+  console.log(`Proxying request to: ${targetUrl}\n\n`);
 
   try {
-    const fetchResponse = await fetch(targetUrl, {
-      method: req.method,
-      headers: req.headers as HeadersInit,
-      body: req.body,
-    });
-    const data = await fetchResponse.text();
+    const ALLOWED_FORWARD_HEADERS = [
+      "Authorization",
+      "Content-Type",
+    ];
 
-    // Copy headers from the fetch response to the proxy response
+    // Forward the request to the target URL
+    const forwardHeaders: HeadersInit = {};
+    const forwardRequest: RequestInit = {
+      method: req.method,
+      headers: forwardHeaders,
+    };
+    for (const header of ALLOWED_FORWARD_HEADERS) {
+      const value = req.get(header);
+      if (value) {
+        forwardHeaders[header] = value;
+      }
+    }
+    if (req.rawBody) forwardRequest.body = req.rawBody as BodyInit;
+
+    console.log(`Request Body (${!!req.body}): ${JSON.stringify(req.body, null, 2)}\n\n`);
+    console.log(`Raw Body (${!!req.rawBody}): ${req.rawBody}\n\n`);
+    console.log(`Target URL: ${targetUrl}\n\n`);
+    console.log(`Forward Request: ${JSON.stringify(forwardRequest, null, 2)}\n\n`);
+    const fetchResponse = await fetch(targetUrl, forwardRequest);
+
+    // Relay the response back to the client
+    const data = await fetchResponse.text();
     fetchResponse.headers.forEach((value, key) => {
       res.setHeader(key, value);
     });
