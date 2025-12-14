@@ -49,6 +49,7 @@ const ALLOWED_FORWARD_METHODS = [
 /** Headers that should never be forwarded from the original request */
 const FORBIDDEN_FORWARD_HEADERS = new Set([
   "Content-Length",
+  "Content-Encoding",
   "Transfer-Encoding",
   "Connection",
   "Keep-Alive",
