@@ -26,8 +26,53 @@ import {onRequest} from "firebase-functions/https";
 // this will be the maximum concurrent request count.
 setGlobalOptions({maxInstances: 10});
 
-export const helloWorld = onRequest((request, response) => {
+export const helloWorld = onRequest((req, res) => {
   // logger.info("Hello logs!", {structuredData: true});
-  response.set("Access-Control-Allow-Origin", "*");
-  response.send(`Hello from Firebase!<br>${new Date().toISOString()}`);
+  res.set("Access-Control-Allow-Origin", "*");
+  res.send(`Hello from Firebase!<br>${new Date().toISOString()}`);
+});
+
+export const proxy = onRequest(async (req, res) => {
+  res.set("Access-Control-Allow-Origin", "*");
+  res.set("Access-Control-Allow-Credentials", "true");
+
+  // Handle preflight OPTIONS request
+  if (req.method === "OPTIONS") {
+    // Send response to OPTIONS requests
+    res.set("Access-Control-Allow-Methods", "GET");
+    res.set("Access-Control-Allow-Headers", "Authorization");
+    res.set("Access-Control-Max-Age", "3600");
+    res.status(204).send("");
+    return;
+  } else if (req.method !== "GET") {
+    res.status(405).send("Method Not Allowed");
+    return;
+  }
+
+  const targetUrl = req.query.url;
+  if (typeof targetUrl !== "string" || !targetUrl) {
+    res.status(400).send("Missing 'url' query parameter");
+    return;
+  }
+
+  res.status(206).send(`Proxying request to: ${targetUrl}\n\n`);
+  return;
+
+  try {
+    const fetchResponse = await fetch(targetUrl, {
+      method: req.method,
+      headers: req.headers as HeadersInit,
+      body: req.body,
+    });
+    const data = await fetchResponse.text();
+
+    // Copy headers from the fetch response to the proxy response
+    fetchResponse.headers.forEach((value, key) => {
+      res.setHeader(key, value);
+    });
+
+    res.status(fetchResponse.status).send(data);
+  } catch (error) {
+    res.status(500).send(`Error fetching URL: ${error}`);
+  }
 });
