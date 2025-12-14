@@ -46,6 +46,19 @@ const ALLOWED_FORWARD_METHODS = [
   "OPTIONS",
 ];
 
+/** Headers that should never be forwarded from the original request */
+const FORBIDDEN_FORWARD_HEADERS = new Set([
+  "Content-Length",
+  "Transfer-Encoding",
+  "Connection",
+  "Keep-Alive",
+  "Proxy-Authenticate",
+  "Proxy-Authorization",
+  "Te",
+  "Trailers",
+  "Upgrade",
+].map(h => h.toLowerCase()));
+
 export const proxy = onRequest(async (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Credentials", "true");
@@ -87,11 +100,12 @@ export const proxy = onRequest(async (req, res) => {
     const fetchResponse = await fetch(targetUrl, forwardRequest);
 
     // Relay the response back to the client
-    const data = await fetchResponse.text();
-    fetchResponse.headers.forEach((value, key) => {
-      res.setHeader(key, value);
+    fetchResponse.headers.forEach((value, header) => {
+      if (FORBIDDEN_FORWARD_HEADERS.has(header.toLowerCase())) return;
+      res.setHeader(header, value);
     });
 
+    const data = await fetchResponse.text();
     res.status(fetchResponse.status).send(data);
   } catch (error) {
     res.status(500).send(`Error proxying request: ${error}`);
