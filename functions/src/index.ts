@@ -55,7 +55,6 @@ export const proxy = onRequest(async (req, res) => {
     return;
   }
 
-  console.log(`Proxying request to: ${targetUrl}\n\n`);
 
   try {
     const ALLOWED_FORWARD_HEADERS = [
@@ -77,10 +76,6 @@ export const proxy = onRequest(async (req, res) => {
     }
     if (req.rawBody) forwardRequest.body = req.rawBody as BodyInit;
 
-    console.log(`Request Body (${!!req.body}): ${JSON.stringify(req.body, null, 2)}\n\n`);
-    console.log(`Raw Body (${!!req.rawBody}): ${req.rawBody}\n\n`);
-    console.log(`Target URL: ${targetUrl}\n\n`);
-    console.log(`Forward Request: ${JSON.stringify(forwardRequest, null, 2)}\n\n`);
     const fetchResponse = await fetch(targetUrl, forwardRequest);
 
     // Relay the response back to the client
