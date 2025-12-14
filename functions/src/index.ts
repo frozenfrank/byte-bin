@@ -32,6 +32,20 @@ export const helloWorld = onRequest((req, res) => {
   res.send(`Hello from Firebase!<br>${new Date().toISOString()}`);
 });
 
+/** Headers that are allowed to be forwarded via proxy */
+const ALLOWED_FORWARD_HEADERS = [
+  "Authorization",
+  "Content-Type",
+];
+
+/** Request types that are allowed to be forwarded via proxy */
+const ALLOWED_FORWARD_METHODS = [
+  "GET",
+  "POST",
+  "DELETE",
+  "OPTIONS",
+];
+
 export const proxy = onRequest(async (req, res) => {
   res.set("Access-Control-Allow-Origin", "*");
   res.set("Access-Control-Allow-Credentials", "true");
@@ -39,12 +53,12 @@ export const proxy = onRequest(async (req, res) => {
   // Handle preflight OPTIONS request
   if (req.method === "OPTIONS") {
     // Send response to OPTIONS requests
-    res.set("Access-Control-Allow-Methods", "GET");
-    res.set("Access-Control-Allow-Headers", "Authorization");
+    res.set("Access-Control-Allow-Methods", ALLOWED_FORWARD_METHODS.join(", "));
+    res.set("Access-Control-Allow-Headers", ALLOWED_FORWARD_HEADERS.join(", "));
     res.set("Access-Control-Max-Age", "3600");
     res.status(204).send("");
     return;
-  } else if (req.method !== "GET") {
+  } else if (ALLOWED_FORWARD_METHODS.indexOf(req.method)<0) {
     res.status(405).send("Method Not Allowed");
     return;
   }
@@ -57,11 +71,6 @@ export const proxy = onRequest(async (req, res) => {
 
 
   try {
-    const ALLOWED_FORWARD_HEADERS = [
-      "Authorization",
-      "Content-Type",
-    ];
-
     // Forward the request to the target URL
     const forwardHeaders: HeadersInit = {};
     const forwardRequest: RequestInit = {
@@ -70,9 +79,8 @@ export const proxy = onRequest(async (req, res) => {
     };
     for (const header of ALLOWED_FORWARD_HEADERS) {
       const value = req.get(header);
-      if (value) {
-        forwardHeaders[header] = value;
-      }
+      if (value === undefined) continue;
+      forwardHeaders[header] = value;
     }
     if (req.rawBody) forwardRequest.body = req.rawBody as BodyInit;
 
@@ -86,6 +94,6 @@ export const proxy = onRequest(async (req, res) => {
 
     res.status(fetchResponse.status).send(data);
   } catch (error) {
-    res.status(500).send(`Error fetching URL: ${error}`);
+    res.status(500).send(`Error proxying request: ${error}`);
   }
 });
