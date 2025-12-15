@@ -1,5 +1,3 @@
-import * as toggl from "./toggl/access";
-
 const INPUT_FILE_ID = 'togglFileInput';
 const DAY_SELECT_ID = 'daySelect';
 const OUTPUT_PRE_ID = 'timecardReport';

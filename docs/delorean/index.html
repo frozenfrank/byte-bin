@@ -34,8 +34,25 @@
 
     <!-- Main body content -->
     <main class="wa-body-l">
-      <h2>Step 1: Choose a Toggl Export File</h2>
+      <h2>Step 1: Import Data</h2>
+      <h3>Option 1.1: From a Toggl CSV export</h3>
       <input type="file" id="togglFileInput" accept=".csv" />
+      <wa-divider></wa-divider>
+      <h3>Option 1.2: With a Toggl API Token</h3>
+      <wa-callout size="small">
+        <wa-icon slot="icon" name="lightbulb" variant="regular"></wa-icon>
+        Your Toggl API token can be revealed at the bottom of <a href="https://track.toggl.com/profile">your profile page</a>.
+      </wa-callout>
+      <br>
+      <div class="wa-flank:end">
+        <wa-input type="password" placeholder="Toggle API Token" password-toggle id="download-toggl-token"></wa-input>
+
+        <wa-tooltip for="download-toggl-data">Downloads the last 45 days of time entries</wa-tooltip>
+        <wa-button variant="brand" id="download-toggl-data" disabled>
+          <wa-icon slot="start" name="cloud-arrow-down"></wa-icon>
+          <span id="download-toggl-label">Download Data</span>
+        </wa-button>
+      </div>
       <br/>
 
       <h2>Step 2: Choose a Day</h2>
@@ -68,6 +85,7 @@
   </wa-page>
 
   <script src="./papaparse.min.js"></script>
+  <script src="./toggl/access.js"></script>
   <script src="./script.js"></script>
 </body>
 </html>
