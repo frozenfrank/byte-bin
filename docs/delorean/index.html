@@ -39,20 +39,22 @@
       <input type="file" id="togglFileInput" accept=".csv" />
       <wa-divider></wa-divider>
       <h3>Option 1.2: With a Toggl API Token</h3>
-      <wa-callout size="small">
-        <wa-icon slot="icon" name="lightbulb" variant="regular"></wa-icon>
-        Your Toggl API token can be revealed at the bottom of <a href="https://track.toggl.com/profile">your profile page</a>.
-      </wa-callout>
-      <br>
-      <div class="wa-flank:end">
-        <wa-input type="password" placeholder="Toggle API Token" password-toggle id="download-toggl-token"></wa-input>
+      <form id="download-toggl-form">
+        <wa-callout size="small">
+          <wa-icon slot="icon" name="lightbulb" variant="regular"></wa-icon>
+          Your Toggl API token can be revealed at the bottom of <a href="https://track.toggl.com/profile">your profile page</a>. The token is expected to be at least <b>32&nbsp;characters</b> in length.
+        </wa-callout>
+        <br>
+        <div class="wa-flank:end">
+          <wa-input type="password" placeholder="Toggle API Token" password-toggle id="download-toggl-token" minlength="32"></wa-input>
 
-        <wa-tooltip for="download-toggl-data">Downloads the last 45 days of time entries</wa-tooltip>
-        <wa-button variant="brand" id="download-toggl-data" disabled>
-          <wa-icon slot="start" name="cloud-arrow-down"></wa-icon>
-          <span id="download-toggl-label">Download Data</span>
-        </wa-button>
-      </div>
+          <wa-tooltip for="download-toggl-button">Downloads the last 45 days of time entries</wa-tooltip>
+          <wa-button type="submit" variant="brand" id="download-toggl-button" disabled>
+            <wa-icon slot="start" name="cloud-arrow-down"></wa-icon>
+            <span id="download-toggl-label">Download Data</span>
+          </wa-button>
+        </div>
+      </form>
       <br/>
 
       <h2>Step 2: Choose a Day</h2>

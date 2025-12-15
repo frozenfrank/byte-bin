@@ -5,6 +5,11 @@ const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
 const NEXT_DAY_BUTTON_ID = 'nextDayButton';
 const PREV_DAY_BUTTON_ID = 'prevDayButton';
 
+const TOGGL_FORM = 'download-toggl-form';
+const TOGGL_TOKEN_ID = 'download-toggl-token';
+const TOGGL_DOWNLOAD_BUTTON = 'download-toggl-button';
+const TOGGL_DOWNLOAD_LABEL = 'download-toggl-label';
+
 const TLP_REGEX = /tlp(\d{5})/i;
 const PRJ_REGEX = /PRJ\s*(\d+)/i;
 const DLG_REGEX = /DLG\s*(\d+)/i;
@@ -55,6 +60,43 @@ function handleDataParsed(results) {
   populateDaySelect(interpretedTimeData.uniqueDates);
   setDaySelectValue(interpretedTimeData.uniqueDates[0]);
 }
+
+// Respond to form submit
+const togglForm = document.getElementById(TOGGL_FORM);
+const togglTokenInput = document.getElementById(TOGGL_TOKEN_ID);
+const togglSubmitButton = document.getElementById(TOGGL_DOWNLOAD_BUTTON);
+const togglSubmitLabel = document.getElementById(TOGGL_DOWNLOAD_LABEL);
+
+togglTokenInput.addEventListener('input', handleTogglTokenChange);
+function handleTogglTokenChange(e) {
+  const token = e.target.value;
+
+  const tokenInputValid = token?.length>=32
+  togglSubmitButton.disabled=!tokenInputValid;
+}
+
+togglForm.addEventListener('submit', handleTogglFormSubmit);
+function handleTogglFormSubmit(e) {
+  e.preventDefault();  // Skip default form submit behavior
+  if (togglSubmitButton.loading) return; // Ensure no double-submitting
+
+  togglSubmitButton.loading = true;
+  togglSubmitLabel.innerText = "Refresh Data";
+
+  const token = togglTokenInput.value;
+  void downloadTogglTimeEntries(token)
+    .then(() => togglSubmitButton.loading = false);
+}
+
+async function downloadTogglTimeEntries(token) {
+  // Simulate a database call / network latency of 3 seconds
+  await new Promise((resolve) => setTimeout(resolve, 3000));
+
+  // Placeholder: replace with real Toggl download logic as needed
+  return;
+}
+
+// ### Handle Filter Changes ###
 
 // Respond to day selection change
 const daySelect = document.getElementById(DAY_SELECT_ID);
