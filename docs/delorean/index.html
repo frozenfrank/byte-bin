@@ -57,10 +57,32 @@
       </form>
       <br/>
 
-      <h2>Step 2: Choose a Day</h2>
-      <wa-select id="daySelect" label="Select a Day">
-        <wa-option value="" selected disabled>-- Choose data source first --</wa-option>
-      </wa-select>
+      <h2>Step 2: Filter Entries</h2>
+      <div class="wa-flank:start wa-align-items-start">
+        <wa-radio-group
+          label="Choose Time Scale"
+          orientation="horizontal"
+          value="1"
+        >
+          <wa-radio appearance="button" value="1">One Day</wa-radio>
+          <wa-radio appearance="button" value="2">One Week</wa-radio>
+          <wa-radio appearance="button" value="3">One Month</wa-radio>
+          <wa-radio appearance="button" value="4">All Time</wa-radio>
+        </wa-radio-group>
+        <br/>
+
+        <wa-select id="daySelect" label="Select a Day">
+          <wa-option value="" selected disabled>-- Choose data source first --</wa-option>
+        </wa-select>
+
+        <wa-select id="weekSelect" label="Select a Week">
+          <wa-option value="" selected disabled>-- Choose data source first --</wa-option>
+        </wa-select>
+
+        <wa-select id="monthSelect" label="Select a Month">
+          <wa-option value="" selected disabled>-- Choose data source first --</wa-option>
+        </wa-select>
+      </div>
       <br/>
 
       <h2>Step 3: View Results</h2>
