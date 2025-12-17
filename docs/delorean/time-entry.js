@@ -25,6 +25,14 @@ function buildDateFromParts(datePart, timePart) {
         return null;
     }
 }
+/** @public Converts a Date object to a string in "YYYY-MM-DD" format. */
+function prepareStartDateStr(start) {
+    return start.toISOString().split('T')[0];
+}
+/** Prepares a Date object for the start date. */
+function prepareStartDateObj(start) {
+    return new Date(start.getFullYear(), start.getMonth(), start.getDate());
+}
 /** @public Convert Toggl API data into our standard format */
 function convertApiDataToTimeEntryData(apiEntries) {
     const entries = apiEntries.map((e) => {
@@ -33,6 +41,7 @@ function convertApiDataToTimeEntryData(apiEntries) {
         return {
             description: e.description || "",
             start,
+            startDate: prepareStartDateObj(start),
             stop,
             durationSeconds: e.duration > 0 ? e.duration : null,
             projectName: e.project_name || "",
@@ -69,6 +78,7 @@ function convertParsedCsvToTimeEntryData(parsed) {
         return {
             description: r['Description'] || "",
             start: start || new Date(NaN),
+            startDate: start ? prepareStartDateObj(start) : new Date(NaN),
             stop: stop,
             durationSeconds,
             projectName: r['Project'] || "",

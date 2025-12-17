@@ -12,6 +12,8 @@ export interface TimeEntryData<T> {
 export interface TimeEntry<T> {
   description: string;
   start: Date;
+  /** A date with the time part fixed to zero, local time. */
+  startDate: Date;
   stop: Date|null;
   durationSeconds: number|null;
   projectName: string;
@@ -23,6 +25,12 @@ export interface TimeEntry<T> {
 }
 
 // ### Types from Toggle API ###
+
+
+// /** @public Convert Toggl API data into our standard format */
+// declare function convertApiDataToTimeEntryData(
+//   apiEntries: TogglAPITimeEntryWithMetadata[]
+// ): TimeEntryData<TogglAPITimeEntryWithMetadata>
 
 export type TimeEntryId = number;
 export type UserId = number;
@@ -72,6 +80,11 @@ export interface TogglAPITimeEntryWithMetadata {
 }
 
 // ### Types from Toggl Export CSV ###
+
+// /** @public Convert Toggl CSV data into our standard format */
+// declare function convertParsedCsvToTimeEntryData(
+//   parsed: PapaParseCSVResult<TogglExportTimeEntry>,
+// ): TimeEntryData<TogglExportTimeEntry>
 
 export interface PapaParseCSVResult<T extends object> {
   data: T[];
