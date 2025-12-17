@@ -73,6 +73,20 @@ export interface TogglAPITimeEntryWithMetadata {
 
 // ### Types from Toggl Export CSV ###
 
+export interface PapaParseCSVResult<T extends object> {
+  data: T[];
+  errors: unknown[];
+  meta: {
+    delimiter: string;
+    linebreak: string;
+    aborted: boolean;
+    truncated: boolean;
+    cursor: number;
+    renamedHeaders: unknown;
+    fields: (keyof T)[];
+  };
+}
+
 /** A time entry exported from Toggl in CSV format. */
 export interface TogglExportTimeEntry {
   "Description": string;
