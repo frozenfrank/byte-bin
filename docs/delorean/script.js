@@ -638,8 +638,13 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
   // Prepare introductory summaries
   introduction += "DeLorean Transfer Timecard Report\n";
   if (timecardLines > 0) {
-    introduction += `Report date: ${minDate.toLocaleDateString()}`
-    if (maxDate != minDate) introduction += ` to ${maxDate.toLocaleDateString()}`;
+    introduction += `Report date: `;
+    if (minDate == maxDate) {
+      introduction += minDate.toLocaleDateString('default', { dateStyle: 'full' });
+    } else {
+      introduction += minDate.toLocaleDateString('default', { month: 'short', day: 'numeric', weekday: 'short' }) + ' to '
+                    + maxDate.toLocaleDateString('default', { dateStyle: 'full' });
+    }
   }
   introduction += `\n`;
 
