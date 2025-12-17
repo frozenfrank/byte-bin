@@ -1,3 +1,7 @@
+/**
+ * Build this file with:
+ * $ tsc -t esnext time-entry.ts && sed -i '' -E 's/^export[[:space:]]+//' time-entry.js
+ */
 /** Converts a string duration into the number of elapsed seconds. e.g., "01:30:00" */
 function parseDurationString(duration) {
     const [h, m, s] = duration.split(':').map(Number);
@@ -21,8 +25,8 @@ function buildDateFromParts(datePart, timePart) {
         return null;
     }
 }
-// Convert an array of Toggl API entries into TimeEntryData<TogglAPITimeEntryWithMetadata>
-export function convertApiDataToTimeEntryData(apiEntries) {
+/** @public Convert Toggl API data into our standard format */
+function convertApiDataToTimeEntryData(apiEntries) {
     const entries = apiEntries.map((e) => {
         const start = new Date(e.start);
         const stop = e.stop ? new Date(e.stop) : null;
@@ -45,7 +49,8 @@ export function convertApiDataToTimeEntryData(apiEntries) {
         entries,
     };
 }
-export function convertParsedCsvToTimeEntryData(parsed) {
+/** @public Convert Toggl CSV data into our standard format */
+function convertParsedCsvToTimeEntryData(parsed) {
     const csvEntries = parsed.data || [];
     const entries = csvEntries.map((r) => {
         const start = buildDateFromParts(r['Start date'], r['Start time']);
