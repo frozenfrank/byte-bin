@@ -1,4 +1,29 @@
 
+// ### Unified Time Entry Type ###
+
+/** The set of all time entries received from the data source. */
+export interface TimeEntryData<T> {
+  hasClientData: boolean;
+  hasBillableData: boolean;
+  entries: TimeEntry<T>[];
+}
+
+/** A unified time entry used within the application. */
+export interface TimeEntry<T> {
+  description: string;
+  start: Date;
+  stop: Date|null;
+  durationSeconds: number|null;
+  projectName: string;
+  clientName?: string;
+  tagNames: string[];
+  billable?: boolean;
+  userName: string;
+  original: T;
+}
+
+// ### Types from Toggle API ###
+
 export type TimeEntryId = number;
 export type UserId = number;
 export type WorkspaceId = number;
@@ -9,6 +34,7 @@ export type TagId = number;
 /** Ex: 2025-11-27T01:07:34+00:00 */
 export type ISO10DateString = string;
 
+/** A time entry received from Toggl's /v9/me/time_entries?meta=true endpoint. */
 export interface TogglAPITimeEntryWithMetadata {
   "id": TimeEntryId;
   "workspace_id": WorkspaceId;
@@ -45,6 +71,9 @@ export interface TogglAPITimeEntryWithMetadata {
   "user_avatar_url": string|"";
 }
 
+// ### Types from Toggl Export CSV ###
+
+/** A time entry exported from Toggl in CSV format. */
 export interface TogglExportTimeEntry {
   "Description": string;
   "Billable"?: "Yes"|"No";
