@@ -1,9 +1,14 @@
 const INPUT_FILE_ID = 'togglFileInput';
+
+const TIME_SCALE_INPUT_ID = 'timeScaleInput';
 const DAY_SELECT_ID = 'daySelect';
+const WEEK_SELECT_ID = 'weekSelect';
+const MONTH_SELECT_ID = 'monthSelect';
 const OUTPUT_PRE_ID = 'timecardReport';
 const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
 const NEXT_DAY_BUTTON_ID = 'nextDayButton';
 const PREV_DAY_BUTTON_ID = 'prevDayButton';
+const PREV_NEXT_LABEL_CLASS = 'prevNextLabel';
 
 const TOGGL_FORM = 'download-toggl-form';
 const TOGGL_TOKEN_ID = 'download-toggl-token';
@@ -19,9 +24,13 @@ let interpretedTimeData = {
   /** Sorted list of unique projects */
   uniqueProjects: [],
   /** Sorted list of unique dates */
-  uniqueDates: [],
+  uniqueDays: [],
   /** Sorted list of unique date values (number values). Used for moving between dates. */
-  uniqueDateValues: [],
+  uniqueDayValues: [],
+  /** Sorted list of unique date values (number values). Used for moving between dates. */
+  uniqueWeekValues: [],
+  /** Sorted list of unique date values (number values). Used for moving between dates. */
+  uniqueMonthValues: [],
   /** Whether the data includes client information */
   hasClientData: false,
   /** Whether the data includes billable information */
@@ -51,32 +60,66 @@ function handleInputFileChange(e) {
 // Respond to data parsing
 function handleDataParsed(results) {
   const timeEntryData = convertParsedCsvToTimeEntryData(results);
-  processParsedTimeEntryData(timeEntryData);
+  processTimeEntryData(timeEntryData);
 }
 
-function processParsedTimeEntryData(timeEntryData) {
+function processTimeEntryData(timeEntryData) {
   const allProjects = new Set();
   const allDates = new Map();
+  const allWeeks = new Map();
+  const allMonths = new Map();
 
   timeEntryData.entries.forEach((entry) => {
     allProjects.add(entry.projectName);
-    allDates.set(+entry.startDate, entry.startDate);
+
+    entry._computedDates = prepareComputedDateValues(entry.start);
+    allDates.set(+entry._computedDates.day, entry._computedDates.day);
+    allWeeks.set(+entry._computedDates.week, entry._computedDates.week);
+    allMonths.set(+entry._computedDates.month, entry._computedDates.month);
   });
 
   const uniqueProjects = Array.from(allProjects).sort();
-  const uniqueDates = Array.from(allDates.values()).sort((a,b) => a - b);
+
+  const dateMapToSortedArr = dateMap => Array.from(dateMap.values()).sort((a,b) => a - b);
+  const dateArrToValuesArr = dateArr => dateArr.map(d => +d);
+
+  const uniqueDays = dateMapToSortedArr(allDates);
+  const uniqueWeeks = dateMapToSortedArr(allWeeks);
+  const uniqueMonths = dateMapToSortedArr(allMonths);
 
   interpretedTimeData = {
     uniqueProjects,
-    uniqueDates,
-    uniqueDateValues: uniqueDates.map(d => +d),
+    uniqueDays, uniqueDayValues: dateArrToValuesArr(uniqueDays),
+    uniqueWeeks, uniqueWeekValues: dateArrToValuesArr(uniqueWeeks),
+    uniqueMonths, uniqueMonthValues: dateArrToValuesArr(uniqueMonths),
     hasClientData: timeEntryData.hasClientData,
     hasBillableData: timeEntryData.hasBillableData,
     allData: timeEntryData.entries,
   }
 
-  populateDaySelect(interpretedTimeData.uniqueDates);
-  setDaySelectValue(interpretedTimeData.uniqueDateValues[0]);
+  populateDateSelector(DAY_SELECT_ID, uniqueDays, "date", d => d.toLocaleDateString('default', { year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' }));
+  populateDateSelector(WEEK_SELECT_ID, uniqueWeeks, "week", w => {
+    const end = new Date(w);
+    end.setDate(end.getDate() + 6);
+    return w.toLocaleDateString('default', { month: 'short', day: 'numeric' }) + " – "
+       + end.toLocaleDateString('default', { month: 'short', day: 'numeric', year: '2-digit' });
+  });
+  populateDateSelector(MONTH_SELECT_ID, uniqueMonths, "month", m => m.toLocaleString('default', { month: 'long', year: 'numeric' }));
+
+  setDateSelectValues(interpretedTimeData.uniqueDayValues[interpretedTimeData.uniqueDayValues.length - 1]);
+  updatePrevNextLabels();
+}
+
+function prepareComputedDateValues(start) {
+  const year = start.getFullYear();
+  const month = start.getMonth();
+  const date = start.getDate();
+
+  return {
+    day: new Date(year, month, date),
+    week: new Date(year, month, date - start.getDay()),
+    month: new Date(year, month, 1),
+  };
 }
 
 // Respond to form submit
@@ -127,8 +170,6 @@ function handleTogglFormSubmit(e) {
     console.warn('Could not save Toggl token to localStorage', err);
   }
 
-  console.warn("Temporarily skipping toggl download."); return;
-
   void downloadTogglTimeEntries(token)
     .then(() => togglSubmitButton.loading = false);
 }
@@ -139,24 +180,107 @@ async function downloadTogglTimeEntries(token) {
   const togglApiData = await getTimeEntries(token, downloadStartDate);
 
   const timeEntryData = convertApiDataToTimeEntryData(togglApiData);
-  processParsedTimeEntryData(timeEntryData);
+  processTimeEntryData(timeEntryData);
 }
 
 // ### Handle Filter Changes ###
 
-// Respond to day selection change
+// Respond to date selector change
+const timeScaleInput = document.getElementById(TIME_SCALE_INPUT_ID);
+const nextPrevLabels = document.getElementsByClassName(PREV_NEXT_LABEL_CLASS);
 const daySelect = document.getElementById(DAY_SELECT_ID);
+const weekSelect = document.getElementById(WEEK_SELECT_ID);
+const monthSelect = document.getElementById(MONTH_SELECT_ID);
+
+timeScaleInput.addEventListener('change', handleTimeScaleChange);
+document.addEventListener('DOMContentLoaded', updatePrevNextLabels);
+function handleTimeScaleChange(e) {
+  updatePrevNextLabels();
+  renderTimecardReport();
+}
+
+function updatePrevNextLabels() {
+  let labelText = "";
+  let buttonsDisabled = false;
+  let displaySelect = null;
+
+  switch (+timeScaleInput.value) {
+    case 1: labelText = 'Day'; displaySelect = daySelect; break;
+    case 2: labelText = 'Week'; displaySelect = weekSelect; break;
+    case 3: labelText = 'Month'; displaySelect = monthSelect; break;
+    default:
+      buttonsDisabled = true;
+      break;
+  }
+
+  if (!interpretedTimeData.uniqueDayValues.length) buttonsDisabled = true;
+  nextButton.disabled = buttonsDisabled;
+  prevButton.disabled = buttonsDisabled;
+
+  for (const label of nextPrevLabels) {
+    label.textContent = labelText;
+  }
+  for (const selectEl of [daySelect, weekSelect, monthSelect]) {
+    selectEl.style.display = (selectEl === displaySelect) ? '' : 'none';
+  }
+}
+
 daySelect.addEventListener('change', handleDayChange);
 function handleDayChange(e) {
   const selectedDay = e.target.value;
-  renderTimecardReport(selectedDay);
+  setDateSelectValues(+selectedDay,true);
 }
 
-function populateDaySelect(dates) {
+weekSelect.addEventListener('change', handleWeekChange);
+function handleWeekChange(e) {
+  const selectedWeek = e.target.value;
+  setDateSelectValues(+selectedWeek,true);
+}
+
+monthSelect.addEventListener('change', handleMonthChange);
+function handleMonthChange(e) {
+  const selectedMonth = e.target.value;
+  setDateSelectValues(+selectedMonth,true);
+}
+
+/** Updates all date selectors with the provided date value.
+ * @param {number} dateValue - The date value to set (as a number, or Date object).
+ * @param {boolean} suppressEvent - Whether to suppress change events for the selectors.
+ */
+function setDateSelectValues(dateValue,suppressEvent=false) {
+  const computedDates = prepareComputedDateValues(new Date(dateValue));
+  const dayValue = Number(computedDates.day);
+  const weekValue = Number(computedDates.week);
+  const monthValue = Number(computedDates.month);
+
+  daySelect.value = ""+interpretedTimeData.uniqueDayValues.find(d => d >= dayValue);
+  weekSelect.value = ""+interpretedTimeData.uniqueWeekValues.find(w => w >= weekValue);
+  monthSelect.value = ""+interpretedTimeData.uniqueMonthValues.find(m => m >= monthValue);
+
+  if (!suppressEvent) {
+    const changedSelector = +timeScaleInput.value;
+    (changedSelector === 1) && daySelect.dispatchEvent(new Event('change', { bubbles: true }));
+    (changedSelector === 2) && weekSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    (changedSelector === 3) && monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  renderTimecardReport();
+}
+
+/**
+ * Populate a date selector dropdown with options.
+ *
+ * @param {string} selectId - The ID of the select element.
+ * @param {Array<Date>} dates - The sorted array of date values to populate.
+ * @param {string} entityNameSingular - The singular name of the entity (e.g., "date").
+ * @param {Function<Date,string>} dateFormatter - A function to format the date for display.
+ * @returns {void}
+ */
+function populateDateSelector(selectId, dates, entityNameSingular, dateFormatter) {
   // Get select element
-  const select = document.getElementById(DAY_SELECT_ID);
+  const select = document.getElementById(selectId);
   if (!select) {
-    console.error(`Day select element with ID '${DAY_SELECT_ID}' not found.`);
+    console.error(`Date selector element with ID '${selectId}' not found.`);
     return;
   }
 
@@ -165,16 +289,16 @@ function populateDaySelect(dates) {
 
   // Empty state
   if (!dates.length) {
-    select.appendChild(createOptionElement('', '-- No available dates --'));
+    select.appendChild(createOptionElement('', `-- No available ${entityNameSingular}s --`));
     return;
   }
 
   // Add a default prompt option
-  select.appendChild(createOptionElement('', '-- Choose a date --'));
+  select.appendChild(createOptionElement('', `-- Choose a ${entityNameSingular} --`));
 
   // Populate options
   dates.forEach(date => {
-    const formattedDate = date.toLocaleDateString();
+    const formattedDate = dateFormatter(date);
     select.appendChild(createOptionElement(+date, formattedDate));
   });
 }
@@ -186,17 +310,13 @@ function createOptionElement(value,text) {
   return opt;
 }
 
-function setDaySelectValue(value) {
-  daySelect.value = ""+value;
-  daySelect.dispatchEvent(new Event('change', { bubbles: true }));
-}
 
 // Attach event listeners to next/prev buttons
-document.getElementById(NEXT_DAY_BUTTON_ID)
-  .addEventListener('click', () => incrementSelectedDay(false));
+const nextButton = document.getElementById(NEXT_DAY_BUTTON_ID)
+nextButton.addEventListener('click', () => incrementSelectedDate(false));
 
-document.getElementById(PREV_DAY_BUTTON_ID)
-  .addEventListener('click', () => incrementSelectedDay(true));
+const prevButton = document.getElementById(PREV_DAY_BUTTON_ID)
+prevButton.addEventListener('click', () => incrementSelectedDate(true));
 
 // Keyboard shortcuts: N = next, P = previous
 document.addEventListener('keydown', (e) => {
@@ -209,9 +329,15 @@ document.addEventListener('keydown', (e) => {
 
   const key = e.key.toLowerCase();
   switch (key) {
-    case 'n':  incrementSelectedDay(false);   break;
-    case 'p':  incrementSelectedDay(true);    break;
+    case 'n':  incrementSelectedDate(false);  break;
+    case 'p':  incrementSelectedDate(true);   break;
     case 'd':  showAllDescSwitch.click();     break;
+    case 't':  incrementTimeScale(false);     break;
+
+    case 'o':  setTimeScale(1);               break;
+    case 'w':  setTimeScale(2);               break;
+    case 'm':  setTimeScale(3);               break;
+    case 'a':  setTimeScale(4);               break;
 
     default:
       return; // ignore other keys
@@ -219,58 +345,116 @@ document.addEventListener('keydown', (e) => {
   e.preventDefault();
 });
 
-function incrementSelectedDay(backward=false) {
-  const numValues = interpretedTimeData.uniqueDateValues.length;
-  if (!numValues) return;
-  if (!daySelect) {
-    console.error(`Day select element with ID '${DAY_SELECT_ID}' not found.`);
-    return;
+function incrementSelectedDate(backward=false) {
+  let dateValuesArr;
+  let dateSelect;
+  switch (+timeScaleInput.value) {
+    case 1: dateValuesArr = interpretedTimeData.uniqueDayValues; dateSelect = daySelect; break;
+    case 2: dateValuesArr = interpretedTimeData.uniqueWeekValues; dateSelect = weekSelect; break;
+    case 3: dateValuesArr = interpretedTimeData.uniqueMonthValues; dateSelect = monthSelect; break;
+    default:
+      return; // Mode does not support date incrementing
   }
 
-  const currentValue = +daySelect.value;
-  let currentIndex = currentValue ? interpretedTimeData.uniqueDateValues.indexOf(currentValue) : 0;  // O(n) operation
+  const numValues = dateValuesArr.length;
+  if (!numValues) return;
+  if (!dateSelect) {
+    throw new Error(`Date select element no longer present in DOM.`);
+  }
+
+  const currentValue = +dateSelect.value;
+  let currentIndex = currentValue ? dateValuesArr.indexOf(currentValue) : 0;  // O(n) operation
   if (currentIndex < 0) currentIndex = 0;
 
   const direction = backward ? -1 : 1;
   const nextIndex = (currentIndex + direction + numValues) % numValues;
-  const nextValue = interpretedTimeData.uniqueDateValues[nextIndex];
-  setDaySelectValue(nextValue);
+  const nextValue = dateValuesArr[nextIndex];
+  setDateSelectValues(nextValue);
 }
 
+function incrementTimeScale(backward=false) {
+  const numValues = 4; // Day, Week, Month, All [Ranged 1-4]
+
+  const currentScale = +timeScaleInput.value;
+  const direction = backward ? -1 : 1;
+  const nextScale = ((currentScale - 1 + direction + numValues) % numValues) + 1; // Shift to 0-based, mod, shift back to 1-based
+  setTimeScale(nextScale);
+}
+
+function setTimeScale(scaleValue) {
+  timeScaleInput.value = ""+scaleValue;
+  updatePrevNextLabels();
+  renderTimecardReport();
+}
 
 // Allow toggling display of all descriptions
 const showAllDescSwitch = document.getElementById(SHOW_ALL_DESC_ID);
 showAllDescSwitch.addEventListener('change', handleShowAllDescChange);
 function handleShowAllDescChange(e) {
-  const showAll = e.target.checked;
-  renderTimecardReport(null,null,showAll);
+  renderTimecardReport();
 }
 
 // ### Extract and Prepare Timecard Entries ###
 
-function renderTimecardReport(forDay=null,timeData=null,showAllDescriptions=null) {
-  if (forDay === null) forDay = daySelect.value;
-  if (timeData === null) timeData = interpretedTimeData.allData;
-  if (showAllDescriptions === null) showAllDescriptions = showAllDescSwitch.checked;
+function renderTimecardReport() {
+  // Retrieve current settings from UI
+  const timeData = interpretedTimeData.allData;
+  const showAllDescriptions = showAllDescSwitch.checked;
+  const {minDateIncl,maxDateExcl} = interpretMinMaxFilterDates();
+  const filterClientName = null; // e.g., "Client XYZ"
 
-  const entries = prepareTimecardEntries(forDay, timeData);
+  // Organize and format entries
+  const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,interpretedTimeData.hasBillableData,filterClientName);
+  const entries = prepareTimecardEntries(filteredData);
   const report = formatTimecardEntries(entries, showAllDescriptions);
   const outputPre = document.getElementById(OUTPUT_PRE_ID);
   outputPre.textContent = report;
 }
 
-function prepareTimecardEntries(forDay,timeData) {
-  if (!forDay || !timeData?.length) {
+function interpretMinMaxFilterDates() {
+  let minDateIncl = null;
+  let maxDateExcl = null;
+
+  const oneDay = 24 * 60 * 60 * 1000;
+  switch (+timeScaleInput.value) {
+    case 1: // Day
+      minDateIncl = new Date(+daySelect.value);
+      maxDateExcl = new Date(+daySelect.value + oneDay);
+      break;
+    case 2: // Week
+      minDateIncl = new Date(+weekSelect.value);
+      maxDateExcl = new Date(+weekSelect.value + (7 * oneDay));
+      break;
+    case 3: // Month
+      minDateIncl = new Date(+monthSelect.value);
+      maxDateExcl = new Date(minDateIncl.getFullYear(), minDateIncl.getMonth() + 1, 1);
+      break;
+  }
+
+  return { minDateIncl, maxDateExcl };
+}
+
+function filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillable=false,clientName=null) {
+  if (!timeData?.length) return [];
+
+  return timeData.filter(entry => {
+    if (requireBillable && !entry.billable) return false;
+    if (clientName && (entry.clientName !== clientName)) return false;
+
+    const entryDate = entry.start;
+    return (!minDateIncl || entryDate >= minDateIncl) &&
+           (!maxDateExcl || entryDate < maxDateExcl);
+  });
+}
+
+function prepareTimecardEntries(timeData) {
+  if (!timeData?.length) {
     return [];
   }
 
-  const entriesForDay = timeData.filter(entry =>
-    (+entry.startDate === +forDay) &&
-    (entry.billable === true));
-
   // Group entries by project and TLP and DLG/QAN code
   const groupedEntries = {};
-  entriesForDay.forEach(entry => {
+  timeData.forEach(entry => {
     const tlpCode = extractTLPCode(entry) || "";
     const prjNumber = extractPRJNumber(entry) || "";
     const dlgNumber = extractDLGNumber(entry) || "";
@@ -382,7 +566,7 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
 
     lineEntriesSet = new Set();
     for (const e of entry.entries) {
-      dateVal = e.startDate;
+      dateVal = e._computedDates.day;
       if (+dateVal < minDate) minDate = dateVal;
       if (+dateVal > maxDate) maxDate = dateVal;
 
@@ -454,8 +638,13 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
   // Prepare introductory summaries
   introduction += "DeLorean Transfer Timecard Report\n";
   if (timecardLines > 0) {
-    introduction += `Report date: ${minDate.toLocaleDateString()}`
-    if (maxDate != minDate) introduction += ` to ${maxDate.toLocaleDateString()}`;
+    introduction += `Report date: `;
+    if (minDate == maxDate) {
+      introduction += minDate.toLocaleDateString('default', { dateStyle: 'full' });
+    } else {
+      introduction += minDate.toLocaleDateString('default', { month: 'short', day: 'numeric', weekday: 'short' }) + ' to '
+                    + maxDate.toLocaleDateString('default', { dateStyle: 'full' });
+    }
   }
   introduction += `\n`;
 
