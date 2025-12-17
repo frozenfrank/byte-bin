@@ -1,5 +1,7 @@
 const INPUT_FILE_ID = 'togglFileInput';
 const DAY_SELECT_ID = 'daySelect';
+const WEEK_SELECT_ID = 'weekSelect';
+const MONTH_SELECT_ID = 'monthSelect';
 const OUTPUT_PRE_ID = 'timecardReport';
 const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
 const NEXT_DAY_BUTTON_ID = 'nextDayButton';
@@ -19,7 +21,7 @@ let interpretedTimeData = {
   /** Sorted list of unique projects */
   uniqueProjects: [],
   /** Sorted list of unique dates */
-  uniqueDates: [],
+  uniqueDays: [],
   /** Sorted list of unique date values (number values). Used for moving between dates. */
   uniqueDateValues: [],
   /** Whether the data includes client information */
@@ -51,32 +53,65 @@ function handleInputFileChange(e) {
 // Respond to data parsing
 function handleDataParsed(results) {
   const timeEntryData = convertParsedCsvToTimeEntryData(results);
-  processParsedTimeEntryData(timeEntryData);
+  processTimeEntryData(timeEntryData);
 }
 
-function processParsedTimeEntryData(timeEntryData) {
+function processTimeEntryData(timeEntryData) {
   const allProjects = new Set();
   const allDates = new Map();
+  const allWeeks = new Map();
+  const allMonths = new Map();
 
   timeEntryData.entries.forEach((entry) => {
     allProjects.add(entry.projectName);
-    allDates.set(+entry.startDate, entry.startDate);
+
+    entry._computedDates = prepareComputedDateValues(entry.start);
+    allDates.set(+entry._computedDates.day, entry._computedDates.day);
+    allWeeks.set(+entry._computedDates.week, entry._computedDates.week);
+    allMonths.set(+entry._computedDates.month, entry._computedDates.month);
   });
 
   const uniqueProjects = Array.from(allProjects).sort();
-  const uniqueDates = Array.from(allDates.values()).sort((a,b) => a - b);
+
+  const dateMapToSortedArr = dateMap => Array.from(dateMap.values()).sort((a,b) => a - b);
+  const dateArrToValuesArr = dateArr => dateArr.map(d => +d);
+
+  const uniqueDays = dateMapToSortedArr(allDates);
+  const uniqueWeeks = dateMapToSortedArr(allWeeks);
+  const uniqueMonths = dateMapToSortedArr(allMonths);
 
   interpretedTimeData = {
     uniqueProjects,
-    uniqueDates,
-    uniqueDateValues: uniqueDates.map(d => +d),
+    uniqueDays, uniqueDateValues: dateArrToValuesArr(uniqueDays),
+    uniqueWeeks, uniqueWeekValues: dateArrToValuesArr(uniqueWeeks),
+    uniqueMonths, uniqueMonthValues: dateArrToValuesArr(uniqueMonths),
     hasClientData: timeEntryData.hasClientData,
     hasBillableData: timeEntryData.hasBillableData,
     allData: timeEntryData.entries,
   }
 
-  populateDaySelect(interpretedTimeData.uniqueDates);
-  setDaySelectValue(interpretedTimeData.uniqueDateValues[0]);
+  populateDateSelector(DAY_SELECT_ID, uniqueDays, "date", d => d.toLocaleDateString('default', { year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' }));
+  populateDateSelector(WEEK_SELECT_ID, uniqueWeeks, "week", w => {
+    const end = new Date(w);
+    end.setDate(end.getDate() + 6);
+    return w.toLocaleDateString('default', { month: 'short', day: 'numeric' }) + " – "
+       + end.toLocaleDateString('default', { month: 'short', day: 'numeric', year: '2-digit' });
+  });
+  populateDateSelector(MONTH_SELECT_ID, uniqueMonths, "month", m => m.toLocaleString('default', { month: 'long', year: 'numeric' }));
+
+  setDateSelectValues(interpretedTimeData.uniqueDateValues[0]);
+}
+
+function prepareComputedDateValues(start) {
+  const year = start.getFullYear();
+  const month = start.getMonth();
+  const date = start.getDate();
+
+  return {
+    day: new Date(year, month, date),
+    week: new Date(year, month, date - start.getDay()),
+    month: new Date(year, month, 1),
+  };
 }
 
 // Respond to form submit
@@ -139,24 +174,68 @@ async function downloadTogglTimeEntries(token) {
   const togglApiData = await getTimeEntries(token, downloadStartDate);
 
   const timeEntryData = convertApiDataToTimeEntryData(togglApiData);
-  processParsedTimeEntryData(timeEntryData);
+  processTimeEntryData(timeEntryData);
 }
 
 // ### Handle Filter Changes ###
 
-// Respond to day selection change
+// Respond to date selector change
 const daySelect = document.getElementById(DAY_SELECT_ID);
+const weekSelect = document.getElementById(WEEK_SELECT_ID);
+const monthSelect = document.getElementById(MONTH_SELECT_ID);
+
 daySelect.addEventListener('change', handleDayChange);
 function handleDayChange(e) {
   const selectedDay = e.target.value;
+  setDateSelectValues(selectedDay,1);
   renderTimecardReport(selectedDay);
 }
 
-function populateDaySelect(dates) {
+weekSelect.addEventListener('change', handleWeekChange);
+function handleWeekChange(e) {
+  const selectedWeek = e.target.value;
+  setDateSelectValues(selectedWeek,2);
+  renderTimecardReport(selectedWeek);
+}
+
+monthSelect.addEventListener('change', handleMonthChange);
+function handleMonthChange(e) {
+  const selectedMonth = e.target.value;
+  setDateSelectValues(selectedMonth,3);
+  renderTimecardReport(selectedMonth);
+}
+
+/** Updates all date selectors with the provided date value.
+ * @param {number} dateValue - The date value to set (as a number, or Date object, or string form of the number).
+ * @param {string} [changedSelector] - The ID of the selector that triggered the change (to avoid redundant updates).
+ *                                     - 1=daySelect, 2=weekSelect, 3=monthSelect
+ */
+function setDateSelectValues(dateValue,changedSelector) {
+  const computedDates = prepareComputedDateValues(new Date(dateValue))
+
+  daySelect.value = ""+Number(computedDates.day);
+  weekSelect.value = ""+Number(computedDates.week);
+  monthSelect.value = ""+Number(computedDates.month);
+
+  (changedSelector !== 1) && daySelect.dispatchEvent(new Event('change', { bubbles: true }));
+  (changedSelector !== 2) && weekSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  (changedSelector !== 3) && monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
+}
+
+/**
+ * Populate a date selector dropdown with options.
+ *
+ * @param {string} selectId - The ID of the select element.
+ * @param {Array<Date>} dates - The sorted array of date values to populate.
+ * @param {string} entityNameSingular - The singular name of the entity (e.g., "date").
+ * @param {Function<Date,string>} dateFormatter - A function to format the date for display.
+ * @returns {void}
+ */
+function populateDateSelector(selectId, dates, entityNameSingular, dateFormatter) {
   // Get select element
-  const select = document.getElementById(DAY_SELECT_ID);
+  const select = document.getElementById(selectId);
   if (!select) {
-    console.error(`Day select element with ID '${DAY_SELECT_ID}' not found.`);
+    console.error(`Date selector element with ID '${selectId}' not found.`);
     return;
   }
 
@@ -165,16 +244,16 @@ function populateDaySelect(dates) {
 
   // Empty state
   if (!dates.length) {
-    select.appendChild(createOptionElement('', '-- No available dates --'));
+    select.appendChild(createOptionElement('', `-- No available ${entityNameSingular}s --`));
     return;
   }
 
   // Add a default prompt option
-  select.appendChild(createOptionElement('', '-- Choose a date --'));
+  select.appendChild(createOptionElement('', `-- Choose a ${entityNameSingular} --`));
 
   // Populate options
   dates.forEach(date => {
-    const formattedDate = date.toLocaleDateString();
+    const formattedDate = dateFormatter(date);
     select.appendChild(createOptionElement(+date, formattedDate));
   });
 }
@@ -186,10 +265,6 @@ function createOptionElement(value,text) {
   return opt;
 }
 
-function setDaySelectValue(value) {
-  daySelect.value = ""+value;
-  daySelect.dispatchEvent(new Event('change', { bubbles: true }));
-}
 
 // Attach event listeners to next/prev buttons
 document.getElementById(NEXT_DAY_BUTTON_ID)
@@ -234,7 +309,7 @@ function incrementSelectedDay(backward=false) {
   const direction = backward ? -1 : 1;
   const nextIndex = (currentIndex + direction + numValues) % numValues;
   const nextValue = interpretedTimeData.uniqueDateValues[nextIndex];
-  setDaySelectValue(nextValue);
+  setDateSelectValues(nextValue);
 }
 
 
@@ -382,7 +457,7 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
 
     lineEntriesSet = new Set();
     for (const e of entry.entries) {
-      dateVal = e.startDate;
+      dateVal = e._computedDates.day;
       if (+dateVal < minDate) minDate = dateVal;
       if (+dateVal > maxDate) maxDate = dateVal;
 

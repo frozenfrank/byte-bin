@@ -27,11 +27,6 @@ function buildDateFromParts(datePart?: string, timePart?: string): Date | null {
   }
 }
 
-/** Prepares a Date object for the start date. */
-function prepareStartDateObj(start: Date): Date {
-  return new Date(start.getFullYear(), start.getMonth(), start.getDate());
-}
-
 /** @public Convert Toggl API data into our standard format */
 export function convertApiDataToTimeEntryData(
   apiEntries: TogglAPITimeEntryWithMetadata[]
@@ -43,7 +38,6 @@ export function convertApiDataToTimeEntryData(
     return {
       description: e.description || "",
       start,
-      startDate: prepareStartDateObj(start),
       stop,
       durationSeconds: e.duration > 0 ? e.duration : null,
       projectName: e.project_name || "",
@@ -88,7 +82,6 @@ export function convertParsedCsvToTimeEntryData(
     return {
       description: r['Description'] || "",
       start: start || new Date(NaN),
-      startDate: start ? prepareStartDateObj(start) : new Date(NaN),
       stop: stop,
       durationSeconds,
       projectName: r['Project'] || "",

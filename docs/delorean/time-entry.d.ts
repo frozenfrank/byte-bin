@@ -12,8 +12,6 @@ export interface TimeEntryData<T> {
 export interface TimeEntry<T> {
   description: string;
   start: Date;
-  /** A date with the time part fixed to zero, local time. */
-  startDate: Date;
   stop: Date|null;
   durationSeconds: number|null;
   projectName: string;
@@ -21,7 +19,13 @@ export interface TimeEntry<T> {
   tagNames: string[];
   billable?: boolean;
   userName: string;
+
   original: T;
+  _computedDates?: {
+    day: Date;
+    week: Date;
+    month: Date;
+  };
 }
 
 // ### Types from Toggle API ###
