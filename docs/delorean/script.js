@@ -187,6 +187,8 @@ const daySelect = document.getElementById(DAY_SELECT_ID);
 const weekSelect = document.getElementById(WEEK_SELECT_ID);
 const monthSelect = document.getElementById(MONTH_SELECT_ID);
 
+timeScaleInput.addEventListener('change', renderTimecardReport);
+
 daySelect.addEventListener('change', handleDayChange);
 function handleDayChange(e) {
   const selectedDay = e.target.value;
@@ -223,7 +225,7 @@ function setDateSelectValues(dateValue,suppressEvent=false) {
     (changedSelector === 3) && monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  renderTimecardReport(daySelect.value);
+  renderTimecardReport();
 }
 
 /**
@@ -321,35 +323,70 @@ function incrementSelectedDay(backward=false) {
 const showAllDescSwitch = document.getElementById(SHOW_ALL_DESC_ID);
 showAllDescSwitch.addEventListener('change', handleShowAllDescChange);
 function handleShowAllDescChange(e) {
-  const showAll = e.target.checked;
-  renderTimecardReport(null,null,showAll);
+  renderTimecardReport();
 }
 
 // ### Extract and Prepare Timecard Entries ###
 
-function renderTimecardReport(forDay=null,timeData=null,showAllDescriptions=null) {
-  if (forDay === null) forDay = daySelect.value;
-  if (timeData === null) timeData = interpretedTimeData.allData;
-  if (showAllDescriptions === null) showAllDescriptions = showAllDescSwitch.checked;
+function renderTimecardReport() {
+  // Retrieve current settings from UI
+  const timeData = interpretedTimeData.allData;
+  const showAllDescriptions = showAllDescSwitch.checked;
+  const {minDateIncl,maxDateExcl} = interpretMinMaxFilterDates();
+  const filterClientName = null; // e.g., "Client XYZ"
 
-  const entries = prepareTimecardEntries(forDay, timeData);
+  // Organize and format entries
+  const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,interpretedTimeData.hasBillableData,filterClientName);
+  const entries = prepareTimecardEntries(filteredData);
   const report = formatTimecardEntries(entries, showAllDescriptions);
   const outputPre = document.getElementById(OUTPUT_PRE_ID);
   outputPre.textContent = report;
 }
 
-function prepareTimecardEntries(forDay,timeData) {
-  if (!forDay || !timeData?.length) {
+function interpretMinMaxFilterDates() {
+  let minDateIncl = null;
+  let maxDateExcl = null;
+
+  const oneDay = 24 * 60 * 60 * 1000;
+  switch (+timeScaleInput.value) {
+    case 1: // Day
+      minDateIncl = new Date(+daySelect.value);
+      maxDateExcl = new Date(+daySelect.value + oneDay);
+      break;
+    case 2: // Week
+      minDateIncl = new Date(+weekSelect.value);
+      maxDateExcl = new Date(+weekSelect.value + (7 * oneDay));
+      break;
+    case 3: // Month
+      minDateIncl = new Date(+monthSelect.value);
+      maxDateExcl = new Date(minDateIncl.getFullYear(), minDateIncl.getMonth() + 1, 1);
+      break;
+  }
+
+  return { minDateIncl, maxDateExcl };
+}
+
+function filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillable=false,clientName=null) {
+  if (!timeData?.length) return [];
+
+  return timeData.filter(entry => {
+    if (requireBillable && !entry.billable) return false;
+    if (clientName && (entry.clientName !== clientName)) return false;
+
+    const entryDate = entry.start;
+    return (!minDateIncl || entryDate >= minDateIncl) &&
+           (!maxDateExcl || entryDate < maxDateExcl);
+  });
+}
+
+function prepareTimecardEntries(timeData) {
+  if (!timeData?.length) {
     return [];
   }
 
-  const entriesForDay = timeData.filter(entry =>
-    (+entry.startDate === +forDay) &&
-    (entry.billable === true));
-
   // Group entries by project and TLP and DLG/QAN code
   const groupedEntries = {};
-  entriesForDay.forEach(entry => {
+  timeData.forEach(entry => {
     const tlpCode = extractTLPCode(entry) || "";
     const prjNumber = extractPRJNumber(entry) || "";
     const dlgNumber = extractDLGNumber(entry) || "";
