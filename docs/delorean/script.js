@@ -250,11 +250,14 @@ function handleMonthChange(e) {
  * @param {boolean} suppressEvent - Whether to suppress change events for the selectors.
  */
 function setDateSelectValues(dateValue,suppressEvent=false) {
-  const computedDates = prepareComputedDateValues(new Date(dateValue))
+  const computedDates = prepareComputedDateValues(new Date(dateValue));
+  const dayValue = Number(computedDates.day);
+  const weekValue = Number(computedDates.week);
+  const monthValue = Number(computedDates.month);
 
-  daySelect.value = ""+Number(computedDates.day);
-  weekSelect.value = ""+Number(computedDates.week);
-  monthSelect.value = ""+Number(computedDates.month);
+  daySelect.value = ""+interpretedTimeData.uniqueDayValues.find(d => d >= dayValue);
+  weekSelect.value = ""+interpretedTimeData.uniqueWeekValues.find(w => w >= weekValue);
+  monthSelect.value = ""+interpretedTimeData.uniqueMonthValues.find(m => m >= monthValue);
 
   if (!suppressEvent) {
     const changedSelector = +timeScaleInput.value;
