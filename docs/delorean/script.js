@@ -50,10 +50,13 @@ function handleInputFileChange(e) {
 
 // Respond to data parsing
 function handleDataParsed(results) {
+  const timeEntryData = convertParsedCsvToTimeEntryData(results);
+  processParsedTimeEntryData(timeEntryData);
+}
+
+function processParsedTimeEntryData(timeEntryData) {
   const allProjects = new Set();
   const allDates = new Map();
-
-  const timeEntryData = convertParsedCsvToTimeEntryData(results);
 
   timeEntryData.entries.forEach((entry) => {
     allProjects.add(entry.projectName);
@@ -104,11 +107,12 @@ function handleTogglFormSubmit(e) {
 }
 
 async function downloadTogglTimeEntries(token) {
-  // Simulate a database call / network latency of 3 seconds
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+  const downloadStartDate = new Date();
+  downloadStartDate.setMonth(downloadStartDate.getMonth() - 2,1); // First of the month, two months ago
+  const togglApiData = await getTimeEntries(token, downloadStartDate);
 
-  // Placeholder: replace with real Toggl download logic as needed
-  return;
+  const timeEntryData = convertApiDataToTimeEntryData(togglApiData);
+  processParsedTimeEntryData(timeEntryData);
 }
 
 // ### Handle Filter Changes ###

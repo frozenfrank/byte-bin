@@ -30,6 +30,8 @@ function getTimeEntries(token,startDate,endDate=new Date,includeMetaInformation=
     throw new Error("Missing required parameter.");
   }
 
+  endDate = new Date(endDate)
+  endDate.setHours(23,59,59,999); // Include full end date
   const parameters = [
     `meta=${!!includeMetaInformation}`,
     `start_date=${formatDate(startDate)}`,
