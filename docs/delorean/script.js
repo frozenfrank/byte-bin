@@ -61,7 +61,6 @@ function handleInputFileChange(e) {
 function handleDataParsed(results) {
   const timeEntryData = convertParsedCsvToTimeEntryData(results);
   processTimeEntryData(timeEntryData);
-  updatePrevNextLabels();
 }
 
 function processTimeEntryData(timeEntryData) {
@@ -107,7 +106,8 @@ function processTimeEntryData(timeEntryData) {
   });
   populateDateSelector(MONTH_SELECT_ID, uniqueMonths, "month", m => m.toLocaleString('default', { month: 'long', year: 'numeric' }));
 
-  setDateSelectValues(interpretedTimeData.uniqueDayValues[0]);
+  setDateSelectValues(interpretedTimeData.uniqueDayValues[interpretedTimeData.uniqueDayValues.length - 1]);
+  updatePrevNextLabels();
 }
 
 function prepareComputedDateValues(start) {
@@ -169,8 +169,6 @@ function handleTogglFormSubmit(e) {
     // Ignore storage errors (e.g. private mode) but don't prevent download
     console.warn('Could not save Toggl token to localStorage', err);
   }
-
-  console.warn("Temporarily skipping toggl download."); return;
 
   void downloadTogglTimeEntries(token)
     .then(() => togglSubmitButton.loading = false);
