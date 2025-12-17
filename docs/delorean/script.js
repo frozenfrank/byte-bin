@@ -55,9 +55,9 @@ function handleInputFileChange(e) {
 
 // Respond to data parsing
 function handleDataParsed(results) {
-  updatePrevNextLabels();
   const timeEntryData = convertParsedCsvToTimeEntryData(results);
   processTimeEntryData(timeEntryData);
+  updatePrevNextLabels();
 }
 
 function processTimeEntryData(timeEntryData) {
@@ -327,6 +327,7 @@ document.addEventListener('keydown', (e) => {
     case 'n':  incrementSelectedDay(false);   break;
     case 'p':  incrementSelectedDay(true);    break;
     case 'd':  showAllDescSwitch.click();     break;
+    case 't':  incrementTimeScale(false);     break;
 
     default:
       return; // ignore other keys
@@ -352,6 +353,17 @@ function incrementSelectedDay(backward=false) {
   setDateSelectValues(nextValue);
 }
 
+function incrementTimeScale(backward=false) {
+  const numValues = 4; // Day, Week, Month, All [Ranged 1-4]
+
+  const currentScale = +timeScaleInput.value;
+  const direction = backward ? -1 : 1;
+  const nextScale = ((currentScale - 1 + direction + numValues) % numValues) + 1; // Shift to 0-based, mod, shift back to 1-based
+  timeScaleInput.value = ""+nextScale;
+
+  updatePrevNextLabels();
+  renderTimecardReport();
+}
 
 // Allow toggling display of all descriptions
 const showAllDescSwitch = document.getElementById(SHOW_ALL_DESC_ID);
