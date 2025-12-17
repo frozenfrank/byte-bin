@@ -26,7 +26,11 @@ let interpretedTimeData = {
   /** Sorted list of unique dates */
   uniqueDays: [],
   /** Sorted list of unique date values (number values). Used for moving between dates. */
-  uniqueDateValues: [],
+  uniqueDayValues: [],
+  /** Sorted list of unique date values (number values). Used for moving between dates. */
+  uniqueWeekValues: [],
+  /** Sorted list of unique date values (number values). Used for moving between dates. */
+  uniqueMonthValues: [],
   /** Whether the data includes client information */
   hasClientData: false,
   /** Whether the data includes billable information */
@@ -86,7 +90,7 @@ function processTimeEntryData(timeEntryData) {
 
   interpretedTimeData = {
     uniqueProjects,
-    uniqueDays, uniqueDateValues: dateArrToValuesArr(uniqueDays),
+    uniqueDays, uniqueDayValues: dateArrToValuesArr(uniqueDays),
     uniqueWeeks, uniqueWeekValues: dateArrToValuesArr(uniqueWeeks),
     uniqueMonths, uniqueMonthValues: dateArrToValuesArr(uniqueMonths),
     hasClientData: timeEntryData.hasClientData,
@@ -103,7 +107,7 @@ function processTimeEntryData(timeEntryData) {
   });
   populateDateSelector(MONTH_SELECT_ID, uniqueMonths, "month", m => m.toLocaleString('default', { month: 'long', year: 'numeric' }));
 
-  setDateSelectValues(interpretedTimeData.uniqueDateValues[0]);
+  setDateSelectValues(interpretedTimeData.uniqueDayValues[0]);
 }
 
 function prepareComputedDateValues(start) {
@@ -211,7 +215,7 @@ function updatePrevNextLabels() {
       break;
   }
 
-  if (!interpretedTimeData.uniqueDateValues.length) buttonsDisabled = true;
+  if (!interpretedTimeData.uniqueDayValues.length) buttonsDisabled = true;
   nextButton.disabled = buttonsDisabled;
   prevButton.disabled = buttonsDisabled;
 
@@ -308,10 +312,10 @@ function createOptionElement(value,text) {
 
 // Attach event listeners to next/prev buttons
 const nextButton = document.getElementById(NEXT_DAY_BUTTON_ID)
-nextButton.addEventListener('click', () => incrementSelectedDay(false));
+nextButton.addEventListener('click', () => incrementSelectedDate(false));
 
 const prevButton = document.getElementById(PREV_DAY_BUTTON_ID)
-prevButton.addEventListener('click', () => incrementSelectedDay(true));
+prevButton.addEventListener('click', () => incrementSelectedDate(true));
 
 // Keyboard shortcuts: N = next, P = previous
 document.addEventListener('keydown', (e) => {
@@ -324,8 +328,8 @@ document.addEventListener('keydown', (e) => {
 
   const key = e.key.toLowerCase();
   switch (key) {
-    case 'n':  incrementSelectedDay(false);   break;
-    case 'p':  incrementSelectedDay(true);    break;
+    case 'n':  incrementSelectedDate(false);  break;
+    case 'p':  incrementSelectedDate(true);   break;
     case 'd':  showAllDescSwitch.click();     break;
     case 't':  incrementTimeScale(false);     break;
 
@@ -335,21 +339,30 @@ document.addEventListener('keydown', (e) => {
   e.preventDefault();
 });
 
-function incrementSelectedDay(backward=false) {
-  const numValues = interpretedTimeData.uniqueDateValues.length;
-  if (!numValues) return;
-  if (!daySelect) {
-    console.error(`Day select element with ID '${DAY_SELECT_ID}' not found.`);
-    return;
+function incrementSelectedDate(backward=false) {
+  let dateValuesArr;
+  let dateSelect;
+  switch (+timeScaleInput.value) {
+    case 1: dateValuesArr = interpretedTimeData.uniqueDayValues; dateSelect = daySelect; break;
+    case 2: dateValuesArr = interpretedTimeData.uniqueWeekValues; dateSelect = weekSelect; break;
+    case 3: dateValuesArr = interpretedTimeData.uniqueMonthValues; dateSelect = monthSelect; break;
+    default:
+      return; // Mode does not support date incrementing
   }
 
-  const currentValue = +daySelect.value;
-  let currentIndex = currentValue ? interpretedTimeData.uniqueDateValues.indexOf(currentValue) : 0;  // O(n) operation
+  const numValues = dateValuesArr.length;
+  if (!numValues) return;
+  if (!dateSelect) {
+    throw new Error(`Date select element no longer present in DOM.`);
+  }
+
+  const currentValue = +dateSelect.value;
+  let currentIndex = currentValue ? dateValuesArr.indexOf(currentValue) : 0;  // O(n) operation
   if (currentIndex < 0) currentIndex = 0;
 
   const direction = backward ? -1 : 1;
   const nextIndex = (currentIndex + direction + numValues) % numValues;
-  const nextValue = interpretedTimeData.uniqueDateValues[nextIndex];
+  const nextValue = dateValuesArr[nextIndex];
   setDateSelectValues(nextValue);
 }
 
