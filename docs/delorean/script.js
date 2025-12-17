@@ -1,4 +1,6 @@
 const INPUT_FILE_ID = 'togglFileInput';
+
+const TIME_SCALE_INPUT_ID = 'timeScaleInput';
 const DAY_SELECT_ID = 'daySelect';
 const WEEK_SELECT_ID = 'weekSelect';
 const MONTH_SELECT_ID = 'monthSelect';
@@ -180,6 +182,7 @@ async function downloadTogglTimeEntries(token) {
 // ### Handle Filter Changes ###
 
 // Respond to date selector change
+const timeScaleInput = document.getElementById(TIME_SCALE_INPUT_ID);
 const daySelect = document.getElementById(DAY_SELECT_ID);
 const weekSelect = document.getElementById(WEEK_SELECT_ID);
 const monthSelect = document.getElementById(MONTH_SELECT_ID);
@@ -187,39 +190,40 @@ const monthSelect = document.getElementById(MONTH_SELECT_ID);
 daySelect.addEventListener('change', handleDayChange);
 function handleDayChange(e) {
   const selectedDay = e.target.value;
-  setDateSelectValues(selectedDay,1);
-  renderTimecardReport(selectedDay);
+  setDateSelectValues(+selectedDay,true);
 }
 
 weekSelect.addEventListener('change', handleWeekChange);
 function handleWeekChange(e) {
   const selectedWeek = e.target.value;
-  setDateSelectValues(selectedWeek,2);
-  renderTimecardReport(selectedWeek);
+  setDateSelectValues(+selectedWeek,true);
 }
 
 monthSelect.addEventListener('change', handleMonthChange);
 function handleMonthChange(e) {
   const selectedMonth = e.target.value;
-  setDateSelectValues(selectedMonth,3);
-  renderTimecardReport(selectedMonth);
+  setDateSelectValues(+selectedMonth,true);
 }
 
 /** Updates all date selectors with the provided date value.
- * @param {number} dateValue - The date value to set (as a number, or Date object, or string form of the number).
- * @param {string} [changedSelector] - The ID of the selector that triggered the change (to avoid redundant updates).
- *                                     - 1=daySelect, 2=weekSelect, 3=monthSelect
+ * @param {number} dateValue - The date value to set (as a number, or Date object).
+ * @param {boolean} suppressEvent - Whether to suppress change events for the selectors.
  */
-function setDateSelectValues(dateValue,changedSelector) {
+function setDateSelectValues(dateValue,suppressEvent=false) {
   const computedDates = prepareComputedDateValues(new Date(dateValue))
 
   daySelect.value = ""+Number(computedDates.day);
   weekSelect.value = ""+Number(computedDates.week);
   monthSelect.value = ""+Number(computedDates.month);
 
-  (changedSelector !== 1) && daySelect.dispatchEvent(new Event('change', { bubbles: true }));
-  (changedSelector !== 2) && weekSelect.dispatchEvent(new Event('change', { bubbles: true }));
-  (changedSelector !== 3) && monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  if (!suppressEvent) {
+    const changedSelector = +timeScaleInput.value;
+    (changedSelector === 1) && daySelect.dispatchEvent(new Event('change', { bubbles: true }));
+    (changedSelector === 2) && weekSelect.dispatchEvent(new Event('change', { bubbles: true }));
+    (changedSelector === 3) && monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  renderTimecardReport(daySelect.value);
 }
 
 /**

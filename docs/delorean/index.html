@@ -60,6 +60,7 @@
       <h2>Step 2: Filter Entries</h2>
       <div class="wa-flank:start wa-align-items-start">
         <wa-radio-group
+          id="timeScaleInput"
           label="Choose Time Scale"
           orientation="horizontal"
           value="1"
@@ -75,7 +76,7 @@
           <wa-option value="" selected disabled>-- Choose data source first --</wa-option>
         </wa-select>
 
-        <wa-select id="weekSelect" label="Select a Week" hint="Week begins on Sunday">
+        <wa-select id="weekSelect" label="Select a Week" hint="Week runs Sun → Saturday">
           <wa-option value="" selected disabled>-- Choose data source first --</wa-option>
         </wa-select>
 
