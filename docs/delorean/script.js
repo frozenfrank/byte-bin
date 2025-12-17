@@ -5,6 +5,11 @@ const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
 const NEXT_DAY_BUTTON_ID = 'nextDayButton';
 const PREV_DAY_BUTTON_ID = 'prevDayButton';
 
+const TOGGL_FORM = 'download-toggl-form';
+const TOGGL_TOKEN_ID = 'download-toggl-token';
+const TOGGL_DOWNLOAD_BUTTON = 'download-toggl-button';
+const TOGGL_DOWNLOAD_LABEL = 'download-toggl-label';
+
 const TLP_REGEX = /tlp(\d{5})/i;
 const PRJ_REGEX = /PRJ\s*(\d+)/i;
 const DLG_REGEX = /DLG\s*(\d+)/i;
@@ -15,7 +20,14 @@ let interpretedTimeData = {
   uniqueProjects: [],
   /** Sorted list of unique dates */
   uniqueDates: [],
-  /** All the data from PapaParse */
+  /** Sorted list of unique date values (number values). Used for moving between dates. */
+  uniqueDateValues: [],
+  /** Whether the data includes client information */
+  hasClientData: false,
+  /** Whether the data includes billable information */
+  hasBillableData: false,
+
+  /** {TimeEntryData<any>} All the data from PapaParse */
   allData: null,
 };
 
@@ -38,23 +50,99 @@ function handleInputFileChange(e) {
 
 // Respond to data parsing
 function handleDataParsed(results) {
-  const allProjects = new Set();
-  const allDates = new Set();
+  const timeEntryData = convertParsedCsvToTimeEntryData(results);
+  processParsedTimeEntryData(timeEntryData);
+}
 
-  results.data.forEach((entry) => {
-    allProjects.add(entry.Project);
-    allDates.add(entry["Start date"]);
+function processParsedTimeEntryData(timeEntryData) {
+  const allProjects = new Set();
+  const allDates = new Map();
+
+  timeEntryData.entries.forEach((entry) => {
+    allProjects.add(entry.projectName);
+    allDates.set(+entry.startDate, entry.startDate);
   });
 
+  const uniqueProjects = Array.from(allProjects).sort();
+  const uniqueDates = Array.from(allDates.values()).sort((a,b) => a - b);
+
   interpretedTimeData = {
-    uniqueProjects: Array.from(allProjects).sort(),
-    uniqueDates: Array.from(allDates).sort(),
-    allData: results.data,
+    uniqueProjects,
+    uniqueDates,
+    uniqueDateValues: uniqueDates.map(d => +d),
+    hasClientData: timeEntryData.hasClientData,
+    hasBillableData: timeEntryData.hasBillableData,
+    allData: timeEntryData.entries,
   }
 
   populateDaySelect(interpretedTimeData.uniqueDates);
-  setDaySelectValue(interpretedTimeData.uniqueDates[0]);
+  setDaySelectValue(interpretedTimeData.uniqueDateValues[0]);
 }
+
+// Respond to form submit
+const togglForm = document.getElementById(TOGGL_FORM);
+const togglTokenInput = document.getElementById(TOGGL_TOKEN_ID);
+const togglSubmitButton = document.getElementById(TOGGL_DOWNLOAD_BUTTON);
+const togglSubmitLabel = document.getElementById(TOGGL_DOWNLOAD_LABEL);
+
+/** Local storage key for saving/restoring the Toggl API token */
+const TOGGL_TOKEN_STORAGE_KEY = 'togglApiToken';
+
+// Restore saved token (if any) when the page loads and update UI
+document.addEventListener('DOMContentLoaded', applySavedTogglToken);
+function applySavedTogglToken() {
+  const _savedToken = localStorage.getItem(TOGGL_TOKEN_STORAGE_KEY);
+  if (!_savedToken) return;
+
+  togglTokenInput.value = _savedToken;
+  togglTokenInput.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+togglTokenInput.addEventListener('input', handleTogglTokenChange);
+function handleTogglTokenChange(e) {
+  const token = e.target.value;
+
+  if (!token?.length) {
+    localStorage.removeItem(TOGGL_TOKEN_STORAGE_KEY);
+  }
+  const tokenInputValid = token?.length>=32
+  togglSubmitButton.disabled=!tokenInputValid;
+}
+
+togglForm.addEventListener('submit', handleTogglFormSubmit);
+function handleTogglFormSubmit(e) {
+  e.preventDefault();  // Skip default form submit behavior
+  if (togglSubmitButton.loading) return; // Ensure no double-submitting
+
+  togglSubmitButton.loading = true;
+  togglSubmitLabel.innerText = "Refresh Data";
+
+  const token = togglTokenInput.value;
+
+  // Persist token to localStorage so it can be restored on next visit
+  try {
+    localStorage.setItem(TOGGL_TOKEN_STORAGE_KEY, token);
+  } catch (err) {
+    // Ignore storage errors (e.g. private mode) but don't prevent download
+    console.warn('Could not save Toggl token to localStorage', err);
+  }
+
+  console.warn("Temporarily skipping toggl download."); return;
+
+  void downloadTogglTimeEntries(token)
+    .then(() => togglSubmitButton.loading = false);
+}
+
+async function downloadTogglTimeEntries(token) {
+  const downloadStartDate = new Date();
+  downloadStartDate.setMonth(downloadStartDate.getMonth() - 2,1); // First of the month, two months ago
+  const togglApiData = await getTimeEntries(token, downloadStartDate);
+
+  const timeEntryData = convertApiDataToTimeEntryData(togglApiData);
+  processParsedTimeEntryData(timeEntryData);
+}
+
+// ### Handle Filter Changes ###
 
 // Respond to day selection change
 const daySelect = document.getElementById(DAY_SELECT_ID);
@@ -85,9 +173,9 @@ function populateDaySelect(dates) {
   select.appendChild(createOptionElement('', '-- Choose a date --'));
 
   // Populate options
-  dates.forEach(dateString => {
-    const formattedDate = parseDateString(dateString).toLocaleDateString();
-    select.appendChild(createOptionElement(dateString, formattedDate));
+  dates.forEach(date => {
+    const formattedDate = date.toLocaleDateString();
+    select.appendChild(createOptionElement(+date, formattedDate));
   });
 }
 
@@ -99,8 +187,7 @@ function createOptionElement(value,text) {
 }
 
 function setDaySelectValue(value) {
-  const daySelect = document.getElementById(DAY_SELECT_ID);
-  daySelect.value = value;
+  daySelect.value = ""+value;
   daySelect.dispatchEvent(new Event('change', { bubbles: true }));
 }
 
@@ -133,20 +220,20 @@ document.addEventListener('keydown', (e) => {
 });
 
 function incrementSelectedDay(backward=false) {
-  const numValues = interpretedTimeData.uniqueDates.length;
+  const numValues = interpretedTimeData.uniqueDateValues.length;
   if (!numValues) return;
   if (!daySelect) {
     console.error(`Day select element with ID '${DAY_SELECT_ID}' not found.`);
     return;
   }
 
-  const currentValue = daySelect.value;
-  let currentIndex = currentValue ? interpretedTimeData.uniqueDates.indexOf(currentValue) : 0;  // O(n) operation
+  const currentValue = +daySelect.value;
+  let currentIndex = currentValue ? interpretedTimeData.uniqueDateValues.indexOf(currentValue) : 0;  // O(n) operation
   if (currentIndex < 0) currentIndex = 0;
 
   const direction = backward ? -1 : 1;
   const nextIndex = (currentIndex + direction + numValues) % numValues;
-  const nextValue = interpretedTimeData.uniqueDates[nextIndex];
+  const nextValue = interpretedTimeData.uniqueDateValues[nextIndex];
   setDaySelectValue(nextValue);
 }
 
@@ -178,8 +265,8 @@ function prepareTimecardEntries(forDay,timeData) {
   }
 
   const entriesForDay = timeData.filter(entry =>
-    (entry["Start date"] === forDay) &&
-    (entry["Billable"] === "Yes"));
+    (+entry.startDate === +forDay) &&
+    (entry.billable === true));
 
   // Group entries by project and TLP and DLG/QAN code
   const groupedEntries = {};
@@ -201,7 +288,7 @@ function prepareTimecardEntries(forDay,timeData) {
       };
     }
 
-    groupedEntries[groupKey].totalSeconds += calculateDurationInSeconds(entry);
+    groupedEntries[groupKey].totalSeconds += entry.durationSeconds;
     groupedEntries[groupKey].entries.push(entry);
   });
 
@@ -216,7 +303,7 @@ function prepareTimecardEntries(forDay,timeData) {
 }
 
 function extractTLPCode(entry) {
-  const tags = entry.Tags;
+  const tags = entry.tagNames?.join(',');
   if (!tags) return null;
   return TLP_REGEX.exec(tags)?.[1] || null;
 }
@@ -225,27 +312,22 @@ function extractPRJNumber(entry) {
   let prjNum;
 
   // Search Project field
-  prjNum = PRJ_REGEX.exec(entry.Project)?.[1];
+  prjNum = PRJ_REGEX.exec(entry.projectName)?.[1];
   if (prjNum) return prjNum;
 
   // Search Description field
-  prjNum = PRJ_REGEX.exec(entry.Description)?.[1];
+  prjNum = PRJ_REGEX.exec(entry.description)?.[1];
   return prjNum || null;
 }
 
 function extractDLGNumber(entry) {
-  return DLG_REGEX.exec(entry.Description)?.[1] || null;
+  return DLG_REGEX.exec(entry.description)?.[1] || null;
 }
 
 function extractQANNumber(entry) {
-  return QAN_REGEX.exec(entry.Description)?.[1] || null;
+  return QAN_REGEX.exec(entry.description)?.[1] || null;
 }
 
-function calculateDurationInSeconds(entry) {
-  const duration = entry["Duration"]; // e.g., "01:30:00"
-  const [h,m,s] = duration.split(':').map(Number);
-  return (h*60*60) + (m*60) + s;
-}
 
 // ### Printing and Output Functions ###
 
@@ -300,13 +382,13 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
 
     lineEntriesSet = new Set();
     for (const e of entry.entries) {
-      dateVal = parseDateString(e["Start date"]);
+      dateVal = e.startDate;
       if (+dateVal < minDate) minDate = dateVal;
       if (+dateVal > maxDate) maxDate = dateVal;
 
-      if (!e.Description) continue;
-      uniqueDescriptions.add(e.Description);
-      lineEntriesSet.add(e.Description);
+      if (!e.description) continue;
+      uniqueDescriptions.add(e.description);
+      lineEntriesSet.add(e.description);
     }
     lineEntriesArr = Array.from(lineEntriesSet).sort();
 
@@ -385,12 +467,6 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
   message = introduction + '\n' + message + '\n\n' + footer;
 
   return message;
-}
-
-function parseDateString(dateStr) {
-  // Expects dateStr in "YYYY-MM-DD" format
-  const [year,month,day] = dateStr.split('-').map(Number);
-  return new Date(year, month-1, day);
 }
 
 function formatTimecardLine(minWidths,values,isHeader=false,isSubsequent=false) {

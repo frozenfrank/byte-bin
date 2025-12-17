@@ -42,6 +42,7 @@
       "Member",
       "Email",
       "Project",
+      // "Client",  // Can be present
       "Tags",
       "Start date",
       "Start time",
