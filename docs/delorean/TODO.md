@@ -11,6 +11,7 @@
 - [ ] Show all data (even those without TLPs)
 - [ ] Convert "Import" section to ask for data method first, then include input prompts
 - [ ] Show relative time since last data update, with total number of time entries received
+- [ ] Actually move focus when using accelerator keys
 
 ## Big Upgrades
 - [ ] File data automatically into DeLorean
