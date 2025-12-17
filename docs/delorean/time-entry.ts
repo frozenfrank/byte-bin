@@ -1,5 +1,10 @@
 import { PapaParseCSVResult, TimeEntryData, TogglAPITimeEntryWithMetadata, TogglExportTimeEntry } from "./time-entry.d";
 
+/**
+ * Build this file with:
+ * $ tsc -t esnext time-entry.ts
+ */
+
 /** Converts a string duration into the number of elapsed seconds. e.g., "01:30:00" */
 function parseDurationString(duration: string): number {
   const [h,m,s] = duration.split(':').map(Number);
@@ -22,7 +27,7 @@ function buildDateFromParts(datePart?: string, timePart?: string): Date | null {
   }
 }
 
-// Convert an array of Toggl API entries into TimeEntryData<TogglAPITimeEntryWithMetadata>
+/** Convert Toggl API data into our standard format */
 export function convertApiDataToTimeEntryData(
   apiEntries: TogglAPITimeEntryWithMetadata[]
 ): TimeEntryData<TogglAPITimeEntryWithMetadata> {
@@ -51,6 +56,7 @@ export function convertApiDataToTimeEntryData(
   };
 }
 
+/** Convert Toggl CSV data into our standard format */
 export function convertParsedCsvToTimeEntryData(
   parsed: PapaParseCSVResult<TogglExportTimeEntry>,
 ): TimeEntryData<TogglExportTimeEntry> {
