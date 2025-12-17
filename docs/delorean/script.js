@@ -8,6 +8,7 @@ const OUTPUT_PRE_ID = 'timecardReport';
 const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
 const NEXT_DAY_BUTTON_ID = 'nextDayButton';
 const PREV_DAY_BUTTON_ID = 'prevDayButton';
+const PREV_NEXT_LABEL_CLASS = 'prevNextLabel';
 
 const TOGGL_FORM = 'download-toggl-form';
 const TOGGL_TOKEN_ID = 'download-toggl-token';
@@ -54,6 +55,7 @@ function handleInputFileChange(e) {
 
 // Respond to data parsing
 function handleDataParsed(results) {
+  updatePrevNextLabels();
   const timeEntryData = convertParsedCsvToTimeEntryData(results);
   processTimeEntryData(timeEntryData);
 }
@@ -183,11 +185,43 @@ async function downloadTogglTimeEntries(token) {
 
 // Respond to date selector change
 const timeScaleInput = document.getElementById(TIME_SCALE_INPUT_ID);
+const nextPrevLabels = document.getElementsByClassName(PREV_NEXT_LABEL_CLASS);
 const daySelect = document.getElementById(DAY_SELECT_ID);
 const weekSelect = document.getElementById(WEEK_SELECT_ID);
 const monthSelect = document.getElementById(MONTH_SELECT_ID);
 
-timeScaleInput.addEventListener('change', renderTimecardReport);
+timeScaleInput.addEventListener('change', handleTimeScaleChange);
+document.addEventListener('DOMContentLoaded', updatePrevNextLabels);
+function handleTimeScaleChange(e) {
+  updatePrevNextLabels();
+  renderTimecardReport();
+}
+
+function updatePrevNextLabels() {
+  let labelText = "";
+  let buttonsDisabled = false;
+  let displaySelect = null;
+
+  switch (+timeScaleInput.value) {
+    case 1: labelText = 'Day'; displaySelect = daySelect; break;
+    case 2: labelText = 'Week'; displaySelect = weekSelect; break;
+    case 3: labelText = 'Month'; displaySelect = monthSelect; break;
+    default:
+      buttonsDisabled = true;
+      break;
+  }
+
+  if (!interpretedTimeData.uniqueDateValues.length) buttonsDisabled = true;
+  nextButton.disabled = buttonsDisabled;
+  prevButton.disabled = buttonsDisabled;
+
+  for (const label of nextPrevLabels) {
+    label.textContent = labelText;
+  }
+  for (const selectEl of [daySelect, weekSelect, monthSelect]) {
+    selectEl.style.display = (selectEl === displaySelect) ? '' : 'none';
+  }
+}
 
 daySelect.addEventListener('change', handleDayChange);
 function handleDayChange(e) {
@@ -273,11 +307,11 @@ function createOptionElement(value,text) {
 
 
 // Attach event listeners to next/prev buttons
-document.getElementById(NEXT_DAY_BUTTON_ID)
-  .addEventListener('click', () => incrementSelectedDay(false));
+const nextButton = document.getElementById(NEXT_DAY_BUTTON_ID)
+nextButton.addEventListener('click', () => incrementSelectedDay(false));
 
-document.getElementById(PREV_DAY_BUTTON_ID)
-  .addEventListener('click', () => incrementSelectedDay(true));
+const prevButton = document.getElementById(PREV_DAY_BUTTON_ID)
+prevButton.addEventListener('click', () => incrementSelectedDay(true));
 
 // Keyboard shortcuts: N = next, P = previous
 document.addEventListener('keydown', (e) => {
