@@ -85,10 +85,26 @@ const togglTokenInput = document.getElementById(TOGGL_TOKEN_ID);
 const togglSubmitButton = document.getElementById(TOGGL_DOWNLOAD_BUTTON);
 const togglSubmitLabel = document.getElementById(TOGGL_DOWNLOAD_LABEL);
 
+/** Local storage key for saving/restoring the Toggl API token */
+const TOGGL_TOKEN_STORAGE_KEY = 'togglApiToken';
+
+// Restore saved token (if any) when the page loads and update UI
+document.addEventListener('DOMContentLoaded', applySavedTogglToken);
+function applySavedTogglToken() {
+  const _savedToken = localStorage.getItem(TOGGL_TOKEN_STORAGE_KEY);
+  if (!_savedToken) return;
+
+  togglTokenInput.value = _savedToken;
+  togglTokenInput.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
 togglTokenInput.addEventListener('input', handleTogglTokenChange);
 function handleTogglTokenChange(e) {
   const token = e.target.value;
 
+  if (!token?.length) {
+    localStorage.removeItem(TOGGL_TOKEN_STORAGE_KEY);
+  }
   const tokenInputValid = token?.length>=32
   togglSubmitButton.disabled=!tokenInputValid;
 }
@@ -102,6 +118,17 @@ function handleTogglFormSubmit(e) {
   togglSubmitLabel.innerText = "Refresh Data";
 
   const token = togglTokenInput.value;
+
+  // Persist token to localStorage so it can be restored on next visit
+  try {
+    localStorage.setItem(TOGGL_TOKEN_STORAGE_KEY, token);
+  } catch (err) {
+    // Ignore storage errors (e.g. private mode) but don't prevent download
+    console.warn('Could not save Toggl token to localStorage', err);
+  }
+
+  console.warn("Temporarily skipping toggl download."); return;
+
   void downloadTogglTimeEntries(token)
     .then(() => togglSubmitButton.loading = false);
 }
