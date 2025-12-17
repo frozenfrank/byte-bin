@@ -334,6 +334,11 @@ document.addEventListener('keydown', (e) => {
     case 'd':  showAllDescSwitch.click();     break;
     case 't':  incrementTimeScale(false);     break;
 
+    case 'o':  setTimeScale(1);               break;
+    case 'w':  setTimeScale(2);               break;
+    case 'm':  setTimeScale(3);               break;
+    case 'a':  setTimeScale(4);               break;
+
     default:
       return; // ignore other keys
   }
@@ -373,8 +378,11 @@ function incrementTimeScale(backward=false) {
   const currentScale = +timeScaleInput.value;
   const direction = backward ? -1 : 1;
   const nextScale = ((currentScale - 1 + direction + numValues) % numValues) + 1; // Shift to 0-based, mod, shift back to 1-based
-  timeScaleInput.value = ""+nextScale;
+  setTimeScale(nextScale);
+}
 
+function setTimeScale(scaleValue) {
+  timeScaleInput.value = ""+scaleValue;
   updatePrevNextLabels();
   renderTimecardReport();
 }
