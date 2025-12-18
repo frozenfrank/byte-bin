@@ -31,9 +31,15 @@ function buildDateFromParts(datePart?: string, timePart?: string): Date | null {
 export function convertApiDataToTimeEntryData(
   apiEntries: TogglAPITimeEntryWithMetadata[]
 ): TimeEntryData<TogglAPITimeEntryWithMetadata> {
+  let hasClientData=false;
+  let hasBillableData=false;
+
   const entries = apiEntries.map((e: TogglAPITimeEntryWithMetadata): TimeEntry<TogglAPITimeEntryWithMetadata> => {
     const start = new Date(e.start);
     const stop = e.stop ? new Date(e.stop) : null;
+
+    hasClientData ||= !!e.client_name;
+    hasBillableData ||= e.billable !== undefined;
 
     return {
       description: e.description || "",
@@ -50,8 +56,8 @@ export function convertApiDataToTimeEntryData(
   });
 
   return {
-    hasClientData: true,
-    hasBillableData: true,
+    hasClientData,
+    hasBillableData,
     entries,
   };
 }
