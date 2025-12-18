@@ -4,7 +4,7 @@
 - [x] Format "Report date" with the day of the week
 - [x] Add next/prev buttons for switching days
 - [x] Add keyboard shortcuts for key workflows (next/prev/toggle switch)
-- [ ] Constrain horizontal width of content
+- [x] Constrain horizontal width of content
 - [x] Add a splash of color, maybe with a colored header
 - [ ] Show distinct descriptions sorted by total duration
 - [x] Move into sub-folder
