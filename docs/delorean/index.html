@@ -8,13 +8,22 @@
   <script src="https://kit.webawesome.com/381cfdad10d64aac.js" crossorigin="anonymous"></script>
 
   <style type="text/css">
-  [slot='banner'] {
-    --wa-color-text-link: var(--wa-color-neutral-on-loud);
-    background-color: var(--wa-color-neutral-fill-loud);
-  }
-  [slot='header'] {
-    background-color: var(--wa-color-brand-fill-normal);
-  }
+    [slot='banner'] {
+      --wa-color-text-link: var(--wa-color-neutral-on-loud);
+      background-color: var(--wa-color-neutral-fill-loud);
+    }
+    [slot='header'] {
+      background-color: var(--wa-color-brand-fill-normal);
+    }
+
+    main {
+      max-width: 55em;
+      margin: auto;
+    }
+
+    #download-toggl-token {
+      width: 30em;
+    }
   </style>
 </head>
 <body>
@@ -45,7 +54,7 @@
           Your Toggl API token can be revealed at the bottom of <a href="https://track.toggl.com/profile">your profile page</a>. The token is expected to be at least <b>32&nbsp;characters</b> in length.
         </wa-callout>
         <br>
-        <div class="wa-flank:end">
+        <div class="wa-cluster">
           <wa-input type="password" placeholder="Toggle API Token" password-toggle with-clear id="download-toggl-token" minlength="32"></wa-input>
 
           <wa-tooltip for="download-toggl-button">Downloads the last 45 days of time entries</wa-tooltip>
