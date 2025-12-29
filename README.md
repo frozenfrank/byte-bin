@@ -11,3 +11,13 @@ Hopefully, you can each appreciate some of the memories represented in this shar
 This folder uses a form of Git to track which files have changed overtime.
 
 The contents of the files are not saved in the git repository, only the metadata about each file.
+
+## Updating the Backup Drive
+
+`rsync` can be used to sync changes from the source into the backup.
+
+```shell
+# https://unix.stackexchange.com/a/203854/416782
+# Notice the trailing slash on A, but no trailing slash on B
+rsync -avu --delete "/home/user/A/" "/home/user/B"
+```
