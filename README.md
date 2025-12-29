@@ -47,9 +47,9 @@ The source folder is enabled for `git` change tracking for a few select files on
 ### Ongoing Usage
 * Update with future changes
   ```shell
-  git fetch origin ensign-family-history && git merge
+  git pull origin ensign-family-history
   ```
 * Cleanup other remote branches (uncommon)
   ```shell
-  git fetch origin ensign-family-history && git merge
+  git branch -r | egrep -v 'ensign-family-history' | xargs git branch -Dr
   ```
