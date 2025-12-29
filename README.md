@@ -12,6 +12,11 @@ This folder uses a form of Git to track which files have changed overtime.
 
 The contents of the files are not saved in the git repository, only the metadata about each file.
 
+```shell
+.ensignhistory/list-files.sh
+.ensignhistory/cleaup-lists.sh
+```
+
 ## Updating the Backup Drive
 
 `rsync` can be used to sync changes from the source into the backup.
