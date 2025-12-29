@@ -26,7 +26,7 @@ rsync -avu --delete --exclude ".git" "/path/to/Family Ensign History/" "/path/to
 
 The source folder is enabled for `git` change tracking for a few select files on Suzie's local computer. The `git` repository is intentionally placed outside of the control of iCloud which likes to offload and optimize certain files. The `git` history allows for easy revision of this README.md file.
 
-To setup:
+### One Time Setup
 1. Connect to the remote
   ```shell
   git remote add origin https://github.com/frozenfrank/byte-bin.git
@@ -43,7 +43,13 @@ To setup:
   ```shell
   git reset --hard @{upstream}
   ```
-5. Update with future changes
+
+### Ongoing Usage
+* Update with future changes
   ```shell
-  git pull
+  git fetch origin ensign-family-history && git merge
+  ```
+* Cleanup other remote branches (uncommon)
+  ```shell
+  git fetch origin ensign-family-history && git merge
   ```
