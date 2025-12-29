@@ -21,3 +21,9 @@ The contents of the files are not saved in the git repository, only the metadata
 # Notice the trailing slash on A, but no trailing slash on B
 rsync -avu --delete "/home/user/A/" "/home/user/B"
 ```
+
+### Command Used
+
+```shell
+rsync -avu --exclude '.git' --delete "/path/to/Family Ensign History/" "/path/to/backup/Ensign Family History"
+```
