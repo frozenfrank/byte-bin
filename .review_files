@@ -5,6 +5,10 @@
 
 SEARCH_DIR="${1:-.}"
 
+echo "Reviewing files for easy improvements."
+echo "Suggestions are printed. A lack of suggestions indicates no warnings."
+echo "Root directory: $SEARCH_DIR"
+
 echo -e "\nLeading spaces:"
 find "$SEARCH_DIR" -type d -name ' *' -print0 |
 while IFS= read -r -d '' dir; do

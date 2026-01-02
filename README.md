@@ -19,8 +19,8 @@ rsync -avu --delete "/home/user/A/" "/home/user/B"
 ### Command Used
 
 ```shell
-rsync --dry-run -avu --delete --exclude ".git" --exclude ".DS_Store" "/Users/suziebean/Documents/Ensign Family History/" "/Volumes/Don Ensign's Pictures/**Ensign Family History (v2)/"
-rsync           -avu --delete --exclude ".git" --exclude ".DS_Store" "/Users/suziebean/Documents/Ensign Family History/" "/Volumes/Don Ensign's Pictures/**Ensign Family History (v2)/"
+./.backup_update --dry-run
+./.backup_update
 ```
 
 ## Git History
