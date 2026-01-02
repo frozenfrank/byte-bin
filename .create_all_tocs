@@ -6,6 +6,7 @@
 ROOT="${1:-.}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CREATE_TOC_SCRIPT="${SCRIPT_DIR}/.create_toc"
+TOC_NAME="TABLE_OF_CONTENTS.txt"
 
 # Function to check if a directory contains subdirectories
 has_subdirectories() {
@@ -17,7 +18,7 @@ has_subdirectories() {
 # Function to generate TOC for a directory
 generate_toc_for_directory() {
     local dir="$1"
-    local toc_file="${dir}/TABLE_OF_CONTENTS.txt"
+    local toc_file="${dir}/$TOC_NAME"
 
     if has_subdirectories "$dir"; then
         echo "Generating TOC for: $dir"
@@ -25,6 +26,10 @@ generate_toc_for_directory() {
         echo "Created: $toc_file"
     fi
 }
+
+# Remove all existing TOCs
+echo "Removing all existing table of contents"
+find "$ROOT" -name "$TOC_NAME" -type f -delete
 
 # Find all directories and generate TOCs
 echo "Scanning for directories with subdirectories..."
