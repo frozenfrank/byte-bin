@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+
+# Usage: ./folder_toc.sh [directory]
+# Default: current directory
+
+ROOT="${1:-.}"
+
+print_tree() {
+    local dir="$1"
+    local indent="$2"
+
+    # Count regular files directly in this directory
+    local file_count
+    file_count=$(find "$dir" -maxdepth 1 -type f 2>/dev/null | wc -l)
+
+    printf "%s📁 %s (%d files)\n" "$indent" "$(basename "$dir")" "$file_count"
+
+    # Loop through subdirectories (sorted)
+    find "$dir" -maxdepth 1 -mindepth 1 -type d 2>/dev/null | sort | while IFS= read -r subdir; do
+        print_tree "$subdir" "$indent    "
+    done
+}
+
+echo "Folder Table of Contents"
+echo "========================"
+
+print_tree "$ROOT" ""
