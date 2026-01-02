@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+
+# Generate table of contents for all directories that contain subdirectories
+# Usage: ./.create_all_tocs [root_directory]
+
+ROOT="${1:-.}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CREATE_TOC_SCRIPT="${SCRIPT_DIR}/.create_toc"
+
+# Function to check if a directory contains subdirectories
+has_subdirectories() {
+    local dir="$1"
+    find "$dir" -maxdepth 1 -mindepth 1 -type d ! -name '.*' 2>/dev/null | grep -q .
+    return $?
+}
+
+# Function to generate TOC for a directory
+generate_toc_for_directory() {
+    local dir="$1"
+    local toc_file="${dir}/TABLE_OF_CONTENTS.txt"
+
+    if has_subdirectories "$dir"; then
+        echo "Generating TOC for: $dir"
+        "$CREATE_TOC_SCRIPT" "$dir" > "$toc_file"
+        echo "Created: $toc_file"
+    fi
+}
+
+# Find all directories and generate TOCs
+echo "Scanning for directories with subdirectories..."
+echo ""
+
+# First, generate TOC for the root if it has subdirectories
+if has_subdirectories "$ROOT"; then
+    generate_toc_for_directory "$ROOT"
+fi
+
+# Then recursively find all subdirectories and generate TOCs for those with their own subdirectories
+find "$ROOT" \
+    -type d \
+    ! -name '.*' \
+    2>/dev/null | sort | while IFS= read -r dir; do
+    if [ "$dir" != "$ROOT" ]; then
+        generate_toc_for_directory "$dir"
+    fi
+done
+
+echo ""
+echo "Done! Generated TABLE_OF_CONTENTS.txt files for all directories containing subdirectories."
