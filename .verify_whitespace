@@ -5,6 +5,14 @@
 
 SEARCH_DIR="${1:-.}"
 
+echo -e "\nLeading spaces:"
+find "$SEARCH_DIR" -type d -name ' *' -print0 |
+while IFS= read -r -d '' dir; do
+    # %q makes trailing spaces visible/escaped
+    printf '%q\n' "$dir"
+done
+
+echo -e "\nTrailing spaces:"
 find "$SEARCH_DIR" -type d -name '* ' -print0 |
 while IFS= read -r -d '' dir; do
     # %q makes trailing spaces visible/escaped
