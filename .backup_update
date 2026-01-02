@@ -1,0 +1,1 @@
+rsync -avu --delete --exclude ".git" --exclude ".DS_Store" "$@" "/Users/suziebean/Documents/Ensign Family History/" "/Volumes/Don Ensign's Pictures/**Ensign Family History (v2)/"

@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+# Usage: ./find_trailing_space_dirs.sh [directory]
+# Defaults to current directory if none is provided
+
+SEARCH_DIR="${1:-.}"
+
+find "$SEARCH_DIR" -type d -name '* ' -print0 |
+while IFS= read -r -d '' dir; do
+    # %q makes trailing spaces visible/escaped
+    printf '%q\n' "$dir"
+done
