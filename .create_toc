@@ -17,7 +17,10 @@ print_tree() {
         ! -name '.*' \
         2>/dev/null | wc -l)
 
-    printf "%s📁 %s (%d files)\n" "$indent" "$(basename "$dir")" "$file_count"
+    local folder_size
+    folder_size=$(du -sh "$dir" 2>/dev/null | awk '{print $1; exit}')
+
+    printf "%s📁 %s (%d files, %s)\n" "$indent" "$(basename "$dir")" "$file_count" "$folder_size"
 
     # Recurse into NON-hidden subdirectories only
     find "$dir" \
