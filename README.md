@@ -29,21 +29,21 @@ The source folder is enabled for `git` change tracking for a few select files on
 
 ### One Time Setup
 1. Connect to the remote
-  ```shell
-  git remote add origin https://github.com/frozenfrank/byte-bin.git
-  ```
+   ```shell
+   git remote add origin https://github.com/frozenfrank/byte-bin.git
+   ```
 2. Fetch the branch corresponding to this project
-  ```shell
-  git fetch origin ensign-family-history
-  ```
+   ```shell
+   git fetch origin ensign-family-history
+   ```
 3. Setup tracking with remote branch
-  ```shell
-  git branch --set-upstream-to origin/ensign-family-history
-  ```
+   ```shell
+   git branch --set-upstream-to origin/ensign-family-history
+   ```
 4. Advance to the tip of the remote branch (one time only)
-  ```shell
-  git reset --hard @{upstream}
-  ```
+   ```shell
+   git reset --hard @{upstream}
+   ```
 
 ### Ongoing Usage
 * Update with future changes
@@ -54,3 +54,29 @@ The source folder is enabled for `git` change tracking for a few select files on
   ```shell
   git branch -r | egrep -v 'ensign-family-history' | xargs git branch -Dr
   ```
+
+## Other Utilities
+
+This repo has several utilities that serve various purposes. Each is represented as a hidden shell file at the root level, and can be invoked directly from the command line: e.g. `./UTILITY`.
+
+### Updating Table of Contents (TOC)
+
+To regenerate all TOCs:
+
+```shell
+./.create_all_tocs [folder]
+```
+
+To preview the TOC that will be generated for a single folder:
+
+```shell
+./.create_toc [folder]
+```
+
+### Reviewing File Contents
+
+To scan for easy improvements and fixes:
+
+```shell
+./review_files [folder]
+```
