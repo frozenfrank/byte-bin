@@ -6,6 +6,7 @@ const WEEK_SELECT_ID = 'weekSelect';
 const MONTH_SELECT_ID = 'monthSelect';
 const OUTPUT_PRE_ID = 'timecardReport';
 const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
+const REQUIRE_BILLABLE_ID = 'requireBillableSwitch';
 const NEXT_DAY_BUTTON_ID = 'nextDayButton';
 const PREV_DAY_BUTTON_ID = 'prevDayButton';
 const PREV_NEXT_LABEL_CLASS = 'prevNextLabel';
@@ -96,6 +97,9 @@ function processTimeEntryData(timeEntryData) {
     hasBillableData: timeEntryData.hasBillableData,
     allData: timeEntryData.entries,
   }
+
+  requireBillableSwitch.disabled = !interpretedTimeData.hasBillableData;
+  requireBillableSwitch.checked = interpretedTimeData.hasBillableData;
 
   populateDateSelector(DAY_SELECT_ID, uniqueDays, "date", d => d.toLocaleDateString('default', { year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' }));
   populateDateSelector(WEEK_SELECT_ID, uniqueWeeks, "week", w => {
@@ -332,6 +336,7 @@ document.addEventListener('keydown', (e) => {
     case 'n':  incrementSelectedDate(false);  break;
     case 'p':  incrementSelectedDate(true);   break;
     case 'd':  showAllDescSwitch.click();     break;
+    case 'b':  requireBillableSwitch.click();  break;
     case 't':  incrementTimeScale(false);     break;
 
     case 'o':  setTimeScale(1);               break;
@@ -394,6 +399,10 @@ function handleShowAllDescChange(e) {
   renderTimecardReport();
 }
 
+// Allow toggling require-billable filter
+const requireBillableSwitch = document.getElementById(REQUIRE_BILLABLE_ID);
+requireBillableSwitch.addEventListener('change', () => renderTimecardReport());
+
 // ### Extract and Prepare Timecard Entries ###
 
 function renderTimecardReport() {
@@ -404,7 +413,7 @@ function renderTimecardReport() {
   const filterClientName = null; // e.g., "Client XYZ"
 
   // Organize and format entries
-  const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,interpretedTimeData.hasBillableData,filterClientName);
+  const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillableSwitch.checked,filterClientName);
   const entries = prepareTimecardEntries(filteredData);
   const report = formatTimecardEntries(entries, showAllDescriptions);
   const outputPre = document.getElementById(OUTPUT_PRE_ID);
