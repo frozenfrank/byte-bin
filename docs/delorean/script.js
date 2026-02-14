@@ -7,6 +7,7 @@ const MONTH_SELECT_ID = 'monthSelect';
 const OUTPUT_PRE_ID = 'timecardReport';
 const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
 const REQUIRE_BILLABLE_ID = 'requireBillableSwitch';
+const GROUP_BY_XDS_ID = 'groupByXdsSwitch';
 const NEXT_DAY_BUTTON_ID = 'nextDayButton';
 const PREV_DAY_BUTTON_ID = 'prevDayButton';
 const PREV_NEXT_LABEL_CLASS = 'prevNextLabel';
@@ -20,6 +21,7 @@ const TLP_REGEX = /tlp(\d{5})/i;
 const PRJ_REGEX = /PRJ\s*(\d+)/i;
 const DLG_REGEX = /DLG\s*(\d+)/i;
 const QAN_REGEX = /QAN\s*(\d+)/i;
+const XDS_REGEX = /XDS\s*(\d+)/i;
 
 let interpretedTimeData = {
   /** Sorted list of unique projects */
@@ -337,6 +339,7 @@ document.addEventListener('keydown', (e) => {
     case 'p':  incrementSelectedDate(true);   break;
     case 'd':  showAllDescSwitch.click();     break;
     case 'b':  requireBillableSwitch.click();  break;
+    case 'x':  groupByXdsSwitch.click();       break;
     case 't':  incrementTimeScale(false);     break;
 
     case 'o':  setTimeScale(1);               break;
@@ -403,6 +406,9 @@ function handleShowAllDescChange(e) {
 const requireBillableSwitch = document.getElementById(REQUIRE_BILLABLE_ID);
 requireBillableSwitch.addEventListener('change', () => renderTimecardReport());
 
+const groupByXdsSwitch = document.getElementById(GROUP_BY_XDS_ID);
+groupByXdsSwitch.addEventListener('change', () => renderTimecardReport());
+
 // ### Extract and Prepare Timecard Entries ###
 
 function renderTimecardReport() {
@@ -413,9 +419,10 @@ function renderTimecardReport() {
   const filterClientName = null; // e.g., "Client XYZ"
 
   // Organize and format entries
+  const groupByXds = groupByXdsSwitch.checked;
   const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillableSwitch.checked,filterClientName);
-  const entries = prepareTimecardEntries(filteredData);
-  const report = formatTimecardEntries(entries, showAllDescriptions);
+  const entries = prepareTimecardEntries(filteredData, groupByXds);
+  const report = formatTimecardEntries(entries, showAllDescriptions, groupByXds);
   const outputPre = document.getElementById(OUTPUT_PRE_ID);
   outputPre.textContent = report;
 }
@@ -456,7 +463,7 @@ function filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBi
   });
 }
 
-function prepareTimecardEntries(timeData) {
+function prepareTimecardEntries(timeData, groupByXds=false) {
   if (!timeData?.length) {
     return [];
   }
@@ -468,14 +475,17 @@ function prepareTimecardEntries(timeData) {
     const prjNumber = extractPRJNumber(entry) || "";
     const dlgNumber = extractDLGNumber(entry) || "";
     const qanNumber = extractQANNumber(entry) || "";
+    const xdsNumber = extractXDSNumber(entry) || "";
 
-    const groupKey = `${tlpCode}|${prjNumber}|${dlgNumber}|${qanNumber}`;
+    let groupKey = `${tlpCode}|${prjNumber}|${dlgNumber}|${qanNumber}`;
+    if (groupByXds) groupKey += `|${xdsNumber}`;
     if (!groupedEntries[groupKey]) {
       groupedEntries[groupKey] = {
         tlpCode,
         prjNumber,
         dlgNumber,
         qanNumber,
+        xdsNumber,
         totalSeconds: 0,
         entries: [],
       };
@@ -491,6 +501,7 @@ function prepareTimecardEntries(timeData) {
     a.tlpCode.localeCompare(b.tlpCode) ||
     a.dlgNumber.localeCompare(b.dlgNumber) ||
     a.qanNumber.localeCompare(b.qanNumber) ||
+    a.xdsNumber.localeCompare(b.xdsNumber) ||
     b.totalSeconds - a.totalSeconds
   );
 }
@@ -521,16 +532,21 @@ function extractQANNumber(entry) {
   return QAN_REGEX.exec(entry.description)?.[1] || null;
 }
 
+function extractXDSNumber(entry) {
+  return XDS_REGEX.exec(entry.description)?.[1] || null;
+}
+
 
 // ### Printing and Output Functions ###
 
-function formatTimecardEntries(entries,displayAllDescriptions=false) {
+function formatTimecardEntries(entries,displayAllDescriptions=false,groupByXds=false) {
   let message = '',introduction='',footer='';
 
   const uniqueTLPs = new Set();
   const uniquePRJs = new Set();
   const uniqueDLGs = new Set();
   const uniqueQANs = new Set();
+  const uniqueXDSs = new Set();
   const uniqueDescriptions = new Set();
 
   let totalHours = 0;
@@ -545,9 +561,11 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
   message += 'Timecard Entries:\n';
 
   // Header line
-  const minWidths = [5,8,8,8,5,40];
+  const minWidths = groupByXds ? [5,8,8,8,8,5,40] : [5,8,8,8,5,40];
   const descHeader = `Descriptions ${(displayAllDescriptions ? '(All Distinct)' : '(Sample)')}`;
-  const headerLine=formatTimecardLine(minWidths, ["TLP", "Dev Log", "QAN", "PRJ", "Hours", descHeader], true);
+  const headerLine=formatTimecardLine(minWidths, groupByXds
+    ? ["TLP", "Dev Log", "QAN", "PRJ", "XDS", "Hours", descHeader]
+    : ["TLP", "Dev Log", "QAN", "PRJ", "Hours", descHeader], true);
   message += headerLine + '\n';
   message += '='.repeat(headerLine.length) + '\n';
 
@@ -572,6 +590,7 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
     if (entry.prjNumber) uniquePRJs.add(entry.prjNumber);
     if (entry.dlgNumber) uniqueDLGs.add(entry.dlgNumber);
     if (entry.qanNumber) uniqueQANs.add(entry.qanNumber);
+    if (entry.xdsNumber) uniqueXDSs.add(entry.xdsNumber);
 
     lineEntriesSet = new Set();
     for (const e of entry.entries) {
@@ -588,28 +607,19 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
 
     // Represent main line
     timecardLines++;
-    message += formatTimecardLine(minWidths, [
-      tlpCode,
-      entry.dlgNumber,
-      entry.qanNumber,
-      entry.prjNumber,
-      hoursRounded,
-      lineEntriesArr[0]
-    ]) + "\n";
+    message += formatTimecardLine(minWidths, groupByXds
+      ? [tlpCode, entry.dlgNumber, entry.qanNumber, entry.prjNumber, entry.xdsNumber, hoursRounded, lineEntriesArr[0]]
+      : [tlpCode, entry.dlgNumber, entry.qanNumber, entry.prjNumber, hoursRounded, lineEntriesArr[0]]
+    ) + "\n";
 
     // Represent each unique description on its own line
     representedEntries += entry.entries.length || 0;
     if (displayAllDescriptions) {
       for (let i=1; i<lineEntriesArr.length; i++) {
-        message += formatTimecardLine(minWidths, [
-          // Carets indicate continuation lines
-          '^',
-          entry.dlgNumber ? '^' : '',
-          entry.qanNumber ? '^' : '',
-          entry.prjNumber ? '^' : '',
-          '^',
-          lineEntriesArr[i]
-        ],false,true) + "\n";
+        message += formatTimecardLine(minWidths, groupByXds
+          ? ['^', entry.dlgNumber ? '^' : '', entry.qanNumber ? '^' : '', entry.prjNumber ? '^' : '', entry.xdsNumber ? '^' : '', '^', lineEntriesArr[i]]
+          : ['^', entry.dlgNumber ? '^' : '', entry.qanNumber ? '^' : '', entry.prjNumber ? '^' : '', '^', lineEntriesArr[i]]
+        ,false,true) + "\n";
       }
     }
   }
@@ -620,14 +630,10 @@ function formatTimecardEntries(entries,displayAllDescriptions=false) {
   } else {
     // Summary lines
     message += '-'.repeat(headerLine.length) + '\n';
-    message += formatTimecardLine(minWidths, [
-      uniqueTLPs.size,
-      uniqueDLGs.size,
-      uniqueQANs.size,
-      uniquePRJs.size,
-      totalRoundedHours,
-      uniqueDescriptions.size + "   (distinct entities)"
-    ]) + "\n";
+    message += formatTimecardLine(minWidths, groupByXds
+      ? [uniqueTLPs.size, uniqueDLGs.size, uniqueQANs.size, uniquePRJs.size, uniqueXDSs.size, totalRoundedHours, uniqueDescriptions.size + "   (distinct entities)"]
+      : [uniqueTLPs.size, uniqueDLGs.size, uniqueQANs.size, uniquePRJs.size, totalRoundedHours, uniqueDescriptions.size + "   (distinct entities)"]
+    ) + "\n";
 
     // Report Detail
     message += '\n\n';
