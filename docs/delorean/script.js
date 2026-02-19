@@ -498,8 +498,8 @@ function prepareTimecardEntries(timeData, groupByXds=false, groupByTlp=true) {
     const qanNumber = extractQANNumber(entry) || "";
     const xdsNumber = extractXDSNumber(entry) || "";
 
-    let groupKey = groupByTlp ? `${tlpCode}|` : '';
-    groupKey += `${prjNumber}|${dlgNumber}|${qanNumber}`;
+    const groupingTlp = (!groupByTlp && tlpCode) ? "00000" : tlpCode; // Treat all entries *with a TLP* as equivalent
+    let groupKey = `${groupingTlp}|${prjNumber}|${dlgNumber}|${qanNumber}`;
     if (groupByXds) groupKey += `|${xdsNumber}`;
     if (!groupedEntries[groupKey]) {
       groupedEntries[groupKey] = {
@@ -520,10 +520,10 @@ function prepareTimecardEntries(timeData, groupByXds=false, groupByTlp=true) {
   // Return a sorted array of grouped entries
   return Object.values(groupedEntries).sort((a,b) =>
     a.prjNumber.localeCompare(b.prjNumber) ||
-    a.tlpCode.localeCompare(b.tlpCode) ||
+    (groupByTlp && a.tlpCode.localeCompare(b.tlpCode)) ||
     a.dlgNumber.localeCompare(b.dlgNumber) ||
     a.qanNumber.localeCompare(b.qanNumber) ||
-    a.xdsNumber.localeCompare(b.xdsNumber) ||
+    (groupByXds && a.xdsNumber.localeCompare(b.xdsNumber)) ||
     b.totalSeconds - a.totalSeconds
   );
 }
@@ -562,7 +562,7 @@ function extractXDSNumber(entry) {
 // ### Printing and Output Functions ###
 
 function formatTimecardEntries(entries,displayAllDescriptions=false,groupByXds=false,groupByTlp=true) {
-  let message = '',introduction='',footer='';
+  let message='',introduction='',footer='';
 
   const uniqueTLPs = new Set();
   const uniquePRJs = new Set();
