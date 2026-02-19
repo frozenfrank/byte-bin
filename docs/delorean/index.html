@@ -8,13 +8,22 @@
   <script src="https://kit.webawesome.com/381cfdad10d64aac.js" crossorigin="anonymous"></script>
 
   <style type="text/css">
-  [slot='banner'] {
-    --wa-color-text-link: var(--wa-color-neutral-on-loud);
-    background-color: var(--wa-color-neutral-fill-loud);
-  }
-  [slot='header'] {
-    background-color: var(--wa-color-brand-fill-normal);
-  }
+    [slot='banner'] {
+      --wa-color-text-link: var(--wa-color-neutral-on-loud);
+      background-color: var(--wa-color-neutral-fill-loud);
+    }
+    [slot='header'] {
+      background-color: var(--wa-color-brand-fill-normal);
+    }
+
+    main {
+      max-width: 55em;
+      margin: auto;
+    }
+
+    #download-toggl-token {
+      width: 30em;
+    }
   </style>
 </head>
 <body>
@@ -35,26 +44,36 @@
     <!-- Main body content -->
     <main class="wa-body-l wa-cloak">
       <h2>Step 1: Import Data</h2>
-      <h3>Option 1.1: From a Toggl CSV export</h3>
-      <input type="file" id="togglFileInput" accept=".csv" />
-      <wa-divider></wa-divider>
-      <h3>Option 1.2: With a Toggl API Token</h3>
-      <form id="download-toggl-form">
-        <wa-callout size="small">
-          <wa-icon slot="icon" name="lightbulb" variant="regular"></wa-icon>
-          Your Toggl API token can be revealed at the bottom of <a href="https://track.toggl.com/profile">your profile page</a>. The token is expected to be at least <b>32&nbsp;characters</b> in length.
-        </wa-callout>
-        <br>
-        <div class="wa-flank:end">
-          <wa-input type="password" placeholder="Toggle API Token" password-toggle with-clear id="download-toggl-token" minlength="32"></wa-input>
+      <wa-radio-group
+        id="import-data-method"
+        orientation="horizontal"
+        value="1"
+      >
+        <span slot="label">Choose Import Method</span>
+        <wa-radio appearance="button" value="1">Toggl API Token</wa-radio>
+        <wa-radio appearance="button" value="2">File Import</wa-radio>
+      </wa-radio-group>
+      <span show-data-for="import-data-method" data-value="2">
+        <input type="file" id="togglFileInput" accept=".csv" />
+      </span>
+      <span show-data-for="import-data-method" data-value="1">
+        <form id="download-toggl-form">
+          <wa-callout size="small">
+            <wa-icon slot="icon" name="lightbulb" variant="regular"></wa-icon>
+            Your Toggl API token can be revealed at the bottom of <a href="https://track.toggl.com/profile">your profile page</a>. The token is expected to be at least <b>32&nbsp;characters</b> in length.
+          </wa-callout>
+          <br>
+          <div class="wa-cluster">
+            <wa-input type="password" placeholder="Toggle API Token" password-toggle with-clear id="download-toggl-token" minlength="32"></wa-input>
 
-          <wa-tooltip for="download-toggl-button">Downloads the last 45 days of time entries</wa-tooltip>
-          <wa-button type="submit" variant="brand" id="download-toggl-button" disabled>
-            <wa-icon slot="start" name="cloud-arrow-down"></wa-icon>
-            <span id="download-toggl-label">Download Data</span>
-          </wa-button>
-        </div>
-      </form>
+            <wa-tooltip for="download-toggl-button">Downloads the last 45 days of time entries</wa-tooltip>
+            <wa-button type="submit" variant="brand" id="download-toggl-button" disabled>
+              <wa-icon slot="start" name="cloud-arrow-down"></wa-icon>
+              <span id="download-toggl-label">Download Data</span>
+            </wa-button>
+          </div>
+        </form>
+      </span>
       <br/>
 
       <h2>Step 2: Filter Entries</h2>

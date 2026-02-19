@@ -1,3 +1,4 @@
+const IMPORT_METHOD_INPUT_ID = 'import-data-method';
 const INPUT_FILE_ID = 'togglFileInput';
 
 const TIME_SCALE_INPUT_ID = 'timeScaleInput';
@@ -45,6 +46,20 @@ let interpretedTimeData = {
 };
 
 // ### Handle File Input and Data Parsing ###
+
+// Dynamically display input options
+const importMethodInput = document.getElementById(IMPORT_METHOD_INPUT_ID);
+document.addEventListener('DOMContentLoaded', handleImportMethodChange);
+importMethodInput.addEventListener('change', handleImportMethodChange);
+importMethodInput.addEventListener('click', handleImportMethodChange);
+function handleImportMethodChange(_e) {
+  const selectedValue = importMethodInput.getAttribute('value');
+  const displayElements = document.querySelectorAll(`[show-data-for=${IMPORT_METHOD_INPUT_ID}]`);
+  displayElements.forEach(el => {
+    const displayValue = el.getAttribute("data-value");
+    el.style.display = displayValue === selectedValue ? "contents" : "none";
+  });
+}
 
 // Respond to file input change
 const fileInput = document.getElementById(INPUT_FILE_ID);
