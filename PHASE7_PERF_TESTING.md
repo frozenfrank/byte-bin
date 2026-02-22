@@ -2,7 +2,7 @@
 
 An exploration of the runtime performance of the [WaveSolveMPI (phase 7)](https://byuhpc.github.io/sci-comp-course/project/phase7.html) code on different storage mediums available on the BYU  SuperComputer.
 
-We researched the following performance on the following storage locations:
+We researched the performance on the following storage locations:
 
 * SHM (`/dev/shm`)
 * TMP (`/tmp`)
@@ -61,10 +61,10 @@ The following files contain the research results. CSV files are delimited with a
 
 | File | Description |
 | ---- | :---------- |
-| [`results.log`](./results.log) | Raw evaluation output from processes |
-| [`data.csv`](./data.csv) | Extracted run times from `results.log` |
-| [`results_cleaned.log`](./results_cleaned.log) | Raw evaluation output, manually cleaned to error times |
-| [`data_cleaned.csv`](./data_cleaned.csv) | Extracted run times from `results_cleaned.log` |
+| [`results.log`](./data/results.log) | Raw evaluation output from processes |
+| [`data.csv`](./data/data.csv) | Extracted run times from `results.log` |
+| [`results_cleaned.log`](./data/results_cleaned.log) | Raw evaluation output, manually cleaned to error times |
+| [`data_cleaned.csv`](./data/data_cleaned.csv) | Extracted run times from `results_cleaned.log` |
 
 These charts and data were analyzed with [this Google Sheet](https://docs.google.com/spreadsheets/d/1woxD0QlrEMhaNHeGzPmCn2BFTa4VjtQ_CSDahKwh5DI/edit?usp=sharing).
 
