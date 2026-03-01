@@ -173,8 +173,16 @@ function applySavedTogglToken() {
 }
 
 // Restore saved switch settings on page load
-customElements.whenDefined('wa-switch').then(applySavedSettings);
-document.addEventListener('DOMContentLoaded', applySavedSettings);
+// Wait for the wa-switch class to be defined, then wait for each element's
+// first Lit render to complete before applying saved state.
+customElements.whenDefined('wa-switch').then(async () => {
+  await Promise.all([
+    showAllDescSwitch.updateComplete,
+    groupByXdsSwitch.updateComplete,
+    groupByTlpSwitch.updateComplete,
+  ]);
+  applySavedSettings();
+});
 function applySavedSettings() {
   for (const [key, element] of [
     [SHOW_ALL_DESC_STORAGE_KEY, showAllDescSwitch],
