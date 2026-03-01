@@ -117,7 +117,12 @@ function processTimeEntryData(timeEntryData) {
   }
 
   requireBillableSwitch.disabled = !interpretedTimeData.hasBillableData;
-  requireBillableSwitch.checked = interpretedTimeData.hasBillableData;
+  if (interpretedTimeData.hasBillableData) {
+    const savedRequireBillable = localStorage.getItem(REQUIRE_BILLABLE_STORAGE_KEY);
+    requireBillableSwitch.checked = savedRequireBillable !== null ? savedRequireBillable === 'true' : true;
+  } else {
+    requireBillableSwitch.checked = false;
+  }
 
   populateDateSelector(DAY_SELECT_ID, uniqueDays, "date", d => d.toLocaleDateString('default', { year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' }));
   populateDateSelector(WEEK_SELECT_ID, uniqueWeeks, "week", w => {
@@ -152,6 +157,10 @@ const togglSubmitLabel = document.getElementById(TOGGL_DOWNLOAD_LABEL);
 
 /** Local storage key for saving/restoring the Toggl API token */
 const TOGGL_TOKEN_STORAGE_KEY = 'togglApiToken';
+const SHOW_ALL_DESC_STORAGE_KEY = 'showAllDescriptions';
+const REQUIRE_BILLABLE_STORAGE_KEY = 'requireBillable';
+const GROUP_BY_XDS_STORAGE_KEY = 'groupByXds';
+const GROUP_BY_TLP_STORAGE_KEY = 'groupByTlp';
 
 // Restore saved token (if any) when the page loads and update UI
 document.addEventListener('DOMContentLoaded', applySavedTogglToken);
@@ -161,6 +170,22 @@ function applySavedTogglToken() {
 
   togglTokenInput.value = _savedToken;
   togglTokenInput.dispatchEvent(new Event('input', { bubbles: true }));
+}
+
+// Restore saved switch settings on page load
+customElements.whenDefined('wa-switch').then(applySavedSettings);
+document.addEventListener('DOMContentLoaded', applySavedSettings);
+function applySavedSettings() {
+  for (const [key, element] of [
+    [SHOW_ALL_DESC_STORAGE_KEY, showAllDescSwitch],
+    [GROUP_BY_XDS_STORAGE_KEY, groupByXdsSwitch],
+    [GROUP_BY_TLP_STORAGE_KEY, groupByTlpSwitch],
+  ]) {
+    const saved = localStorage.getItem(key);
+    if (saved !== null) {
+      element.checked = saved === 'true';
+    }
+  }
 }
 
 togglTokenInput.addEventListener('input', handleTogglTokenChange);
@@ -428,6 +453,21 @@ groupByXdsSwitch.addEventListener('change', () => renderTimecardReport());
 
 const groupByTlpSwitch = document.getElementById(GROUP_BY_TLP_ID);
 groupByTlpSwitch.addEventListener('change', () => renderTimecardReport());
+
+function saveSwitchSettings() {
+  try {
+    localStorage.setItem(SHOW_ALL_DESC_STORAGE_KEY, showAllDescSwitch.checked);
+    localStorage.setItem(REQUIRE_BILLABLE_STORAGE_KEY, requireBillableSwitch.checked);
+    localStorage.setItem(GROUP_BY_XDS_STORAGE_KEY, groupByXdsSwitch.checked);
+    localStorage.setItem(GROUP_BY_TLP_STORAGE_KEY, groupByTlpSwitch.checked);
+  } catch (err) {
+    console.warn('Could not save settings to localStorage', err);
+  }
+}
+
+for (const sw of [showAllDescSwitch, requireBillableSwitch, groupByXdsSwitch, groupByTlpSwitch]) {
+  sw.addEventListener('change', saveSwitchSettings);
+}
 
 // ### Extract and Prepare Timecard Entries ###
 
