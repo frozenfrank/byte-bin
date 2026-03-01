@@ -118,7 +118,7 @@ function processTimeEntryData(timeEntryData) {
 
   requireBillableSwitch.disabled = !interpretedTimeData.hasBillableData;
   if (interpretedTimeData.hasBillableData) {
-    const savedRequireBillable = localStorage.getItem(REQUIRE_BILLABLE_STORAGE_KEY);
+    const savedRequireBillable = localStorage.getItem(requireBillableSwitch.id);
     requireBillableSwitch.checked = savedRequireBillable !== null ? savedRequireBillable === 'true' : true;
   } else {
     requireBillableSwitch.checked = false;
@@ -157,10 +157,6 @@ const togglSubmitLabel = document.getElementById(TOGGL_DOWNLOAD_LABEL);
 
 /** Local storage key for saving/restoring the Toggl API token */
 const TOGGL_TOKEN_STORAGE_KEY = 'togglApiToken';
-const SHOW_ALL_DESC_STORAGE_KEY = 'showAllDescriptions';
-const REQUIRE_BILLABLE_STORAGE_KEY = 'requireBillable';
-const GROUP_BY_XDS_STORAGE_KEY = 'groupByXds';
-const GROUP_BY_TLP_STORAGE_KEY = 'groupByTlp';
 
 // Restore saved token (if any) when the page loads and update UI
 document.addEventListener('DOMContentLoaded', applySavedTogglToken);
@@ -176,23 +172,13 @@ function applySavedTogglToken() {
 // Wait for the wa-switch class to be defined, then wait for each element's
 // first Lit render to complete before applying saved state.
 customElements.whenDefined('wa-switch').then(async () => {
-  await Promise.all([
-    showAllDescSwitch.updateComplete,
-    groupByXdsSwitch.updateComplete,
-    groupByTlpSwitch.updateComplete,
-  ]);
-  applySavedSettings();
+  await Promise.all(switchSettings.map(sw => sw.updateComplete));
+  applySavedSwitchSettings();
 });
-function applySavedSettings() {
-  for (const [key, element] of [
-    [SHOW_ALL_DESC_STORAGE_KEY, showAllDescSwitch],
-    [GROUP_BY_XDS_STORAGE_KEY, groupByXdsSwitch],
-    [GROUP_BY_TLP_STORAGE_KEY, groupByTlpSwitch],
-  ]) {
-    const saved = localStorage.getItem(key);
-    if (saved !== null) {
-      element.checked = saved === 'true';
-    }
+function applySavedSwitchSettings() {
+  for (const sw of switchSettings) {
+    const saved = localStorage.getItem(sw.id);
+    if (saved !== null) sw.checked = saved === 'true';
   }
 }
 
@@ -462,18 +448,17 @@ groupByXdsSwitch.addEventListener('change', () => renderTimecardReport());
 const groupByTlpSwitch = document.getElementById(GROUP_BY_TLP_ID);
 groupByTlpSwitch.addEventListener('change', () => renderTimecardReport());
 
+const switchSettings = [showAllDescSwitch, requireBillableSwitch, groupByXdsSwitch, groupByTlpSwitch];
+
 function saveSwitchSettings() {
   try {
-    localStorage.setItem(SHOW_ALL_DESC_STORAGE_KEY, showAllDescSwitch.checked);
-    localStorage.setItem(REQUIRE_BILLABLE_STORAGE_KEY, requireBillableSwitch.checked);
-    localStorage.setItem(GROUP_BY_XDS_STORAGE_KEY, groupByXdsSwitch.checked);
-    localStorage.setItem(GROUP_BY_TLP_STORAGE_KEY, groupByTlpSwitch.checked);
+    for (const sw of switchSettings) localStorage.setItem(sw.id, sw.checked);
   } catch (err) {
     console.warn('Could not save settings to localStorage', err);
   }
 }
 
-for (const sw of [showAllDescSwitch, requireBillableSwitch, groupByXdsSwitch, groupByTlpSwitch]) {
+for (const sw of switchSettings) {
   sw.addEventListener('change', saveSwitchSettings);
 }
 
