@@ -32,6 +32,7 @@ alias statc="git diff --stat --cached"
 function diffstat(){
   git show --stat $1 | egrep "[0-9]+ files"
 }
+alias swords="git show --word-diff-regex='\w+|[^[:space:]]'" # Show WORDS
 
 # GIT stage management
 alias add="git add"
