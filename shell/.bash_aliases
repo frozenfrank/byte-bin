@@ -33,6 +33,7 @@ function diffstat(){
   git show --stat $1 | egrep "[0-9]+ files"
 }
 alias swords="git show --word-diff-regex='\w+|[^[:space:]]'" # Show WORDS
+alias sword="git show --word-diff-regex='\w+|[^[:space:]]'" # ^Show WORD
 
 # GIT stage management
 alias add="git add"
