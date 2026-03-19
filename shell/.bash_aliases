@@ -65,6 +65,7 @@ alias fetch="git fetch"
 alias prune="git fetch --prune"
 alias push="git push"
 alias pull="git fetch && git rebase origin/master"
+alias track-bare="git config --local --add remote.origin.fetch \"+refs/heads/*:refs/remotes/origin/*\" && git fetch origin"
 
 # This command deletes the local copy of all remote branches except "master" & "main"
 alias prevmaster="git branch -r | egrep -v 'origin|master' | xargs git branch -Dr"
