@@ -34,12 +34,13 @@ function diffstat(){
 }
 alias swords="git show --word-diff-regex='\w+|[^[:space:]]'" # Show WORDS
 alias sword="git show --word-diff-regex='\w+|[^[:space:]]'" # ^Show WORD
+alias diffw="git diff --word-diff-regex='\w+|[^[:space:]]'" # Diff WORDS
 
 # GIT stage management
-alias add="git add"
 alias amend="git commit --amend --no-edit"
 alias amendnow="git commit --amend --no-edit -a"
 alias commit="git commit"
+alias commitnow="git commit --no-edit"
 
 # GIT branch management
 alias merge="git merge --no-ff"
@@ -66,6 +67,7 @@ alias prune="git fetch --prune"
 alias push="git push"
 alias pull="git fetch && git rebase origin/master"
 alias track-bare="git config --local --add remote.origin.fetch \"+refs/heads/*:refs/remotes/origin/*\" && git fetch origin"
+git config --global alias.track-prefix '!f() { git config --add remote.origin.fetch "+refs/heads/$1*:refs/remotes/origin/$1*"; git config --add remote.origin.fetch "+refs/tags/$1*:refs/tags/$1*"; }; f'
 
 # This command deletes the local copy of all remote branches except "master" & "main"
 alias prevmaster="git branch -r | egrep -v 'origin|master' | xargs git branch -Dr"
