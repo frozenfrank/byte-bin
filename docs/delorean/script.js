@@ -482,9 +482,9 @@ function renderTimecardReport() {
   const groupByXds = groupByXdsSwitch.checked;
   const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillableSwitch.checked,filterClientName);
   const entries = prepareTimecardEntries(filteredData, groupByXds, groupByTlp);
-  const report = formatTimecardEntries(entries, showAllDescriptions, groupByXds, groupByTlp);
-  const outputPre = document.getElementById(OUTPUT_PRE_ID);
-  outputPre.textContent = report;
+  const reportEl = buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp);
+  const outputEl = document.getElementById(OUTPUT_PRE_ID);
+  outputEl.replaceChildren(reportEl);
 }
 
 function interpretMinMaxFilterDates() {

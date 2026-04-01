@@ -24,6 +24,52 @@
     #download-toggl-token {
       width: 30em;
     }
+
+    .timecard-table {
+      border-collapse: collapse;
+      width: 100%;
+      font-family: monospace;
+    }
+    .timecard-table th,
+    .timecard-table td {
+      padding: 0.3em 0.6em;
+      text-align: right;
+      border-bottom: 1px solid var(--wa-color-neutral-border-normal);
+    }
+    .timecard-table th:last-child,
+    .timecard-table td:last-child {
+      text-align: left;
+    }
+    .timecard-table thead tr {
+      border-bottom: 2px solid var(--wa-color-neutral-border-loud);
+    }
+    .timecard-table tfoot tr {
+      border-top: 2px solid var(--wa-color-neutral-border-loud);
+      font-weight: bold;
+    }
+    .timecard-table tbody tr:hover {
+      background: var(--wa-color-neutral-fill-quiet);
+    }
+    .code-cell {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.2em;
+    }
+    .timecard-header h3 {
+      margin-bottom: 0.2em;
+    }
+    .timecard-summary p {
+      margin: 0.1em 0;
+      font-family: monospace;
+    }
+    .timecard-footer {
+      margin-top: 1em;
+    }
+    .subsequent-row td {
+      color: var(--wa-color-neutral-text-quiet);
+      font-size: 0.9em;
+      border-bottom-style: dashed;
+    }
   </style>
 </head>
 <body>
@@ -125,7 +171,7 @@
           </wa-button>
         </div>
 
-        <pre id="timecardReport">Waiting for report output...</pre>
+        <div id="timecardReport"><p class="wa-body-s">Waiting for report output...</p></div>
       </div>
       <br/>
 
@@ -135,6 +181,7 @@
   <script src="./papaparse.min.js"></script>
   <script src="./toggl/access.js"></script>
   <script src="./time-entry.js"></script>
+  <script src="./report.js"></script>
   <script src="./script.js"></script>
 </body>
 </html>
