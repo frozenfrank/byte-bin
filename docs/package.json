@@ -1,0 +1,23 @@
+{
+  "name": "docs",
+  "version": "1.0.0",
+  "description": "Byte Bin published files, including small projects.",
+  "homepage": "https://github.com/frozenfrank/byte-bin#readme",
+  "bugs": {
+    "url": "https://github.com/frozenfrank/byte-bin/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/frozenfrank/byte-bin.git"
+  },
+  "license": "ISC",
+  "author": "James Finlinson",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@awesome.me/webawesome": "^3.4.0"
+  }
+}
