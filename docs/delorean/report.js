@@ -263,6 +263,8 @@ function buildEntryRows(entry, hoursRounded, showAllDescriptions, groupByXds, gr
     for (let i = 1; i < descriptions.length; i++) {
       rows.push(buildSubsequentRow(entry, descriptions[i], groupByXds, groupByTlp));
     }
+    // Mark the last row of this group so CSS can draw a thick divider between groups
+    rows[rows.length - 1].classList.add('group-end');
   }
 
   return rows;
