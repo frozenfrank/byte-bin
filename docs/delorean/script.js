@@ -124,6 +124,8 @@ function processTimeEntryData(timeEntryData) {
     requireBillableSwitch.checked = false;
   }
 
+  const prevDayValue = +daySelect.value || null;
+
   populateDateSelector(DAY_SELECT_ID, uniqueDays, "date", d => d.toLocaleDateString('default', { year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' }));
   populateDateSelector(WEEK_SELECT_ID, uniqueWeeks, "week", w => {
     const end = new Date(w);
@@ -133,7 +135,11 @@ function processTimeEntryData(timeEntryData) {
   });
   populateDateSelector(MONTH_SELECT_ID, uniqueMonths, "month", m => m.toLocaleString('default', { month: 'long', year: 'numeric' }));
 
-  setDateSelectValues(interpretedTimeData.uniqueDayValues[interpretedTimeData.uniqueDayValues.length - 1]);
+  const mostRecentDay = interpretedTimeData.uniqueDayValues[interpretedTimeData.uniqueDayValues.length - 1];
+  const targetDay = prevDayValue && interpretedTimeData.uniqueDayValues.some(d => d >= prevDayValue)
+    ? prevDayValue
+    : mostRecentDay;
+  setDateSelectValues(targetDay);
   updatePrevNextLabels();
 }
 
