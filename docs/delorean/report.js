@@ -123,7 +123,7 @@ function buildTimecardTable(entries, stats, showAllDescriptions, groupByXds, gro
   const table = document.createElement('table');
   table.className = 'timecard-table';
 
-  table.appendChild(buildTableHead(groupByTlp, groupByXds, showAllDescriptions));
+  table.appendChild(buildTableHead(groupByTlp, groupByXds, showAllDescriptions, stats));
   table.appendChild(buildTableBody(entries, showAllDescriptions, groupByXds, groupByTlp));
   table.appendChild(buildTableFoot(stats, groupByXds, groupByTlp));
 
@@ -162,22 +162,30 @@ function buildNoEntriesMessage() {
 
 // ### Table Section Builders ###
 
-function buildTableHead(groupByTlp, groupByXds, showAllDescriptions) {
+function buildTableHead(groupByTlp, groupByXds, showAllDescriptions, stats) {
   const thead = document.createElement('thead');
   const tr = document.createElement('tr');
 
   const descHeader = `Descriptions ${showAllDescriptions ? '(All Distinct)' : '(Sample)'}`;
-  const headers = [
-    ...(groupByTlp ? ['TLP'] : []),
-    'Dev Log', 'QAN', 'PRJ',
-    ...(groupByXds ? ['XDS'] : []),
-    'Hours',
-    descHeader,
+  const headerSpecs = [
+    ...(groupByTlp ? [{ text: 'TLP',     copySet: stats.uniqueTLPs }] : []),
+    { text: 'Dev Log',  copySet: stats.uniqueDLGs },
+    { text: 'QAN',      copySet: stats.uniqueQANs },
+    { text: 'PRJ',      copySet: stats.uniquePRJs },
+    ...(groupByXds ? [{ text: 'XDS',     copySet: stats.uniqueXDSs }] : []),
+    { text: 'Hours',    copySet: null },
+    { text: descHeader, copySet: null },
   ];
 
-  for (const text of headers) {
+  for (const spec of headerSpecs) {
     const th = document.createElement('th');
-    th.textContent = text;
+    th.appendChild(document.createTextNode(spec.text));
+    if (spec.copySet?.size > 0) {
+      const icon = document.createElement('wa-icon');
+      icon.setAttribute('name', 'copy');
+      icon.className = 'header-copy-icon';
+      th.appendChild(icon);
+    }
     tr.appendChild(th);
   }
 
