@@ -27,7 +27,7 @@ function buildTimecardReportElement(entries, showAllDescriptions, groupByXds, gr
   container.appendChild(buildReportSummary(stats));
 
   const footer = document.createElement('p');
-  footer.className = 'timecard-footer wa-body-s';
+  footer.className = 'timecard-footer wa-body-m';
   footer.textContent = `Generated on: ${new Date().toLocaleString()}`;
   container.appendChild(footer);
 
@@ -104,7 +104,7 @@ function buildReportHeader(minDate, maxDate) {
 
   if (minDate && maxDate) {
     const dateLine = document.createElement('p');
-    dateLine.className = 'wa-body-s';
+    dateLine.className = 'wa-body-m';
     if (+minDate === +maxDate) {
       dateLine.textContent = `Report date: ${minDate.toLocaleDateString('default', { dateStyle: 'full' })}`;
     } else {
