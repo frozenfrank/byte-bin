@@ -18,6 +18,7 @@ const TOGGL_FORM = 'download-toggl-form';
 const TOGGL_TOKEN_ID = 'download-toggl-token';
 const TOGGL_DOWNLOAD_BUTTON = 'download-toggl-button';
 const TOGGL_DOWNLOAD_LABEL = 'download-toggl-label';
+const TOGGL_TIP_ID = 'toggl-api-tip';
 
 const TLP_REGEX = /tlp(\d{5})/i;
 const PRJ_REGEX = /PRJ\s*(\d+)/i;
@@ -164,6 +165,10 @@ const togglSubmitLabel = document.getElementById(TOGGL_DOWNLOAD_LABEL);
 /** Local storage key for saving/restoring the Toggl API token */
 const TOGGL_TOKEN_STORAGE_KEY = 'togglApiToken';
 
+function setTogglTipVisible(visible) {
+  document.getElementById(TOGGL_TIP_ID).style.display = visible ? '' : 'none';
+}
+
 // Restore saved token (if any) when the page loads and update UI
 document.addEventListener('DOMContentLoaded', applySavedTogglToken);
 function applySavedTogglToken() {
@@ -172,6 +177,7 @@ function applySavedTogglToken() {
 
   togglTokenInput.value = _savedToken;
   togglTokenInput.dispatchEvent(new Event('input', { bubbles: true }));
+  setTogglTipVisible(false);
 }
 
 // Restore saved switch settings on page load
@@ -194,6 +200,7 @@ function handleTogglTokenChange(e) {
 
   if (!token?.length) {
     localStorage.removeItem(TOGGL_TOKEN_STORAGE_KEY);
+    setTogglTipVisible(true);
   }
   const tokenInputValid = token?.length>=32
   togglSubmitButton.disabled=!tokenInputValid;
@@ -228,6 +235,7 @@ async function downloadTogglTimeEntries(token) {
 
   const timeEntryData = convertApiDataToTimeEntryData(togglApiData);
   processTimeEntryData(timeEntryData);
+  setTogglTipVisible(false);
 }
 
 // ### Handle Filter Changes ###
