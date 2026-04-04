@@ -22,7 +22,7 @@ fi
 # Insert into .bashrc (auto-update)
 # -----------------------------
 BASHRC_MARK="# >>> dotfiles bashrc >>>"
-BASHRC_LINE='[ -f "$HOME/.dotfiles/bashrc_update.sh" ] && source "$HOME/.dotfiles/bashrc_update.sh"'
+BASHRC_LINE='[ -f "$HOME/.dotfiles/bashrc.sh" ] && source "$HOME/.dotfiles/bashrc.sh"'
 
 if ! grep -q "$BASHRC_MARK" "$BASHRC_FILE" 2>/dev/null; then
     echo "" >> "$BASHRC_FILE"
@@ -38,7 +38,7 @@ fi
 # Insert into .bash_profile (aliases)
 # -----------------------------
 BASH_PROFILE_MARK="# >>> dotfiles bash_profile >>>"
-BASH_PROFILE_LINE='[ -f "$HOME/.dotfiles/bash_profile_aliases.sh" ] && source "$HOME/.dotfiles/bash_profile_aliases.sh"'
+BASH_PROFILE_LINE='[ -f "$HOME/.dotfiles/bash_profile.sh" ] && source "$HOME/.dotfiles/bash_profile.sh"'
 
 if ! grep -q "$BASH_PROFILE_MARK" "$BASH_PROFILE_FILE" 2>/dev/null; then
     echo "" >> "$BASH_PROFILE_FILE"
