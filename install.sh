@@ -4,24 +4,51 @@ set -e
 
 REPO_URL="https://github.com/frozenfrank/byte-bin.git"
 INSTALL_DIR="$HOME/.dotfiles"
-ALIASES_FILE="$INSTALL_DIR/.bash_aliases"
-TARGET_FILE="$HOME/.bash_aliases"
+
+BASHRC_FILE="$HOME/.bashrc"
+BASH_PROFILE_FILE="$HOME/.bash_profile"
 
 echo "Installing dotfiles..."
 
-# Clone if not already installed
+# Clone or update repo
 if [ ! -d "$INSTALL_DIR" ]; then
     git clone --single-branch --branch dotfiles "$REPO_URL" "$INSTALL_DIR"
 else
-    echo "Repo already exists. Pulling latest changes..."
+    echo "Repo exists. Pulling latest..."
     git -C "$INSTALL_DIR" pull
 fi
 
-# Symlink .bash_aliases
-if [ -f "$TARGET_FILE" ] || [ -L "$TARGET_FILE" ]; then
-    rm "$TARGET_FILE"
+# -----------------------------
+# Insert into .bashrc (auto-update)
+# -----------------------------
+BASHRC_MARK="# >>> dotfiles bashrc >>>"
+BASHRC_LINE='[ -f "$HOME/.dotfiles/bashrc_update.sh" ] && source "$HOME/.dotfiles/bashrc_update.sh"'
+
+if ! grep -q "$BASHRC_MARK" "$BASHRC_FILE" 2>/dev/null; then
+    echo "" >> "$BASHRC_FILE"
+    echo "$BASHRC_MARK" >> "$BASHRC_FILE"
+    echo "$BASHRC_LINE" >> "$BASHRC_FILE"
+    echo "# <<< dotfiles bashrc <<<" >> "$BASHRC_FILE"
+    echo "Added auto-update hook to .bashrc"
+else
+    echo ".bashrc already configured"
 fi
 
-ln -s "$ALIASES_FILE" "$TARGET_FILE"
+# -----------------------------
+# Insert into .bash_profile (aliases)
+# -----------------------------
+BASH_PROFILE_MARK="# >>> dotfiles bash_profile >>>"
+BASH_PROFILE_LINE='[ -f "$HOME/.dotfiles/bash_profile_aliases.sh" ] && source "$HOME/.dotfiles/bash_profile_aliases.sh"'
 
-echo "Done! Reload your shell or run: source ~/.bashrc"
+if ! grep -q "$BASH_PROFILE_MARK" "$BASH_PROFILE_FILE" 2>/dev/null; then
+    echo "" >> "$BASH_PROFILE_FILE"
+    echo "$BASH_PROFILE_MARK" >> "$BASH_PROFILE_FILE"
+    echo "$BASH_PROFILE_LINE" >> "$BASH_PROFILE_FILE"
+    echo "# <<< dotfiles bash_profile <<<" >> "$BASH_PROFILE_FILE"
+    echo "Added aliases hook to .bash_profile"
+else
+    echo ".bash_profile already configured"
+fi
+
+echo "Done! Restart your shell or run:"
+echo "source ~/.bashrc && source ~/.bash_profile"
