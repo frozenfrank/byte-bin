@@ -88,4 +88,4 @@ function is-ancestor() {
 function mktouch() {
   mkdir -p "$(dirname "$1")" && touch "$1"
 }
-alias hello="Echo 'World (v4)'"
+alias hello="Echo 'World (v5)'"
