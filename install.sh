@@ -50,5 +50,9 @@ else
     echo ".bash_profile already configured"
 fi
 
-echo "Done! Restart your shell or run:"
-echo "source ~/.bashrc && source ~/.bash_profile"
+source "$BASH_PROFILE_FILE"
+echo "Inspect the available commands at this file:"
+echo "  $INSTALL_DIR/.bash_aliases"
+
+echo ""
+echo "Installed!"
