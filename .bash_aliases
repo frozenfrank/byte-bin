@@ -86,7 +86,7 @@ function is-ancestor() {
 
 ## Non-Git Aliases
 mktouch() { mkdir -p "$(dirname "$1")" && touch "$1" }
-alias hello="Echo 'World (v2)'"
+alias hello="Echo 'World (v3)'"
 
 ## Other Aliases
 BYTE_BIN="/path/to/root-of/byte-bin"
