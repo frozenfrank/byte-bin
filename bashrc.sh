@@ -9,7 +9,7 @@ if [ -d "$DOTFILES_DIR" ]; then
     NEW_HASH=$(git -C "$DOTFILES_DIR" rev-parse HEAD)
 
     if [ "$PREV_HASH" != "$NEW_HASH" ]; then
-        echo "Changes detected! A pull occurred."
-        source "$DOTFILES_DIR/bashrc.sh"
+        echo "New frozenfrank/.dotfiles available! Changes are being applied automatically."
+        source "$DOTFILES_DIR/bash_profile.sh"
     fi
 fi
