@@ -69,6 +69,9 @@ alias pull="git fetch && git rebase origin/master"
 alias track-bare="git config --local --add remote.origin.fetch \"+refs/heads/*:refs/remotes/origin/*\" && git fetch origin"
 git config --global alias.track-prefix '!f() { git config --add remote.origin.fetch "+refs/heads/$1*:refs/remotes/origin/$1*"; git config --add remote.origin.fetch "+refs/tags/$1*:refs/tags/$1*"; }; f'
 
+alias mergeinto='BRANCH=$(git branch --show-current) && git checkout $1 && git merge $BRANCH --no-ff --no-edit'
+alias mergemain='BRANCH=$(git branch --show-current) && git checkout main && git merge $BRANCH --no-ff --no-edit'
+
 # This command deletes the local copy of all remote branches except "master" & "main"
 alias prevmaster="git branch -r | egrep -v 'origin|master' | xargs git branch -Dr"
 alias prevmain="git branch -r | egrep -v 'origin|main' | xargs git branch -Dr"
