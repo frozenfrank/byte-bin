@@ -85,5 +85,7 @@ function is-ancestor() {
 
 
 ## Non-Git Aliases
-mktouch() { mkdir -p "$(dirname "$1")" && touch "$1" }
+function mktouch() {
+  mkdir -p "$(dirname "$1")" && touch "$1"
+}
 alias hello="Echo 'World (v3)'"
