@@ -10,6 +10,6 @@ if [ -d "$DOTFILES_DIR" ]; then
 
     if [ "$PREV_HASH" != "$NEW_HASH" ]; then
         echo "New frozenfrank/.dotfiles available! Changes are being applied automatically."
-        source "$DOTFILES_DIR/bash_profile.sh"
     fi
+    source "$DOTFILES_DIR/bash_profile.sh"
 fi
