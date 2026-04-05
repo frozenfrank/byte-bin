@@ -38,9 +38,12 @@ alias commit="git commit"
 alias commitnow="git commit --no-edit"
 
 # GIT branch management
-alias merge="git merge --no-ff"
+alias merge="git merge --no-ff --no-edit"
 alias reset="git reset --hard"
 alias undo="git reset --hard HEAD^"
+alias mergeinto='BRANCH=$(git branch --show-current) && git checkout $1 && git merge $BRANCH --no-ff --no-edit'
+alias mergemain='BRANCH=$(git branch --show-current) && git checkout main && git merge $BRANCH --no-ff --no-edit'
+
 function ub() {
   # Update branch: updates a branch to it's remote tracking version
   # Usage: ubranch BRANCH_NAME [REMOTE_NAME]
@@ -64,8 +67,6 @@ alias pull="git fetch && git rebase origin/master"
 alias track-bare="git config --local --add remote.origin.fetch \"+refs/heads/*:refs/remotes/origin/*\" && git fetch origin"
 git config --global alias.track-prefix '!f() { git config --add remote.origin.fetch "+refs/heads/$1*:refs/remotes/origin/$1*"; git config --add remote.origin.fetch "+refs/tags/$1*:refs/tags/$1*"; }; f'
 
-alias mergeinto='BRANCH=$(git branch --show-current) && git checkout $1 && git merge $BRANCH --no-ff --no-edit'
-alias mergemain='BRANCH=$(git branch --show-current) && git checkout main && git merge $BRANCH --no-ff --no-edit'
 
 # This command deletes the local copy of all remote branches except "master" & "main"
 alias prevmaster="git branch -r | egrep -v 'origin|master' | xargs git branch -Dr"
