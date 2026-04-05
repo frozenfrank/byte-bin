@@ -59,6 +59,32 @@ function ucb() {
   ub $1 $2 && git checkout $1
 }
 
+# Git Continuations
+function git-continue() {
+  # Source: https://stackoverflow.com/a/53370600/2844859
+  local repo_path=$(git rev-parse --git-dir)
+  local ret_status=$?
+
+  if [ $ret_status -ne 0 ]; then
+    exit $ret_status
+  fi
+
+  if [ -d "${repo_path}/rebase-merge" ]; then
+    git rebase --continue
+  elif [ -d "${repo_path}/rebase-apply" ]; then
+    git rebase --continue
+  elif [ -f "${repo_path}/MERGE_HEAD" ]; then
+    git merge --continue
+  elif [ -f "${repo_path}/CHERRY_PICK_HEAD" ]; then
+    git cherry-pick --continue
+  elif [ -f "${repo_path}/REVERT_HEAD" ]; then
+    git revert --continue
+  else
+    echo "No something in progress?"
+  fi
+}
+git config --global alias.continue 'git-continue'
+
 # GIT remote management
 alias fetch="git fetch"
 alias prune="git fetch --prune"
