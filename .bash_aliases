@@ -1,10 +1,5 @@
-# Author: James Finlinson @frozenfrank 2024
-#
-# To install, copy (or symlink) this file into `~/.bash_aliases`.
-# Restart the terminal to view the changes, or `source ~/.bash_aliases`.
-# Other shells (zsh, ksh, git-bash, etc) may require the file in a different location;
-# either copy or symlink or directly reference your main file from the location
-# your shell is expecting by adding a `source ~/.bash_aliases` in the other file.
+# Author: James Finlinson @frozenfrank 2026
+# Source: https://github.com/frozenfrank/byte-bin/tree/dotfiles
 
 
 # GIT history visualizations
