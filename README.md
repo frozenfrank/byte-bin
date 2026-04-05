@@ -1,15 +1,15 @@
 # dotfiles
 
-This branch in the poly repo contains useful dot files for sharing config across multiple machines.
+This branch of the poly repo contains shared dot files for syncing configuration across multiple machines.
 
-Available files:
+**Available files:**
 * [`.bash_aliases`](./.bash_aliases)
 
-## Usage
+## Installation
 
-## Automatic Installation
+### Automatic (Recommended)
 
-Execute the following command on a new machine:
+Run the following command on a new machine:
 
 ```shell
 curl -fsSL https://raw.githubusercontent.com/frozenfrank/byte-bin/dotfiles/install.sh | bash
@@ -17,26 +17,31 @@ curl -fsSL https://raw.githubusercontent.com/frozenfrank/byte-bin/dotfiles/insta
 
 The install script will:
 1. Clone a single branch of the repository into `~/.dotfiles`
-2. Insert a hook into the `~/.bashrc` to auto-update with changes.
-3. Insert a hook into the `~/.bash_profile` to ensure every session has the aliases.
+2. Add a hook to `~/.bashrc` to auto-update when changes are made
+3. Add a hook to `~/.bash_profile` to load aliases in every new session
 
+#### Not using `bash`?
 
-### Not using `bash`?
-
-Add the following line of code to your terminal's startup script (`~/.zshrc`, etc):
+Add the following line to your shell's startup script (`~/.zshrc`, etc.):
 
 ```shell
 [[ -f ~/.bashrc ]] && . ~/.bashrc
 ```
 
-## Manual Installation
+### Manual
 
-To install, copy (or symlink) [`.bash_aliases`](./.bash_aliases) file into `~/.bash_aliases`.
+Copy (or symlink) [`.bash_aliases`](./.bash_aliases) to `~/.bash_aliases`.
 
-At any point, you can enter `source ~/.bash_aliases` to pull in all the shortcuts to the terminal session.
+To load the aliases into your current session without restarting, run:
 
-Some configurations have a have a line of code in the `~/.bash_profile` file that imports `~/.bash_aliases` if it exists.
-Restart the terminal to view the changes, or `source ~/.bash_aliases`.
-Other shells (zsh, ksh, git-bash, etc) may require the file in a different location;
-either copy or symlink or directly reference your main file from the location
-your shell is expecting by adding a `source ~/.bash_aliases` in the other file.
+```shell
+source ~/.bash_aliases
+```
+
+Many configurations already include a line in `~/.bash_profile` that automatically imports `~/.bash_aliases` if it exists — in that case, simply restarting your terminal is enough.
+
+For other shells (zsh, ksh, git-bash, etc.), the aliases file may need to be in a different location. You can either move/symlink the file there, or add the following line to your shell's startup script:
+
+```shell
+source ~/.bash_aliases
+```
