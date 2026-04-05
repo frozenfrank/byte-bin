@@ -3,6 +3,20 @@ A collection of handy utility functions, scripts, and random coding snippets gat
 From small code hacks to reusable features, this is the go-to bin for all those useful bytes of code!
 
 ## Installation
+
+### Bash Alias Installation
+
+> [!TIP]
+> The bash aliases are all you really need ;)
+
+```shell
+curl -fsSL https://raw.githubusercontent.com/frozenfrank/byte-bin/dotfiles/install.sh | bash
+```
+
+See the documentation on the [dotfiles](https://github.com/frozenfrank/byte-bin/tree/dotfiles).
+
+### Shell Directory installation
+
 After cloning the repo, install the shell scripts on your `PATH` with the following:
 ```shell
 export PATH="path/to/byte-bin/shell:$PATH"
