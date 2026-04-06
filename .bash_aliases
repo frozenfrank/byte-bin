@@ -9,6 +9,7 @@ alias graphall="git log --oneline --graph --all"
 alias graphmain="git log --oneline --graph --first-parent"
 alias graphhead="git log --oneline --graph --first-parent HEAD main"
 alias graphimp="git log --oneline --graph --first-parent --branches --remotes"
+alias graphmine='git log --oneline --graph origin/main HEAD $(git branch -a --format="%(refname:short)" | grep jfinlins)'
 alias path-between="git rev-list --ancestry-path --topo-order --pretty=oneline"
 alias commits-between="git rev-list --ancestry-path --topo-order --pretty"
 function path-from-ancestor() {
