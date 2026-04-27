@@ -12,7 +12,7 @@ def shiftLetter(c: str, offset: int) -> str:
   if not c or not c.isalpha():
     return c
 
-  return chr((ord(c) + offset - BASE + 26) % 26 + BASE)
+  return chr((ord(c) - offset - BASE + 26) % 26 + BASE)
 
 def printTranslate(offset: int) -> None:
   print("")
