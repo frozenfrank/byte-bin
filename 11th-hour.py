@@ -1,3 +1,5 @@
+# This solves the cryptographic puzzle in "The Eleventh Hour" by Graeme Base
+# Author: James Finlinson
 
 
 BASE=ord("A")
