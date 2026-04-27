@@ -31,6 +31,7 @@ The source folder is enabled for `git` change tracking for a few select files on
 1. Connect to the remote
    ```shell
    git remote add origin https://github.com/frozenfrank/byte-bin.git
+   git config --replace-all remote.origin.fetch "+refs/heads/ensign-family-history:refs/remotes/origin/ensign-family-history"
    ```
 2. Fetch the branch corresponding to this project
    ```shell
