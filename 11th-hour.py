@@ -22,8 +22,10 @@ def printTranslate(offset: int) -> None:
 def findOffset() -> None:
   for offset in range(26):
     printTranslate(offset)
-    print("** Press Enter to Continue**")
-    input()
+    print("** Press Enter to Continue, q to quit **")
+    rsp = input().upper()
+    if rsp == "Q":
+      break
 
 def main():
 
