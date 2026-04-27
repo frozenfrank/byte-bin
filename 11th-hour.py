@@ -1,28 +1,22 @@
 
-text=""
-while True:
-  line=input()
-  if not line:
-    break
 
-  text += line.upper() + "\n"
+BASE=ord("A")
 
-print("")
-print("Input: ")
-print(text)
+def readInitial():
+  with open("11th-hour.txt", "r") as f:
+    content = f.read()  # Replaces 'input()' for large blocks of text
+  return content
 
-
-base=ord("A")
 
 def shiftLetter(c: str, offset: int) -> str:
   if not c or not c.isalpha():
     return c
 
-  return chr((ord(c) + offset - base + 26) % 26 + base)
+  return chr((ord(c) + offset - BASE + 26) % 26 + BASE)
 
 def printTranslate(offset: int) -> None:
   print("")
-  print(f"Translated (offset={chr(base + offset)}): ")
+  print(f"Translated (offset={chr(BASE + offset)}): ")
   print("".join([shiftLetter(c, offset) for c in text]))
 
 def findOffset() -> None:
@@ -32,16 +26,23 @@ def findOffset() -> None:
     input()
 
 def main():
+
+  global text
+  text = readInitial()
+  print("")
+  print("Input: ")
+  print(text)
+
   while True:
     print("Do you know the offset? Enter it if known.")
     start = input("Offset: ").upper()
-    if len(start) != 1:
-      print("Enter one letter only. Try again.")
-    elif start.isalpha():
-      printTranslate(ord(start)-base)
-      break
-    else:
+    if len(start) == 0:
       findOffset()
+      break
+    elif len(start) > 1 or not start.isalpha():
+      print("Enter one letter only. Try again.")
+    else:
+      printTranslate(ord(start)-BASE)
       break
 
   print("Done.")
