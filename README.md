@@ -46,6 +46,12 @@ The source folder is enabled for `git` change tracking for a few select files on
    git reset --hard @{upstream}
    ```
 
+**Alternative: Download Fresh Clone**
+1. Git clone the `ensign-family-history` branch
+   ```shell
+   git clone --branch ensign-family-history --single-branch https://github.com/frozenfrank/byte-bin.git ensign-family-history
+   ```
+
 ### Ongoing Usage
 * Update with future changes
   ```shell
