@@ -1,2 +1,11 @@
+.agents/*
+!.agents/skills
+.claude/*
+!.claude/skills
+
 *.zip
 **/node_modules/
+dist/
+
+# 11ty (Build Awesome) artifacts
+_site/

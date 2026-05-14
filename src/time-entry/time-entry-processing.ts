@@ -1,9 +1,4 @@
-import type { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglAPITimeEntryWithMetadata, TogglExportTimeEntry } from "./time-entry.d";
-
-/**
- * Build this file with:
- * $ tsc -t esnext time-entry.ts && sed -i '' -E 's/^export[[:space:]]+//' time-entry.js
- */
+import type { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglAPITimeEntryWithMetadata, TogglExportTimeEntry } from "./time-entry";
 
 /** Converts a string duration into the number of elapsed seconds. e.g., "01:30:00" */
 function parseDurationString(duration: string): number {

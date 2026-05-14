@@ -1,0 +1,59 @@
+#download-toggl-token {
+  width: 30em;
+}
+
+.timecard-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-family: monospace;
+}
+.timecard-table th,
+.timecard-table td {
+  padding: 0.3em 0.6em;
+  text-align: right;
+  border-bottom: 1px solid var(--wa-color-neutral-border-normal);
+}
+.timecard-table th:last-child,
+.timecard-table td:last-child {
+  text-align: left;
+}
+.timecard-table thead tr {
+  border-bottom: 2px solid var(--wa-color-neutral-border-loud);
+}
+.timecard-table tfoot tr {
+  border-top: 2px solid var(--wa-color-neutral-border-loud);
+  font-weight: bold;
+}
+.timecard-table tbody tr:hover {
+  background: var(--wa-color-neutral-fill-quiet);
+}
+.code-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2em;
+}
+.timecard-header h3 {
+  margin-bottom: 0.2em;
+}
+.timecard-summary p {
+  margin: 0.1em 0;
+  font-family: monospace;
+}
+.timecard-footer {
+  margin-top: 1em;
+}
+.subsequent-row td {
+  color: var(--wa-color-neutral-text-quiet);
+  font-size: 0.9em;
+  background: var(--wa-color-neutral-fill-quiet);
+  border-bottom-style: dashed;
+}
+.group-end td {
+  border-bottom: 2px solid var(--wa-color-neutral-border-loud);
+}
+.header-copy-icon {
+  font-size: 0.8em;
+  opacity: 0.5;
+  margin-left: 0.2em;
+  vertical-align: middle;
+}

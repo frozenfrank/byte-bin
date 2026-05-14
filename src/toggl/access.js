@@ -8,7 +8,7 @@ const DEFAULT_PROXY_URL = "https://proxy-fjuhi57saa-uc.a.run.app";
  * @param {string} token A Toggl API token
  * @returns Promise<TogglProfileData> An object containing data about the signed in user
  */
-function getProfile(token) {
+export function getProfile(token) {
   if (!token) {
     throw new Error("Missing required parameter.");
   }
@@ -25,7 +25,7 @@ function getProfile(token) {
  * @param {boolean} [includeMetaInformation=true] When true, additional information like entity names will be included in the output, instead of requiring separate queries to lookup IDs.
  * @returns Toggl's Time Entry data output
  */
-function getTimeEntries(token,startDate,endDate=new Date,includeMetaInformation=true) {
+export function getTimeEntries(token,startDate,endDate=new Date,includeMetaInformation=true) {
   if (!token || !startDate || !endDate) {
     throw new Error("Missing required parameter.");
   }
@@ -44,7 +44,7 @@ function formatDate(date) {
   return date.toISOString().slice(0, 10);
 }
 
-async function makeTogglRequest(method,endpoint,usernameOrToken,password="api_token",proxyUrl=DEFAULT_PROXY_URL) {
+export async function makeTogglRequest(method,endpoint,usernameOrToken,password="api_token",proxyUrl=DEFAULT_PROXY_URL) {
   // Prepare request URL
   let requestURL = TOGGL_BASE_URL+endpoint;
   if (proxyUrl) {
