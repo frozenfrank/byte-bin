@@ -1,2 +1,5 @@
 *.zip
 **/node_modules/
+
+# 11ty (Build Awesome) artifacts
+_site/
