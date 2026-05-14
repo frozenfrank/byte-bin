@@ -1,10 +1,11 @@
 import Papa, { ParseResult } from 'papaparse';
-import { convertParsedCsvToTimeEntryData, convertApiDataToTimeEntryData } from './time-entry/time-entry-processing';
-import { getTimeEntries } from './toggl/access';
-import { buildTimecardReportElement } from './report';
-import { EntryGrouping, PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
+import { renderSummaryCharts } from './charts';
 import { DateValue } from './model/types';
 import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch } from './model/web-awesome';
+import { buildTimecardReportElement } from './report';
+import { EntryGrouping, PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
+import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData } from './time-entry/time-entry-processing';
+import { getTimeEntries } from './toggl/access';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
 const IMPORT_METHOD_STORAGE_KEY = 'importMethod';
@@ -572,6 +573,7 @@ function renderTimecardReport() {
   const groupByTlp = groupByTlpSwitch.checked;
   const groupByXds = groupByXdsSwitch.checked;
   const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillableSwitch.checked,filterClientName);
+  renderSummaryCharts(filteredData);
   const entries = prepareTimecardEntries(filteredData, groupByXds, groupByTlp);
   const reportEl = buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp);
   const outputEl = getElementById(OUTPUT_PRE_ID);
