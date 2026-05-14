@@ -1,9 +1,12 @@
+---
+title:
+---
 <!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Byte Bin</title>
+  <title>Byte Bin {{ "| " + title if title else "" }}</title>
 
   <script src="https://kit.webawesome.com/381cfdad10d64aac.js" crossorigin="anonymous"></script>
 
@@ -34,11 +37,7 @@
 
     <!-- Main body content -->
     <main class="wa-body-l">
-      <h2>List of projects</h2>
-      <ul>
-        <li><a href="./delorean/index.html">Toggl to DeLorean Transfer Report</a></li>
-      </ul>
-
+      {{ content | safe }}
     </main>
   </wa-page>
 </body>
