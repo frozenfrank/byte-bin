@@ -2,9 +2,9 @@
   "version": 1,
   "skills": {
     "webawesome": {
-      "source": "/Users/frozenfrank/code/toggl-to-delorean/docs/node_modules/@awesome.me/webawesome/dist/skills/webawesome",
+      "source": "/Users/frozenfrank/code/toggl-to-delorean/docs/node_modules/@web.awesome.me/webawesome-pro/dist/skills/webawesome",
       "sourceType": "local",
-      "computedHash": "7d4c155843227337e9a4e934803ac76a36dc6716eeac296e9a5dc630ffe8fd09"
+      "computedHash": "e95c2696c1081bf1188ca68a212d8962a8750cba7837ab2106a55f66607d2aab"
     }
   }
 }
