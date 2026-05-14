@@ -13,6 +13,9 @@
 - [ ] Show relative time since last data update, with total number of time entries received
 - [ ] Actually move focus when using accelerator keys
 
+## Medium Improvements
+- [ ] Switch to [npm based bundled WA elements](https://webawesome.com/docs/#installing-with-npm)
+
 ## Big Upgrades
 - [ ] File data automatically into DeLorean
 - [x] Leverage Toggl APIs to get data directly
