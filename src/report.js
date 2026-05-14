@@ -11,7 +11,7 @@
  * @param {boolean} groupByTlp - Whether TLP column is shown
  * @returns {HTMLElement}
  */
-function buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp) {
+export function buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp) {
   const container = document.createElement('div');
 
   // Collect stats while building the table body, so we can build the header/footer around them

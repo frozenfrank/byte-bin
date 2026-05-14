@@ -15,6 +15,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "build": "./node_modules/.bin/esbuild src/index.ts --bundle --minify --outfile=dist/bundle.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
