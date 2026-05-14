@@ -19,5 +19,8 @@
   },
   "dependencies": {
     "@web.awesome.me/webawesome-pro": "^3.7.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.0"
   }
 }
