@@ -1,3 +1,0 @@
-# Exclude test JSON and TXT files
-*.txt
-*.json
