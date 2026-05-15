@@ -1,7 +1,7 @@
 {
-  "name": "docs",
-  "version": "1.0.0",
-  "description": "Byte Bin published files, including small projects.",
+  "name": "toggl-to-delorean",
+  "version": "1.2.0",
+  "description": "Loads time entries from Toggl and displays it for review & entry into Delorean.",
   "homepage": "https://github.com/frozenfrank/byte-bin#readme",
   "bugs": {
     "url": "https://github.com/frozenfrank/byte-bin/issues"
