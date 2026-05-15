@@ -1,5 +1,5 @@
 
-# Performance Testing
+# `sizeof-node-modules.sh` Performance Testing
 
 ## Detailed Stats — Root Directory
 
