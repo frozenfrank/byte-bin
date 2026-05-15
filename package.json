@@ -13,7 +13,7 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "toggl-to-delorean": "github:frozenfrank/byte-bin#delorean-main"
+    "toggl-to-delorean": "file:../../toggl-to-delorean"
   },
   "devDependencies": {
     "@11ty/eleventy": "^3.1.5"
