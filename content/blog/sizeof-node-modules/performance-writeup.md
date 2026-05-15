@@ -1,5 +1,9 @@
-
-# `sizeof-node-modules.sh` Performance Testing
+---
+title: Sizeof node_modules/ – Performance testing
+description: Performance results over several iterations of a sizeof utility
+date: 2024-10-24
+tags: ["performance"]
+---
 
 ## Detailed Stats — Root Directory
 
