@@ -59,7 +59,7 @@ document.addEventListener('DOMContentLoaded', handleImportMethodChange);
 importMethodInput.addEventListener('change', handleImportMethodChange);
 importMethodInput.addEventListener('click', handleImportMethodChange);
 function handleImportMethodChange(_e) {
-  const selectedValue = importMethodInput.getAttribute('value');
+  const selectedValue = importMethodInput.value;
   const displayElements = document.querySelectorAll(`[show-data-for=${IMPORT_METHOD_INPUT_ID}]`);
   displayElements.forEach(el => {
     const displayValue = el.getAttribute("data-value");
