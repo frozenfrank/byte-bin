@@ -1,5 +1,6 @@
 *.zip
 **/node_modules/
+.claude/settings.local.json
 
 # 11ty (Build Awesome) artifacts
 _site/
