@@ -5,6 +5,7 @@
 # GIT history visualizations
 alias log="git log --oneline"
 alias graph="git log --oneline --graph"
+alias graphu="git log --oneline --graph @ @{u}"
 alias graphall="git log --oneline --graph --all"
 alias graphmain="git log --oneline --graph --first-parent"
 alias graphhead="git log --oneline --graph --first-parent HEAD main"
@@ -42,8 +43,8 @@ alias commitnow="git commit --no-edit"
 alias merge="git merge --no-ff --no-edit"
 alias reset="git reset --hard"
 alias undo="git reset --hard HEAD^"
-alias mergeinto='BRANCH=$(git branch --show-current) && git checkout $1 && git merge $BRANCH --no-ff --no-edit'
-alias mergemain='BRANCH=$(git branch --show-current) && git checkout main && git merge $BRANCH --no-ff --no-edit'
+function mergeinto() { local BRANCH=$(git branch --show-current); git checkout $1; git merge $BRANCH --no-ff --no-edit; }
+function mergemain() { local BRANCH=$(git branch --show-current); git checkout main; git merge $BRANCH --no-ff --no-edit; }
 
 function ub() {
   # Update branch: updates a branch to it's remote tracking version
@@ -58,6 +59,13 @@ function ucb() {
   # Update and Checkout Branch: Updates a branch to it's remote head and checks it out locally
   # Usage: ucb BRANCH_NAME [REMOTE_NAME]
   ub $1 $2 && git checkout $1
+}
+
+# Git blame related
+function blame-dir() {
+  git ls-files "$@" | while read file; do
+    echo "$(git log -1 --format="%C(auto)%h %<(15,trunc)%ar %<(50,trunc)%s" -- "$file") $file";
+  done
 }
 
 # Git Continuations
