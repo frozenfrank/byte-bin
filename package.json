@@ -1,21 +1,49 @@
 {
-  "name": "byte-bin-site",
-  "version": "1.0.0",
-  "author": "James Finlinson",
-  "description": "A collection of handy utility functions, scripts, and random coding snippets gathered over time. From small code hacks to reusable features, this is the go-to bin for all those useful bytes of code!",
-  "keywords": [],
-  "license": "ISC",
-  "type": "module",
-  "scripts": {
-    "build": "npx @11ty/eleventy",
-    "build-ghpages": "npx @11ty/eleventy",
-    "dev": "npx @11ty/eleventy --serve",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "dependencies": {
-    "toggl-to-delorean": "file:../../toggl-to-delorean"
-  },
-  "devDependencies": {
-    "@11ty/eleventy": "^3.1.5"
-  }
+	"name": "byte-bin-blog",
+	"version": "1.0.0",
+	"description": "A blog with assorted information from my experience as a software developer.",
+	"type": "module",
+	"scripts": {
+		"build": "npx @11ty/eleventy",
+		"build-nocolor": "cross-env NODE_DISABLE_COLORS=1 npx @11ty/eleventy",
+		"build-ghpages": "npx @11ty/eleventy",
+		"start": "npx @11ty/eleventy --serve --quiet",
+		"start-ghpages": "npx @11ty/eleventy --serve --quiet",
+		"debug": "cross-env DEBUG=Eleventy* npx @11ty/eleventy",
+		"debugstart": "cross-env DEBUG=Eleventy* npx @11ty/eleventy --serve --quiet",
+		"benchmark": "cross-env DEBUG=Eleventy:Benchmark* npx @11ty/eleventy"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git://github.com/frozenfrank/byte-bin.git"
+	},
+	"author": {
+		"name": "James",
+		"email": "james@wheatharvest.llc",
+		"url": "https://bytes.wheatharvest.llc"
+	},
+	"license": "MIT",
+	"engines": {
+		"node": ">=18"
+	},
+	"bugs": {
+		"url": "https://github.com/frozenfrank/byte-bin/issues"
+	},
+	"homepage": "https://github.com/frozenfrank/byte-bin#readme",
+	"dependencies": {
+		"@zachleat/heading-anchors": "^1.0.5"
+	},
+	"devDependencies": {
+		"@11ty/eleventy": "^3.1.5",
+		"@11ty/eleventy-img": "^6.0.4",
+		"@11ty/eleventy-navigation": "^1.0.5",
+		"@11ty/eleventy-plugin-rss": "^3.0.0",
+		"@11ty/eleventy-plugin-syntaxhighlight": "^5.0.2",
+		"cross-env": "^10.1.0",
+		"luxon": "^3.7.2",
+		"prismjs": "^1.30.0",
+		"toggl-to-delorean": "file:../../toggl-to-delorean",
+		"zod": "^4.3.6",
+		"zod-validation-error": "^5.0.0"
+	}
 }

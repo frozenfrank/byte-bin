@@ -4,3 +4,4 @@
 
 # 11ty (Build Awesome) artifacts
 _site/
+.cache
