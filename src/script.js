@@ -55,7 +55,7 @@ let interpretedTimeData = {
 
 // Dynamically display input options
 const importMethodInput = document.getElementById(IMPORT_METHOD_INPUT_ID);
-document.addEventListener('DOMContentLoaded', handleImportMethodChange);
+customElements.whenDefined('wa-radio-group').then(() => handleImportMethodChange());
 importMethodInput.addEventListener('change', handleImportMethodChange);
 importMethodInput.addEventListener('click', handleImportMethodChange);
 function handleImportMethodChange(_e) {
