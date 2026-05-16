@@ -5,11 +5,22 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<title>{{ title or metadata.title }}</title>
 		<meta name="description" content="{{ description or metadata.description }}">
+
 		<link rel="alternate" href="/feed/feed.xml" type="application/atom+xml" title="{{ metadata.title }}">
+		<meta name="generator" content="{{ eleventy.generator }}">
 
-		{#- Uncomment this if you’d like folks to know that you used Eleventy to build your site!  #}
-		{#- <meta name="generator" content="{{ eleventy.generator }}"> #}
+		<script src="https://kit.webawesome.com/381cfdad10d64aac.js" crossorigin="anonymous"></script>
 
+
+		<style type="text/css">
+			[slot='banner'] {
+				--wa-color-text-link: var(--wa-color-neutral-on-loud);
+				background-color: var(--wa-color-neutral-fill-loud);
+			}
+			[slot='header'] {
+				background-color: var(--wa-color-brand-fill-normal);
+			}
+		</style>
 		{#-
 		Plain-text bundles are provided via the `eleventy-plugin-bundle` plugin:
 		1. CSS:
@@ -21,9 +32,6 @@
 		3. Learn more: https://github.com/11ty/eleventy-plugin-bundle
 		#}
 
-		{#- Add CSS to the bundle #}
-		{#- <style>/* This is an arbitrary CSS string added to the bundle */</style> #}
-
 		{#- Add the contents of a file to the bundle #}
 		<style>{% include "css/index.css" %}</style>
 
@@ -31,7 +39,7 @@
 		{# <style>{% include "node_modules/something.css" %}</style> #}
 
 		{#- Render the CSS bundle using inlined CSS (for the fastest site performance in production) #}
-		<style>{% getBundle "css" %}</style>
+		{#- <style>{% getBundle "css" %}</style> #}
 
 		{#- Renders the CSS bundle using a separate file, if you can't set CSP directive style-src: 'unsafe-inline' #}
 		{#- <link rel="stylesheet" href="{% getBundleFileUrl "css" %}"> #}
@@ -40,33 +48,38 @@
 		<script type="module">{% include "node_modules/@zachleat/heading-anchors/heading-anchors.js" %}</script>
 	</head>
 	<body>
-		<a href="#main" id="skip-link" class="visually-hidden">Skip to main content</a>
+		<wa-page>
+			<div slot="banner" class="wa-body-s">
+				<a href="https://webawesome.com/" class="wa-cluster wa-align-items-baseline wa-gap-xs" style="flex-wrap: nowrap;">
+					<wa-icon name="crown" style="color: var(--wa-color-orange-60)"></wa-icon>
+					<span>Proudly developed with WebAwesome</span>
+				</a>
+			</div>
 
-		<header>
-			<a href="/" class="home-link">{{ metadata.title }}</a>
+			<header slot="header" class="wa-split">
+				<nav class="wa-cluster">
+					<a href="/" class="wa-cluster">
+						<wa-icon name="square-binary" style="color: var(--wa-color-brand-fill-loud); font-size: 1.5em"></wa-icon>
+						<span id="brand-name" class="wa-heading-m wa-desktop-only">{{ metadata.title }}</span>
+					</a>
+					{%- for entry in collections.all | eleventyNavigation %}
+						<a href="{{ entry.url }}"{% if entry.url == page.url %} aria-current="page"{% endif %}>{{ entry.title }}</a>
+					{%- endfor %}
+				</nav>
+			</header>
 
-			{#- Read more about `eleventy-navigation` at https://www.11ty.dev/docs/plugins/navigation/ #}
-			<nav>
-				<h2 class="visually-hidden">Top level navigation menu</h2>
-				<ul class="nav">
-				{%- for entry in collections.all | eleventyNavigation %}
-					<li class="nav-item"><a href="{{ entry.url }}"{% if entry.url == page.url %} aria-current="page"{% endif %}>{{ entry.title }}</a></li>
-				{%- endfor %}
-				</ul>
-			</nav>
-		</header>
+			<main class="wa-body-l">
+				<heading-anchors>
+					{{ content | safe }}
+				</heading-anchors>
+			</main>
 
-		<main id="main">
-			<heading-anchors>
-				{{ content | safe }}
-			</heading-anchors>
-		</main>
-
-		<footer>
-			<p>
-				<em>Built with <a href="https://www.11ty.dev/">{{ eleventy.generator }}</a></em>
-			</p>
-		</footer>
+			<footer slot="footer">
+				<p>
+					<em>Built with <a href="https://www.11ty.dev/">{{ eleventy.generator }}</a></em>
+				</p>
+			</footer>
+		</wa-page>
 
 		<!-- This page `{{ page.url }}` was built on {% currentBuildDate %} -->
 		<script type="module" src="{% getBundleFileUrl "js" %}"></script>
