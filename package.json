@@ -15,14 +15,15 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
+    "start": "./scripts/serve.sh",
+    "serve": "./scripts/serve.sh",
     "build": "./scripts/build.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "dependencies": {
-  },
   "devDependencies": {
-    "@web.awesome.me/webawesome-pro": "^3.7.0",
-    "papaparse": "^5.5.3",
-    "esbuild": "0.28.0"
+    "@web.awesome.me/webawesome-pro": "file:/Users/frozenfrank/Documents/Personal/webawesome-pro-v3.7.0",
+    "esbuild": "0.28.0",
+    "http-server": "^14.1.1",
+    "papaparse": "^5.5.3"
   }
 }
