@@ -30,6 +30,9 @@
 		"url": "https://github.com/frozenfrank/byte-bin/issues"
 	},
 	"homepage": "https://github.com/frozenfrank/byte-bin#readme",
+	"dependencies": {
+		"@zachleat/heading-anchors": "^1.0.5"
+	},
 	"devDependencies": {
 		"@11ty/eleventy": "^3.1.5",
 		"@11ty/eleventy-img": "^6.0.4",
@@ -39,10 +42,8 @@
 		"cross-env": "^10.1.0",
 		"luxon": "^3.7.2",
 		"prismjs": "^1.30.0",
+		"toggl-to-delorean": "file:../../toggl-to-delorean",
 		"zod": "^4.3.6",
 		"zod-validation-error": "^5.0.0"
-	},
-	"dependencies": {
-		"@zachleat/heading-anchors": "^1.0.5"
 	}
 }
