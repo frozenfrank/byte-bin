@@ -1,7 +1,7 @@
 {
-  "name": "docs",
-  "version": "1.0.0",
-  "description": "Byte Bin published files, including small projects.",
+  "name": "toggl-to-delorean",
+  "version": "1.2.0",
+  "description": "Loads time entries from Toggl and displays it for review & entry into Delorean.",
   "homepage": "https://github.com/frozenfrank/byte-bin#readme",
   "bugs": {
     "url": "https://github.com/frozenfrank/byte-bin/issues"
@@ -15,14 +15,14 @@
   "type": "module",
   "main": "src/index.js",
   "scripts": {
-    "build": "rm -rf dist/ && ./node_modules/.bin/esbuild src/index.ts --bundle --minify --outfile=dist/bundle.js && cp src/fragment.html dist/ && cp src/styles.css dist/",
+    "build": "./scripts/build.sh",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "@web.awesome.me/webawesome-pro": "^3.7.0",
-    "papaparse": "^5.5.3"
   },
   "devDependencies": {
+    "@web.awesome.me/webawesome-pro": "^3.7.0",
+    "papaparse": "^5.5.3",
     "esbuild": "0.28.0"
   }
 }

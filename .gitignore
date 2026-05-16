@@ -1,7 +1,4 @@
-.agents/*
-!.agents/skills
-.claude/*
-!.claude/skills
+.claude/settings.local.json
 
 *.zip
 **/node_modules/
