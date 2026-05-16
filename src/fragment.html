@@ -5,7 +5,14 @@
   <wa-radio appearance="button" value="2">File Import</wa-radio>
 </wa-radio-group>
 <span show-data-for="import-data-method" data-value="2">
-  <input type="file" id="togglFileInput" accept=".csv" />
+  <wa-callout size="small">
+    <wa-icon slot="icon" name="lightbulb" variant="regular"></wa-icon>
+    Upload a CSV file exported from your <a href="https://track.toggl.com/reports">Toggl Reports page</a>.
+  </wa-callout>
+  <br>
+  <div class="wa-cluster">
+    <wa-file-input id="togglFileInput" accept=".csv" label="Toggl CSV Export"></wa-file-input>
+  </div>
 </span>
 <span show-data-for="import-data-method" data-value="1">
   <form id="download-toggl-form">
