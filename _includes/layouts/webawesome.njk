@@ -1,0 +1,16 @@
+---
+layout: layouts/base.njk
+---
+<script src="https://kit.webawesome.com/381cfdad10d64aac.js" crossorigin="anonymous"></script>
+
+<style type="text/css">
+  [slot='banner'] {
+    --wa-color-text-link: var(--wa-color-neutral-on-loud);
+    background-color: var(--wa-color-neutral-fill-loud);
+  }
+  [slot='header'] {
+    background-color: var(--wa-color-brand-fill-normal);
+  }
+</style>
+
+{{ content | safe }}

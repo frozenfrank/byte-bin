@@ -4,6 +4,10 @@ layout: layouts/base.njk
 {# Only include the syntax highlighter CSS on blog posts, included with the CSS per-page bundle #}
 <style>{% include "node_modules/prismjs/themes/prism-okaidia.css" %}</style>
 <style>{% include "css/prism-diff.css" %}</style>
+{#- Add the heading-anchors web component to the JavaScript bundle #}
+<script type="module">{% include "node_modules/@zachleat/heading-anchors/heading-anchors.js" %}</script>
+
+
 <h1>{{ title }}</h1>
 
 <ul class="post-metadata">
@@ -14,7 +18,10 @@ layout: layouts/base.njk
 	{%- endfor %}
 </ul>
 
-{{ content | safe }}
+
+<heading-anchors>
+	{{ content | safe }}
+</heading-anchors>
 
 {%- if collections.posts %}
 {%- set previousPost = collections.posts | getPreviousCollectionItem %}
