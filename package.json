@@ -21,7 +21,7 @@
   "dependencies": {
   },
   "devDependencies": {
-    "@web.awesome.me/webawesome-pro": "^3.7.0",
+    "@web.awesome.me/webawesome-pro": "file:/Users/frozenfrank/Documents/Personal/webawesome-pro-v3.7.0",
     "papaparse": "^5.5.3",
     "esbuild": "0.28.0"
   }
