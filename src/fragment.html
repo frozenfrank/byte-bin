@@ -8,19 +8,34 @@
   <span show-data-for="import-data-method" data-value="2">
     <wa-callout size="small">
       <wa-icon slot="icon" name="lightbulb" variant="regular"></wa-icon>
-      Upload a CSV file exported from your <a href="https://track.toggl.com/reports">Toggl Reports page</a>.
+      Upload a CSV file exported from your <a target="_blank" href="https://track.toggl.com/reports/detailed">Toggl Reports (Detailed) page</a>. Apply appropriate filters and turn on relevant columns before generating the export.
     </wa-callout>
-    <div class="wa-cluster">
-      <wa-file-input id="togglFileInput" accept=".csv" label="Toggl CSV Export"></wa-file-input>
-    </div>
+    <wa-details summary="Toggl Export Column Information">
+      <p>The generated file contains only the columns enabled on the screen when the export is triggered. If information is not present on the screen, it is not in the file and therefore, unavailable for use in this tool.</p>
+      <p>
+        The following columns are supported by this utility (order is irrelevant):
+        <ul>
+          <li><b>Description</b>*</li>
+          <li><b>Date & Time</b>*</li>
+          <li><b>Tags</b>*</li>
+          <li><b>Project</b>*</li>
+          <li>Billable</li>
+          <li>Client</li>
+          <li>Member</li>
+          <li>Email</li>
+        </ul>
+      </p>
+      <p><i>* Indicates a required column</i></p>
+    </wa-details>
+    <wa-file-input id="togglFileInput" accept=".csv" label="Toggl CSV Export"></wa-file-input>
   </span>
   <span show-data-for="import-data-method" data-value="1">
     <form id="download-toggl-form">
       <wa-callout size="small" id="toggl-api-tip">
         <wa-icon slot="icon" name="lightbulb" variant="regular"></wa-icon>
         Your Toggl API token can be revealed at the bottom of
-        <a href="https://track.toggl.com/profile">your profile page</a>. The token
-        is expected to be at least <b>32&nbsp;characters</b> in length.
+        <a target="_blank" href="https://track.toggl.com/profile">your profile page</a>.
+        The token is expected to be at least <b>32&nbsp;characters</b> in length.
       </wa-callout>
       <br />
       <div class="wa-cluster">
