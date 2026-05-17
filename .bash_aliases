@@ -44,7 +44,7 @@ alias merge="git merge --no-ff --no-edit"
 alias reset="git reset --hard"
 alias undo="git reset --hard HEAD^"
 function mergeinto() { local BRANCH=$(git branch --show-current); git checkout $1; git merge $BRANCH --no-ff --no-edit; }
-function mergemain() { local BRANCH=$(git branch --show-current); git checkout main; git merge $BRANCH --no-ff --no-edit; }
+function mergemain() { local BRANCH=$(git branch --show-current); git checkout main; git merge $BRANCH --no-ff --no-edit; git branch -d $BRANCH; }
 
 function ub() {
   # Update branch: updates a branch to it's remote tracking version
