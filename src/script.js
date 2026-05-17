@@ -145,7 +145,7 @@ function processTimeEntryData(timeEntryData) {
   requireBillableSwitch.disabled = !interpretedTimeData.hasBillableData;
   if (interpretedTimeData.hasBillableData) {
     const savedRequireBillable = localStorage.getItem(requireBillableSwitch.id);
-    requireBillableSwitch.checked = savedRequireBillable !== null ? savedRequireBillable === 'true' : true;
+    requireBillableSwitch.checked = savedRequireBillable !== null ? savedRequireBillable === 'true' : false;
   } else {
     requireBillableSwitch.checked = false;
   }
