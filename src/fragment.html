@@ -67,7 +67,15 @@
 <br />
 
 <h2>Step 2: Filter Entries</h2>
-<div class="wa-cluster wa-align-items-start">
+<div class="wa-stack">
+  <wa-select id="clientSelect" label="Filter by Client" hint="Show entries for a specific client">
+    <wa-option value="" selected disabled>-- Import data first --</wa-option>
+  </wa-select>
+
+  <div class="wa-cluster wa-align-items-start">
+    <wa-switch id="requireBillableSwitch">Require <u>B</u>illable</wa-switch>
+  </div>
+
   <wa-radio-group id="timeScaleInput" orientation="horizontal" value="1">
     <span slot="label">Choose <u>T</u>ime Scale</span>
     <wa-radio appearance="button" value="1"><u>O</u>ne Day</wa-radio>
@@ -75,7 +83,6 @@
     <wa-radio appearance="button" value="3">One <u>M</u>onth</wa-radio>
     <wa-radio appearance="button" value="4"><u>A</u>ll Time</wa-radio>
   </wa-radio-group>
-  <br />
 
   <wa-select id="daySelect" label="Select a Day" hint="One day at a time">
     <wa-option value="" selected disabled>-- Import data first --</wa-option>
@@ -96,8 +103,6 @@
   >
     <wa-option value="" selected disabled>-- Import data first --</wa-option>
   </wa-select>
-
-  <wa-switch id="requireBillableSwitch">Require <u>B</u>illable</wa-switch>
 </div>
 <br />
 
