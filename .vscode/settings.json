@@ -1,4 +1,5 @@
 {
+  "html.customData": ["./node_modules-preserve/@web.awesome.me/webawesome-pro/dist-cdn/vscode.html-custom-data.json"],
   "cSpell.words": [
     "DLGs",
     "duronly",
