@@ -11,6 +11,8 @@ const TIME_SCALE_INPUT_ID = 'timeScaleInput';
 const DAY_SELECT_ID = 'daySelect';
 const WEEK_SELECT_ID = 'weekSelect';
 const MONTH_SELECT_ID = 'monthSelect';
+const CLIENT_SELECT_ID = 'clientSelect';
+const CLIENT_FILTER_STORAGE_KEY = 'clientFilter';
 const OUTPUT_PRE_ID = 'timecardReport';
 const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
 const REQUIRE_BILLABLE_ID = 'requireBillableSwitch';
@@ -35,6 +37,8 @@ const XDS_REGEX = /XDS\s*(\d+)/i;
 let interpretedTimeData = {
   /** Sorted list of unique projects */
   uniqueProjects: [],
+  /** Sorted list of unique client names */
+  uniqueClients: [],
   /** Sorted list of unique dates */
   uniqueDays: [],
   /** Sorted list of unique date values (number values). Used for moving between dates. */
@@ -102,12 +106,14 @@ function handleDataParsed(results) {
 
 function processTimeEntryData(timeEntryData) {
   const allProjects = new Set();
+  const allClients = new Set();
   const allDates = new Map();
   const allWeeks = new Map();
   const allMonths = new Map();
 
   timeEntryData.entries.forEach((entry) => {
     allProjects.add(entry.projectName);
+    if (entry.clientName) allClients.add(entry.clientName);
 
     entry._computedDates = prepareComputedDateValues(entry.start);
     allDates.set(+entry._computedDates.day, entry._computedDates.day);
@@ -116,6 +122,7 @@ function processTimeEntryData(timeEntryData) {
   });
 
   const uniqueProjects = Array.from(allProjects).sort();
+  const uniqueClients = Array.from(allClients).sort();
 
   const dateMapToSortedArr = dateMap => Array.from(dateMap.values()).sort((a,b) => a - b);
   const dateArrToValuesArr = dateArr => dateArr.map(d => +d);
@@ -126,6 +133,7 @@ function processTimeEntryData(timeEntryData) {
 
   interpretedTimeData = {
     uniqueProjects,
+    uniqueClients,
     uniqueDays, uniqueDayValues: dateArrToValuesArr(uniqueDays),
     uniqueWeeks, uniqueWeekValues: dateArrToValuesArr(uniqueWeeks),
     uniqueMonths, uniqueMonthValues: dateArrToValuesArr(uniqueMonths),
@@ -152,6 +160,8 @@ function processTimeEntryData(timeEntryData) {
        + end.toLocaleDateString('default', { month: 'short', day: 'numeric', year: '2-digit' });
   });
   populateDateSelector(MONTH_SELECT_ID, uniqueMonths, "month", m => m.toLocaleString('default', { month: 'long', year: 'numeric' }));
+
+  populateClientSelector(uniqueClients, interpretedTimeData.hasClientData);
 
   const mostRecentDay = interpretedTimeData.uniqueDayValues[interpretedTimeData.uniqueDayValues.length - 1];
   const targetDay = prevDayValue && interpretedTimeData.uniqueDayValues.some(d => d >= prevDayValue)
@@ -263,6 +273,17 @@ const nextPrevLabels = document.getElementsByClassName(PREV_NEXT_LABEL_CLASS);
 const daySelect = document.getElementById(DAY_SELECT_ID);
 const weekSelect = document.getElementById(WEEK_SELECT_ID);
 const monthSelect = document.getElementById(MONTH_SELECT_ID);
+const clientSelect = document.getElementById(CLIENT_SELECT_ID);
+
+clientSelect.addEventListener('change', handleClientChange);
+function handleClientChange(_e) {
+  try {
+    localStorage.setItem(CLIENT_FILTER_STORAGE_KEY, clientSelect.value);
+  } catch (err) {
+    console.warn('Could not save client filter to localStorage', err);
+  }
+  renderTimecardReport();
+}
 
 timeScaleInput.addEventListener('change', handleTimeScaleChange);
 document.addEventListener('DOMContentLoaded', updatePrevNextLabels);
@@ -380,6 +401,36 @@ function createOptionElement(value,text) {
   opt.setAttribute('value', value);
   opt.textContent = text;
   return opt;
+}
+
+/**
+ * Populate the client selector with sorted unique client names. If no client
+ * data is available, render a single disabled placeholder. Restores any saved
+ * selection from localStorage when the saved client still exists in the list.
+ *
+ * @param {string[]} clients - Sorted array of unique client names.
+ * @param {boolean} hasClientData - Whether the dataset includes client info.
+ */
+function populateClientSelector(clients, hasClientData) {
+  clientSelect.innerHTML = '';
+
+  if (!hasClientData || !clients.length) {
+    const opt = createOptionElement('', '-- No Clients --');
+    opt.setAttribute('selected', '');
+    opt.setAttribute('disabled', '');
+    clientSelect.appendChild(opt);
+    return;
+  }
+
+  clientSelect.appendChild(createOptionElement('', '-- All Clients --'));
+  clients.forEach(name => clientSelect.appendChild(createOptionElement(name, name)));
+
+  const saved = localStorage.getItem(CLIENT_FILTER_STORAGE_KEY);
+  if (saved && clients.includes(saved)) {
+    clientSelect.value = saved;
+  } else {
+    clientSelect.value = '';
+  }
 }
 
 
@@ -500,7 +551,7 @@ function renderTimecardReport() {
   const timeData = interpretedTimeData.allData;
   const showAllDescriptions = showAllDescSwitch.checked;
   const {minDateIncl,maxDateExcl} = interpretMinMaxFilterDates();
-  const filterClientName = null; // e.g., "Client XYZ"
+  const filterClientName = clientSelect.value || null;
 
   // Organize and format entries
   const groupByTlp = groupByTlpSwitch.checked;

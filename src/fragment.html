@@ -68,6 +68,10 @@
 
 <h2>Step 2: Filter Entries</h2>
 <div class="wa-stack">
+  <wa-select id="clientSelect" label="Filter by Client" hint="Show entries for a specific client">
+    <wa-option value="" selected disabled>-- Import data first --</wa-option>
+  </wa-select>
+
   <div class="wa-cluster wa-align-items-start">
     <wa-switch id="requireBillableSwitch">Require <u>B</u>illable</wa-switch>
   </div>
