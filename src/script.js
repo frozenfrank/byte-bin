@@ -4,6 +4,7 @@ import { getTimeEntries } from './toggl/access.js';
 import { buildTimecardReportElement } from './report.js';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
+const IMPORT_METHOD_STORAGE_KEY = 'importMethod';
 const INPUT_FILE_ID = 'togglFileInput';
 
 const TIME_SCALE_INPUT_ID = 'timeScaleInput';
@@ -55,11 +56,22 @@ let interpretedTimeData = {
 
 // Dynamically display input options
 const importMethodInput = document.getElementById(IMPORT_METHOD_INPUT_ID);
-document.addEventListener('DOMContentLoaded', handleImportMethodChange);
+customElements.whenDefined('wa-radio-group')
+  .then(() => importMethodInput.updateComplete)
+  .then(() => {
+    const saved = localStorage.getItem(IMPORT_METHOD_STORAGE_KEY);
+    if (saved !== null) importMethodInput.value = saved;
+    handleImportMethodChange();
+  });
 importMethodInput.addEventListener('change', handleImportMethodChange);
 importMethodInput.addEventListener('click', handleImportMethodChange);
 function handleImportMethodChange(_e) {
   const selectedValue = importMethodInput.value;
+  try {
+    localStorage.setItem(IMPORT_METHOD_STORAGE_KEY, selectedValue);
+  } catch (err) {
+    console.warn('Could not save import method to localStorage', err);
+  }
   const displayElements = document.querySelectorAll(`[show-data-for=${IMPORT_METHOD_INPUT_ID}]`);
   displayElements.forEach(el => {
     const displayValue = el.getAttribute("data-value");
@@ -385,7 +397,7 @@ document.addEventListener('keydown', (e) => {
 
   // don't interfere while typing in inputs/textareas/contenteditable
   const active = document.activeElement;
-  if (active && (active.id !== INPUT_FILE_ID) && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
+  if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
 
   const key = e.key.toLowerCase();
   switch (key) {

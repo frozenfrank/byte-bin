@@ -15,8 +15,9 @@
 
 ## Medium Improvements
 - [ ] Switch to [npm based bundled WA elements](https://webawesome.com/docs/#installing-with-npm)
+- [ ] Create error states and clear warning messages when invalid files are provided to `<wa-file-input>`
 
 ## Big Upgrades
 - [ ] File data automatically into DeLorean
 - [x] Leverage Toggl APIs to get data directly
-- [ ] Migrate to framework UI with table elements, ghost rows, blank screen, bolding, etc (React or Angular or Svelt)
+- [x] Migrate to framework UI with table elements, ghost rows, blank screen, bolding, etc (React or Angular or Svelt)
