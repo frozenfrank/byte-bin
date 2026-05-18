@@ -1,8 +1,9 @@
-import Papa from 'papaparse';
+import Papa, { ParseResult } from 'papaparse';
 import { convertParsedCsvToTimeEntryData, convertApiDataToTimeEntryData } from './time-entry/time-entry-processing';
 import { getTimeEntries } from './toggl/access';
 import { buildTimecardReportElement } from './report';
-import { TimeEntryData } from './time-entry/time-entry';
+import { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
+import { DateValue } from './model/types';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
 const IMPORT_METHOD_STORAGE_KEY = 'importMethod';
@@ -37,30 +38,34 @@ const XDS_REGEX = /XDS\s*(\d+)/i;
 
 let interpretedTimeData = {
   /** Sorted list of unique projects */
-  uniqueProjects: [],
+  uniqueProjects: [] as string[],
   /** Sorted list of unique client names */
-  uniqueClients: [],
+  uniqueClients: [] as string[],
   /** Sorted list of unique dates */
-  uniqueDays: [],
+  uniqueDays: [] as Date[],
+  /** Sorted list of unique weeks */
+  uniqueWeeks: [] as Date[],
+  /** Sorted list of unique months */
+  uniqueMonths: [] as Date[],
   /** Sorted list of unique date values (number values). Used for moving between dates. */
-  uniqueDayValues: [],
+  uniqueDayValues: [] as DateValue[],
   /** Sorted list of unique date values (number values). Used for moving between dates. */
-  uniqueWeekValues: [],
+  uniqueWeekValues: [] as DateValue[],
   /** Sorted list of unique date values (number values). Used for moving between dates. */
-  uniqueMonthValues: [],
+  uniqueMonthValues: [] as DateValue[],
   /** Whether the data includes client information */
-  hasClientData: false,
+  hasClientData: false as boolean,
   /** Whether the data includes billable information */
-  hasBillableData: false,
+  hasBillableData: false as boolean,
 
-  /** {TimeEntryData<any>} All the data from PapaParse */
-  allData: null as TimeEntryData<any> | null,
+  /** All the data from PapaParse */
+  allData: null as TimeEntry[] | null,
 };
 
 // ### Handle File Input and Data Parsing ###
 
 // Dynamically display input options
-const importMethodInput = document.getElementById(IMPORT_METHOD_INPUT_ID);
+const importMethodInput = document.getElementById(IMPORT_METHOD_INPUT_ID) as HTMLInputElement;
 customElements.whenDefined('wa-radio-group')
   .then(() => importMethodInput.updateComplete)
   .then(() => {
@@ -70,14 +75,14 @@ customElements.whenDefined('wa-radio-group')
   });
 importMethodInput.addEventListener('change', handleImportMethodChange);
 importMethodInput.addEventListener('click', handleImportMethodChange);
-function handleImportMethodChange(_e) {
+function handleImportMethodChange(_e?: Event) {
   const selectedValue = importMethodInput.value;
   try {
     localStorage.setItem(IMPORT_METHOD_STORAGE_KEY, selectedValue);
   } catch (err) {
     console.warn('Could not save import method to localStorage', err);
   }
-  const displayElements = document.querySelectorAll(`[show-data-for=${IMPORT_METHOD_INPUT_ID}]`);
+  const displayElements = document.querySelectorAll<HTMLElement>(`[show-data-for=${IMPORT_METHOD_INPUT_ID}]`);
   displayElements.forEach(el => {
     const displayValue = el.getAttribute("data-value");
     el.style.display = displayValue === selectedValue ? "contents" : "none";
@@ -85,32 +90,35 @@ function handleImportMethodChange(_e) {
 }
 
 // Respond to file input change
-const fileInput = document.getElementById(INPUT_FILE_ID);
+const fileInput = document.getElementById(INPUT_FILE_ID) as HTMLInputElement;
 fileInput.addEventListener('change', handleInputFileChange);
-function handleInputFileChange(e) {
-  const files = e.target.files;
+function handleInputFileChange(e: Event) {
+  const files = (e.target as HTMLInputElement).files;
   if (!files?.length) {
     return;
   }
 
-  Papa.parse(files[0], {
+  Papa.parse<TogglExportTimeEntry, File>(files[0], {
     header: true,
     complete: handleDataParsed,
   });
 }
 
 // Respond to data parsing
-function handleDataParsed(results) {
-  const timeEntryData = convertParsedCsvToTimeEntryData(results);
+function handleDataParsed(results: ParseResult<TogglExportTimeEntry>) {
+  const timeEntryData = convertParsedCsvToTimeEntryData(results as PapaParseCSVResult<TogglExportTimeEntry>);
   processTimeEntryData(timeEntryData);
 }
 
-function processTimeEntryData(timeEntryData) {
-  const allProjects = new Set();
-  const allClients = new Set();
-  const allDates = new Map();
-  const allWeeks = new Map();
-  const allMonths = new Map();
+function processTimeEntryData(timeEntryData: TimeEntryData<any>) {
+  /** Maps some numeric value to a unique Date value */
+  type DateMap = Map<number, Date>;
+
+  const allProjects = new Set<string>();
+  const allClients = new Set<string>();
+  const allDates: DateMap = new Map();
+  const allWeeks: DateMap = new Map();
+  const allMonths: DateMap = new Map();
 
   timeEntryData.entries.forEach((entry) => {
     allProjects.add(entry.projectName);
@@ -125,8 +133,8 @@ function processTimeEntryData(timeEntryData) {
   const uniqueProjects = Array.from(allProjects).sort();
   const uniqueClients = Array.from(allClients).sort();
 
-  const dateMapToSortedArr = dateMap => Array.from(dateMap.values()).sort((a,b) => a - b);
-  const dateArrToValuesArr = dateArr => dateArr.map(d => +d);
+  const dateMapToSortedArr = (dateMap: DateMap) => Array.from(dateMap.values()).sort((a,b) => +a - +b);
+  const dateArrToValuesArr = (dateArr: Date[]) => dateArr.map(d => +d);
 
   const uniqueDays = dateMapToSortedArr(allDates);
   const uniqueWeeks = dateMapToSortedArr(allWeeks);
@@ -172,7 +180,7 @@ function processTimeEntryData(timeEntryData) {
   updatePrevNextLabels();
 }
 
-function prepareComputedDateValues(start) {
+function prepareComputedDateValues(start: Date) {
   const year = start.getFullYear();
   const month = start.getMonth();
   const date = start.getDate();
@@ -185,16 +193,16 @@ function prepareComputedDateValues(start) {
 }
 
 // Respond to form submit
-const togglForm = document.getElementById(TOGGL_FORM);
-const togglTokenInput = document.getElementById(TOGGL_TOKEN_ID);
-const togglSubmitButton = document.getElementById(TOGGL_DOWNLOAD_BUTTON);
-const togglSubmitLabel = document.getElementById(TOGGL_DOWNLOAD_LABEL);
+const togglForm = document.getElementById(TOGGL_FORM)!;
+const togglTokenInput = document.getElementById(TOGGL_TOKEN_ID) as HTMLInputElement;
+const togglSubmitButton = document.getElementById(TOGGL_DOWNLOAD_BUTTON)!;
+const togglSubmitLabel = document.getElementById(TOGGL_DOWNLOAD_LABEL)!;
 
 /** Local storage key for saving/restoring the Toggl API token */
 const TOGGL_TOKEN_STORAGE_KEY = 'togglApiToken';
 
-function setTogglTipVisible(visible) {
-  document.getElementById(TOGGL_TIP_ID).style.display = visible ? '' : 'none';
+function setTogglTipVisible(visible: boolean) {
+  document.getElementById(TOGGL_TIP_ID)!.style.display = visible ? '' : 'none';
 }
 
 // Restore saved token (if any) when the page loads and update UI
@@ -223,8 +231,8 @@ function applySavedSwitchSettings() {
 }
 
 togglTokenInput.addEventListener('input', handleTogglTokenChange);
-function handleTogglTokenChange(e) {
-  const token = e.target.value;
+function handleTogglTokenChange(e: Event) {
+  const token = (e.target as HTMLInputElement).value;
 
   if (!token?.length) {
     localStorage.removeItem(TOGGL_TOKEN_STORAGE_KEY);
@@ -235,7 +243,7 @@ function handleTogglTokenChange(e) {
 }
 
 togglForm.addEventListener('submit', handleTogglFormSubmit);
-function handleTogglFormSubmit(e) {
+function handleTogglFormSubmit(e: Event) {
   e.preventDefault();  // Skip default form submit behavior
   if (togglSubmitButton.loading) return; // Ensure no double-submitting
 
@@ -256,7 +264,7 @@ function handleTogglFormSubmit(e) {
     .then(() => togglSubmitButton.loading = false);
 }
 
-async function downloadTogglTimeEntries(token) {
+async function downloadTogglTimeEntries(token: string) {
   const downloadStartDate = new Date();
   downloadStartDate.setMonth(downloadStartDate.getMonth() - 2,1); // First of the month, two months ago
   const togglApiData = await getTimeEntries(token, downloadStartDate);
@@ -269,15 +277,15 @@ async function downloadTogglTimeEntries(token) {
 // ### Handle Filter Changes ###
 
 // Respond to date selector change
-const timeScaleInput = document.getElementById(TIME_SCALE_INPUT_ID);
-const nextPrevLabels = document.getElementsByClassName(PREV_NEXT_LABEL_CLASS);
-const daySelect = document.getElementById(DAY_SELECT_ID);
-const weekSelect = document.getElementById(WEEK_SELECT_ID);
-const monthSelect = document.getElementById(MONTH_SELECT_ID);
-const clientSelect = document.getElementById(CLIENT_SELECT_ID);
+const timeScaleInput = document.getElementById(TIME_SCALE_INPUT_ID) as HTMLInputElement;
+const nextPrevLabels = document.getElementsByClassName(PREV_NEXT_LABEL_CLASS)!;
+const daySelect = document.getElementById(DAY_SELECT_ID) as HTMLInputElement;
+const weekSelect = document.getElementById(WEEK_SELECT_ID) as HTMLInputElement;
+const monthSelect = document.getElementById(MONTH_SELECT_ID) as HTMLInputElement;
+const clientSelect = document.getElementById(CLIENT_SELECT_ID) as HTMLInputElement;
 
 clientSelect.addEventListener('change', handleClientChange);
-function handleClientChange(_e) {
+function handleClientChange(_e?: Event) {
   try {
     localStorage.setItem(CLIENT_FILTER_STORAGE_KEY, clientSelect.value);
   } catch (err) {
@@ -288,7 +296,7 @@ function handleClientChange(_e) {
 
 timeScaleInput.addEventListener('change', handleTimeScaleChange);
 document.addEventListener('DOMContentLoaded', updatePrevNextLabels);
-function handleTimeScaleChange(e) {
+function handleTimeScaleChange(_e: Event) {
   updatePrevNextLabels();
   renderTimecardReport();
 }
@@ -320,20 +328,20 @@ function updatePrevNextLabels() {
 }
 
 daySelect.addEventListener('change', handleDayChange);
-function handleDayChange(e) {
-  const selectedDay = e.target.value;
+function handleDayChange(e: Event) {
+  const selectedDay = (e.target as HTMLInputElement).value;
   setDateSelectValues(+selectedDay,true);
 }
 
 weekSelect.addEventListener('change', handleWeekChange);
-function handleWeekChange(e) {
-  const selectedWeek = e.target.value;
+function handleWeekChange(e: Event) {
+  const selectedWeek = (e.target as HTMLInputElement).value;
   setDateSelectValues(+selectedWeek,true);
 }
 
 monthSelect.addEventListener('change', handleMonthChange);
-function handleMonthChange(e) {
-  const selectedMonth = e.target.value;
+function handleMonthChange(e: Event) {
+  const selectedMonth = (e.target as HTMLInputElement).value;
   setDateSelectValues(+selectedMonth,true);
 }
 
@@ -341,7 +349,7 @@ function handleMonthChange(e) {
  * @param {number} dateValue - The date value to set (as a number, or Date object).
  * @param {boolean} suppressEvent - Whether to suppress change events for the selectors.
  */
-function setDateSelectValues(dateValue,suppressEvent=false) {
+function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=false) {
   const computedDates = prepareComputedDateValues(new Date(dateValue));
   const dayValue = Number(computedDates.day);
   const weekValue = Number(computedDates.week);
@@ -370,7 +378,7 @@ function setDateSelectValues(dateValue,suppressEvent=false) {
  * @param {Function<Date,string>} dateFormatter - A function to format the date for display.
  * @returns {void}
  */
-function populateDateSelector(selectId, dates, entityNameSingular, dateFormatter) {
+function populateDateSelector(selectId: string, dates: Date[], entityNameSingular: string, dateFormatter: (date: Date) => string) {
   // Get select element
   const select = document.getElementById(selectId);
   if (!select) {
@@ -397,9 +405,9 @@ function populateDateSelector(selectId, dates, entityNameSingular, dateFormatter
   });
 }
 
-function createOptionElement(value,text) {
+function createOptionElement(value: string|number, text: string) {
   const opt = document.createElement('wa-option');
-  opt.setAttribute('value', value);
+  opt.setAttribute('value', ""+value);
   opt.textContent = text;
   return opt;
 }
@@ -412,7 +420,7 @@ function createOptionElement(value,text) {
  * @param {string[]} clients - Sorted array of unique client names.
  * @param {boolean} hasClientData - Whether the dataset includes client info.
  */
-function populateClientSelector(clients, hasClientData) {
+function populateClientSelector(clients: string[], hasClientData: boolean) {
   clientSelect.innerHTML = '';
 
   if (!hasClientData || !clients.length) {
@@ -436,10 +444,10 @@ function populateClientSelector(clients, hasClientData) {
 
 
 // Attach event listeners to next/prev buttons
-const nextButton = document.getElementById(NEXT_DAY_BUTTON_ID)
+const nextButton = document.getElementById(NEXT_DAY_BUTTON_ID)!;
 nextButton.addEventListener('click', () => incrementSelectedDate(false));
 
-const prevButton = document.getElementById(PREV_DAY_BUTTON_ID)
+const prevButton = document.getElementById(PREV_DAY_BUTTON_ID)!;
 prevButton.addEventListener('click', () => incrementSelectedDate(true));
 
 // Keyboard shortcuts: N = next, P = previous
@@ -508,27 +516,27 @@ function incrementTimeScale(backward=false) {
   setTimeScale(nextScale);
 }
 
-function setTimeScale(scaleValue) {
+function setTimeScale(scaleValue: number) {
   timeScaleInput.value = ""+scaleValue;
   updatePrevNextLabels();
   renderTimecardReport();
 }
 
 // Allow toggling display of all descriptions
-const showAllDescSwitch = document.getElementById(SHOW_ALL_DESC_ID);
+const showAllDescSwitch = document.getElementById(SHOW_ALL_DESC_ID)!;
 showAllDescSwitch.addEventListener('change', handleShowAllDescChange);
-function handleShowAllDescChange(e) {
+function handleShowAllDescChange(_e: Event) {
   renderTimecardReport();
 }
 
 // Allow toggling require-billable filter
-const requireBillableSwitch = document.getElementById(REQUIRE_BILLABLE_ID);
+const requireBillableSwitch = document.getElementById(REQUIRE_BILLABLE_ID)!;
 requireBillableSwitch.addEventListener('change', () => renderTimecardReport());
 
-const groupByXdsSwitch = document.getElementById(GROUP_BY_XDS_ID);
+const groupByXdsSwitch = document.getElementById(GROUP_BY_XDS_ID) as HTMLInputElement;
 groupByXdsSwitch.addEventListener('change', () => renderTimecardReport());
 
-const groupByTlpSwitch = document.getElementById(GROUP_BY_TLP_ID);
+const groupByTlpSwitch = document.getElementById(GROUP_BY_TLP_ID) as HTMLInputElement;
 groupByTlpSwitch.addEventListener('change', () => renderTimecardReport());
 
 const switchSettings = [showAllDescSwitch, requireBillableSwitch, groupByXdsSwitch, groupByTlpSwitch];
@@ -549,7 +557,7 @@ for (const sw of switchSettings) {
 
 function renderTimecardReport() {
   // Retrieve current settings from UI
-  const timeData = interpretedTimeData.allData;
+  const timeData = interpretedTimeData.allData ?? [];
   const showAllDescriptions = showAllDescSwitch.checked;
   const {minDateIncl,maxDateExcl} = interpretMinMaxFilterDates();
   const filterClientName = clientSelect.value || null;
@@ -560,7 +568,7 @@ function renderTimecardReport() {
   const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillableSwitch.checked,filterClientName);
   const entries = prepareTimecardEntries(filteredData, groupByXds, groupByTlp);
   const reportEl = buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp);
-  const outputEl = document.getElementById(OUTPUT_PRE_ID);
+  const outputEl = document.getElementById(OUTPUT_PRE_ID)!;
   outputEl.replaceChildren(reportEl);
 }
 
@@ -587,7 +595,7 @@ function interpretMinMaxFilterDates() {
   return { minDateIncl, maxDateExcl };
 }
 
-function filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillable=false,clientName=null) {
+function filterTimeEntriesByDateRange(timeData: TimeEntry[], minDateIncl: Date|null, maxDateExcl: Date|null, requireBillable=false, clientName: string|null=null) {
   if (!timeData?.length) return [];
 
   return timeData.filter(entry => {
@@ -600,13 +608,23 @@ function filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBi
   });
 }
 
-function prepareTimecardEntries(timeData, groupByXds=false, groupByTlp=true) {
+/** TimeEntry's grouped by several relevant fields */
+interface EntryGrouping<T> {
+  tlpCode: string,
+  prjNumber: string,
+  dlgNumber: string,
+  qanNumber: string,
+  xdsNumber: string,
+  totalSeconds: number,
+  entries: TimeEntry<T>[],
+}
+
+function prepareTimecardEntries<T>(timeData: TimeEntry<T>[], groupByXds=false, groupByTlp=true): EntryGrouping<T>[] {
   if (!timeData?.length) {
     return [];
   }
 
-  // Group entries by project and TLP and DLG/QAN code
-  const groupedEntries = {};
+  const groupedEntries: Record<string, EntryGrouping<T>> = {};
   timeData.forEach(entry => {
     const tlpCode = extractTLPCode(entry) || "";
     const prjNumber = extractPRJNumber(entry) || "";
@@ -629,7 +647,7 @@ function prepareTimecardEntries(timeData, groupByXds=false, groupByTlp=true) {
       };
     }
 
-    groupedEntries[groupKey].totalSeconds += entry.durationSeconds;
+    groupedEntries[groupKey].totalSeconds += entry.durationSeconds || 0;
     groupedEntries[groupKey].entries.push(entry);
   });
 
@@ -644,13 +662,13 @@ function prepareTimecardEntries(timeData, groupByXds=false, groupByTlp=true) {
   );
 }
 
-function extractTLPCode(entry) {
+function extractTLPCode(entry: TimeEntry): string|null {
   const tags = entry.tagNames?.join(',');
   if (!tags) return null;
   return TLP_REGEX.exec(tags)?.[1] || null;
 }
 
-function extractPRJNumber(entry) {
+function extractPRJNumber(entry: TimeEntry): string|null {
   let prjNum;
 
   // Search Project field
@@ -662,22 +680,22 @@ function extractPRJNumber(entry) {
   return prjNum || null;
 }
 
-function extractDLGNumber(entry) {
+function extractDLGNumber(entry: TimeEntry): string|null {
   return DLG_REGEX.exec(entry.description)?.[1] || null;
 }
 
-function extractQANNumber(entry) {
+function extractQANNumber(entry: TimeEntry): string|null {
   return QAN_REGEX.exec(entry.description)?.[1] || null;
 }
 
-function extractXDSNumber(entry) {
+function extractXDSNumber(entry: TimeEntry): string|null {
   return XDS_REGEX.exec(entry.description)?.[1] || null;
 }
 
 
 // ### Printing and Output Functions ###
 
-function formatTimecardEntries(entries,displayAllDescriptions=false,groupByXds=false,groupByTlp=true) {
+function formatTimecardEntries(entries: EntryGrouping<unknown>[], displayAllDescriptions=false, groupByXds=false, groupByTlp=true) {
   let message='',introduction='',footer='';
 
   const uniqueTLPs = new Set();
@@ -692,8 +710,8 @@ function formatTimecardEntries(entries,displayAllDescriptions=false,groupByXds=f
   let timecardLines = 0;
   let representedEntries = 0;
 
-  let minDate = Infinity;
-  let maxDate = -Infinity;
+  let minDate: Date | number = Infinity;
+  let maxDate: Date | number = -Infinity;
 
   // Introductory message
   message += 'Timecard Entries:\n';
@@ -740,9 +758,9 @@ function formatTimecardEntries(entries,displayAllDescriptions=false,groupByXds=f
 
     lineEntriesSet = new Set();
     for (const e of entry.entries) {
-      dateVal = e._computedDates.day;
-      if (+dateVal < minDate) minDate = dateVal;
-      if (+dateVal > maxDate) maxDate = dateVal;
+      dateVal = e._computedDates!.day;
+      if (+dateVal < +minDate) minDate = dateVal;
+      if (+dateVal > +maxDate) maxDate = dateVal;
 
       if (!e.description) continue;
       uniqueDescriptions.add(e.description);
@@ -807,10 +825,10 @@ function formatTimecardEntries(entries,displayAllDescriptions=false,groupByXds=f
   if (timecardLines > 0) {
     introduction += `Report date: `;
     if (minDate == maxDate) {
-      introduction += minDate.toLocaleDateString('default', { dateStyle: 'full' });
+      introduction += (minDate as Date).toLocaleDateString('default', { dateStyle: 'full' });
     } else {
-      introduction += minDate.toLocaleDateString('default', { month: 'short', day: 'numeric', weekday: 'short' }) + ' to '
-                    + maxDate.toLocaleDateString('default', { dateStyle: 'full' });
+      introduction += (minDate as Date).toLocaleDateString('default', { month: 'short', day: 'numeric', weekday: 'short' }) + ' to '
+                    + (maxDate as Date).toLocaleDateString('default', { dateStyle: 'full' });
     }
   }
   introduction += `\n`;
@@ -825,7 +843,7 @@ function formatTimecardEntries(entries,displayAllDescriptions=false,groupByXds=f
   return message;
 }
 
-function formatTimecardLine(minWidths,values,isHeader=false,isSubsequent=false) {
+function formatTimecardLine(minWidths: number[], values: any[], isHeader=false, isSubsequent=false) {
   const descriptionColIdx = minWidths.length - 1;
   return values.map((val,idx) => {
     const strVal = (val !== null && val !== undefined) ? String(val) : '';

@@ -1,3 +1,4 @@
+import type { ParseMeta, ParseResult } from "papaparse";
 import { ISO10DateString } from "../model/types";
 
 // ### Unified Time Entry Type ###
@@ -10,7 +11,7 @@ export interface TimeEntryData<T> {
 }
 
 /** A unified time entry used within the application. */
-export interface TimeEntry<T> {
+export interface TimeEntry<T = unknown> {
   description: string;
   start: Date;
   stop: Date|null;
@@ -89,18 +90,14 @@ export interface TogglAPITimeEntryWithMetadata {
 //   parsed: PapaParseCSVResult<TogglExportTimeEntry>,
 // ): TimeEntryData<TogglExportTimeEntry>
 
-export interface PapaParseCSVResult<T extends object> {
-  data: T[];
-  errors: unknown[];
-  meta: {
-    delimiter: string;
-    linebreak: string;
-    aborted: boolean;
-    truncated: boolean;
-    cursor: number;
-    renamedHeaders: unknown;
-    fields: (keyof T)[];
-  };
+/** A helper type that specifically links the `fields` to the keys of the expected object type. */
+interface SpecificParseMeta<T> extends ParseMeta {
+  fields: (Extract<keyof T, string>)[];
+}
+
+/** A more specific version of {@linkcode ParseResult} which specifically links the `fields` to the keys of the expected object type. */
+export interface PapaParseCSVResult<T> extends ParseResult<T> {
+  meta: SpecificParseMeta<T>;
 }
 
 /** A time entry exported from Toggl in CSV format. */
