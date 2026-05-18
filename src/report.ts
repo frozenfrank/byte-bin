@@ -1,4 +1,4 @@
-import { WaIcon } from "./model/web-awesome";
+import { WaCopyButton, WaIcon } from "./model/web-awesome";
 import { EntryGrouping } from "./time-entry/time-entry";
 
 // ### HTML Report Rendering ###
@@ -342,7 +342,7 @@ function createCodeCell(code: any) {
     const label = document.createElement('span');
     label.textContent = String(code);
 
-    const copyBtn = document.createElement('wa-copy-button');
+    const copyBtn = document.createElement('wa-copy-button') as WaCopyButton;
     copyBtn.setAttribute('value', String(code));
 
     wrapper.appendChild(label);

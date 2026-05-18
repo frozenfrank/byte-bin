@@ -82,7 +82,7 @@ customElements.whenDefined('wa-radio-group')
 importMethodInput.addEventListener('change', handleImportMethodChange);
 importMethodInput.addEventListener('click', handleImportMethodChange);
 function handleImportMethodChange(_e?: Event) {
-  const selectedValue = importMethodInput.value;
+  const selectedValue = importMethodInput.value as string;
   try {
     localStorage.setItem(IMPORT_METHOD_STORAGE_KEY, selectedValue);
   } catch (err) {
@@ -165,7 +165,7 @@ function processTimeEntryData(timeEntryData: TimeEntryData<any>) {
     requireBillableSwitch.checked = false;
   }
 
-  const prevDayValue = +daySelect.value || null;
+  const prevDayValue = +(daySelect.value || 0);
 
   populateDateSelector(DAY_SELECT_ID, uniqueDays, "date", d => d.toLocaleDateString('default', { year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' }));
   populateDateSelector(WEEK_SELECT_ID, uniqueWeeks, "week", w => {
@@ -293,7 +293,7 @@ const clientSelect = getElementById<WaSelect>(CLIENT_SELECT_ID);
 clientSelect.addEventListener('change', handleClientChange);
 function handleClientChange(_e?: Event) {
   try {
-    localStorage.setItem(CLIENT_FILTER_STORAGE_KEY, clientSelect.value);
+    localStorage.setItem(CLIENT_FILTER_STORAGE_KEY, clientSelect.value as string); // We only allow selecting a single Client
   } catch (err) {
     console.warn('Could not save client filter to localStorage', err);
   }
@@ -312,7 +312,7 @@ function updatePrevNextLabels() {
   let buttonsDisabled = false;
   let displaySelect = null;
 
-  switch (+timeScaleInput.value) {
+  switch (+(timeScaleInput.value || 0)) {
     case 1: labelText = 'Day'; displaySelect = daySelect; break;
     case 2: labelText = 'Week'; displaySelect = weekSelect; break;
     case 3: labelText = 'Month'; displaySelect = monthSelect; break;
@@ -366,7 +366,7 @@ function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=false) {
   monthSelect.value = ""+interpretedTimeData.uniqueMonthValues.find(m => m >= monthValue);
 
   if (!suppressEvent) {
-    const changedSelector = +timeScaleInput.value;
+    const changedSelector = +(timeScaleInput.value || 0);
     (changedSelector === 1) && daySelect.dispatchEvent(new Event('change', { bubbles: true }));
     (changedSelector === 2) && weekSelect.dispatchEvent(new Event('change', { bubbles: true }));
     (changedSelector === 3) && monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
@@ -384,7 +384,7 @@ function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=false) {
  * @param {Function<Date,string>} dateFormatter - A function to format the date for display.
  * @returns {void}
  */
-function populateDateSelector(selectId: string, dates: Date[], entityNameSingular: string, dateFormatter: (date: Date) => string) {
+function populateDateSelector(selectId: string, dates: Date[], entityNameSingular: string, dateFormatter: (date: Date) => string): void {
   // Get select element
   const select = document.getElementById(selectId);
   if (!select) {
@@ -462,7 +462,7 @@ document.addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.altKey || e.metaKey) return;
 
   // don't interfere while typing in inputs/textareas/contenteditable
-  const active = document.activeElement;
+  const active = document.activeElement as HTMLElement | null;
   if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return;
 
   const key = e.key.toLowerCase();
@@ -489,7 +489,7 @@ document.addEventListener('keydown', (e) => {
 function incrementSelectedDate(backward=false) {
   let dateValuesArr;
   let dateSelect;
-  switch (+timeScaleInput.value) {
+  switch (+(timeScaleInput.value || 0)) {
     case 1: dateValuesArr = interpretedTimeData.uniqueDayValues; dateSelect = daySelect; break;
     case 2: dateValuesArr = interpretedTimeData.uniqueWeekValues; dateSelect = weekSelect; break;
     case 3: dateValuesArr = interpretedTimeData.uniqueMonthValues; dateSelect = monthSelect; break;
@@ -503,7 +503,7 @@ function incrementSelectedDate(backward=false) {
     throw new Error(`Date select element no longer present in DOM.`);
   }
 
-  const currentValue = +dateSelect.value;
+  const currentValue = +(dateSelect.value || 0);
   let currentIndex = currentValue ? dateValuesArr.indexOf(currentValue) : 0;  // O(n) operation
   if (currentIndex < 0) currentIndex = 0;
 
@@ -516,7 +516,7 @@ function incrementSelectedDate(backward=false) {
 function incrementTimeScale(backward=false) {
   const numValues = 4; // Day, Week, Month, All [Ranged 1-4]
 
-  const currentScale = +timeScaleInput.value;
+  const currentScale = +(timeScaleInput.value || 0);
   const direction = backward ? -1 : 1;
   const nextScale = ((currentScale - 1 + direction + numValues) % numValues) + 1; // Shift to 0-based, mod, shift back to 1-based
   setTimeScale(nextScale);
@@ -549,7 +549,7 @@ const switchSettings = [showAllDescSwitch, requireBillableSwitch, groupByXdsSwit
 
 function saveSwitchSettings() {
   try {
-    for (const sw of switchSettings) localStorage.setItem(sw.id, sw.checked);
+    for (const sw of switchSettings) localStorage.setItem(sw.id, ""+sw.checked);
   } catch (err) {
     console.warn('Could not save settings to localStorage', err);
   }
@@ -566,7 +566,7 @@ function renderTimecardReport() {
   const timeData = interpretedTimeData.allData ?? [];
   const showAllDescriptions = showAllDescSwitch.checked;
   const {minDateIncl,maxDateExcl} = interpretMinMaxFilterDates();
-  const filterClientName = clientSelect.value || null;
+  const filterClientName = clientSelect.value as string || null;
 
   // Organize and format entries
   const groupByTlp = groupByTlpSwitch.checked;
@@ -583,16 +583,19 @@ function interpretMinMaxFilterDates() {
   let maxDateExcl = null;
 
   const oneDay = 24 * 60 * 60 * 1000;
-  switch (+timeScaleInput.value) {
+  switch (+timeScaleInput.value!) {
     case 1: // Day
+      if (!daySelect.value) break;
       minDateIncl = new Date(+daySelect.value);
       maxDateExcl = new Date(+daySelect.value + oneDay);
       break;
     case 2: // Week
+      if (!weekSelect.value) break;
       minDateIncl = new Date(+weekSelect.value);
       maxDateExcl = new Date(+weekSelect.value + (7 * oneDay));
       break;
     case 3: // Month
+      if (!monthSelect.value) break;
       minDateIncl = new Date(+monthSelect.value);
       maxDateExcl = new Date(minDateIncl.getFullYear(), minDateIncl.getMonth() + 1, 1);
       break;
