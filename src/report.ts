@@ -1,3 +1,4 @@
+import { WaIcon } from "./model/web-awesome";
 import { EntryGrouping } from "./time-entry/time-entry";
 
 // ### HTML Report Rendering ###
@@ -202,7 +203,7 @@ function buildTableHead(groupByTlp: boolean, groupByXds: boolean, showAllDescrip
     const th = document.createElement('th');
     th.appendChild(document.createTextNode(spec.text));
     if (spec.copySet?.size! > 0) {
-      const icon = document.createElement('wa-icon');
+      const icon = document.createElement('wa-icon') as WaIcon;
       icon.setAttribute('name', 'copy');
       icon.className = 'header-copy-icon';
       th.appendChild(icon);

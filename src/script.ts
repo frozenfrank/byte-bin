@@ -4,6 +4,7 @@ import { getTimeEntries } from './toggl/access';
 import { buildTimecardReportElement } from './report';
 import { EntryGrouping, PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
 import { DateValue } from './model/types';
+import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch } from './model/web-awesome';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
 const IMPORT_METHOD_STORAGE_KEY = 'importMethod';
@@ -62,10 +63,15 @@ let interpretedTimeData = {
   allData: null as TimeEntry[] | null,
 };
 
+/** Helper function that assumes the value is element is always in the DOM. */
+function getElementById<T = HTMLElement>(id: string): T {
+  return document.getElementById(id) as T;
+}
+
 // ### Handle File Input and Data Parsing ###
 
 // Dynamically display input options
-const importMethodInput = document.getElementById(IMPORT_METHOD_INPUT_ID) as HTMLInputElement;
+const importMethodInput = getElementById<WaRadioGroup>(IMPORT_METHOD_INPUT_ID);
 customElements.whenDefined('wa-radio-group')
   .then(() => importMethodInput.updateComplete)
   .then(() => {
@@ -90,7 +96,7 @@ function handleImportMethodChange(_e?: Event) {
 }
 
 // Respond to file input change
-const fileInput = document.getElementById(INPUT_FILE_ID) as HTMLInputElement;
+const fileInput = getElementById<WaFileInput>(INPUT_FILE_ID);
 fileInput.addEventListener('change', handleInputFileChange);
 function handleInputFileChange(e: Event) {
   const files = (e.target as HTMLInputElement).files;
@@ -193,16 +199,16 @@ function prepareComputedDateValues(start: Date) {
 }
 
 // Respond to form submit
-const togglForm = document.getElementById(TOGGL_FORM)!;
-const togglTokenInput = document.getElementById(TOGGL_TOKEN_ID) as HTMLInputElement;
-const togglSubmitButton = document.getElementById(TOGGL_DOWNLOAD_BUTTON)!;
-const togglSubmitLabel = document.getElementById(TOGGL_DOWNLOAD_LABEL)!;
+const togglForm = getElementById(TOGGL_FORM);
+const togglTokenInput = getElementById<WaButton>(TOGGL_TOKEN_ID);
+const togglSubmitButton = getElementById<WaButton>(TOGGL_DOWNLOAD_BUTTON);
+const togglSubmitLabel = getElementById(TOGGL_DOWNLOAD_LABEL);
 
 /** Local storage key for saving/restoring the Toggl API token */
 const TOGGL_TOKEN_STORAGE_KEY = 'togglApiToken';
 
 function setTogglTipVisible(visible: boolean) {
-  document.getElementById(TOGGL_TIP_ID)!.style.display = visible ? '' : 'none';
+  getElementById<WaCallout>(TOGGL_TIP_ID)!.style.display = visible ? '' : 'none';
 }
 
 // Restore saved token (if any) when the page loads and update UI
@@ -277,12 +283,12 @@ async function downloadTogglTimeEntries(token: string) {
 // ### Handle Filter Changes ###
 
 // Respond to date selector change
-const timeScaleInput = document.getElementById(TIME_SCALE_INPUT_ID) as HTMLInputElement;
+const timeScaleInput = getElementById<WaRadioGroup>(TIME_SCALE_INPUT_ID);
 const nextPrevLabels = document.getElementsByClassName(PREV_NEXT_LABEL_CLASS)!;
-const daySelect = document.getElementById(DAY_SELECT_ID) as HTMLInputElement;
-const weekSelect = document.getElementById(WEEK_SELECT_ID) as HTMLInputElement;
-const monthSelect = document.getElementById(MONTH_SELECT_ID) as HTMLInputElement;
-const clientSelect = document.getElementById(CLIENT_SELECT_ID) as HTMLInputElement;
+const daySelect = getElementById<WaSelect>(DAY_SELECT_ID);
+const weekSelect = getElementById<WaSelect>(WEEK_SELECT_ID);
+const monthSelect = getElementById<WaSelect>(MONTH_SELECT_ID);
+const clientSelect = getElementById<WaSelect>(CLIENT_SELECT_ID);
 
 clientSelect.addEventListener('change', handleClientChange);
 function handleClientChange(_e?: Event) {
@@ -405,8 +411,8 @@ function populateDateSelector(selectId: string, dates: Date[], entityNameSingula
   });
 }
 
-function createOptionElement(value: string|number, text: string) {
-  const opt = document.createElement('wa-option');
+function createOptionElement(value: string|number, text: string): WaOption {
+  const opt = document.createElement('wa-option') as WaOption;
   opt.setAttribute('value', ""+value);
   opt.textContent = text;
   return opt;
@@ -444,10 +450,10 @@ function populateClientSelector(clients: string[], hasClientData: boolean) {
 
 
 // Attach event listeners to next/prev buttons
-const nextButton = document.getElementById(NEXT_DAY_BUTTON_ID)!;
+const nextButton = getElementById<WaButton>(NEXT_DAY_BUTTON_ID);
 nextButton.addEventListener('click', () => incrementSelectedDate(false));
 
-const prevButton = document.getElementById(PREV_DAY_BUTTON_ID)!;
+const prevButton = getElementById<WaButton>(PREV_DAY_BUTTON_ID);
 prevButton.addEventListener('click', () => incrementSelectedDate(true));
 
 // Keyboard shortcuts: N = next, P = previous
@@ -523,20 +529,20 @@ function setTimeScale(scaleValue: number) {
 }
 
 // Allow toggling display of all descriptions
-const showAllDescSwitch = document.getElementById(SHOW_ALL_DESC_ID)!;
+const showAllDescSwitch = getElementById<WaSwitch>(SHOW_ALL_DESC_ID);
 showAllDescSwitch.addEventListener('change', handleShowAllDescChange);
 function handleShowAllDescChange(_e: Event) {
   renderTimecardReport();
 }
 
 // Allow toggling require-billable filter
-const requireBillableSwitch = document.getElementById(REQUIRE_BILLABLE_ID)!;
+const requireBillableSwitch = getElementById<WaSwitch>(REQUIRE_BILLABLE_ID);
 requireBillableSwitch.addEventListener('change', () => renderTimecardReport());
 
-const groupByXdsSwitch = document.getElementById(GROUP_BY_XDS_ID) as HTMLInputElement;
+const groupByXdsSwitch = getElementById<WaSwitch>(GROUP_BY_XDS_ID);
 groupByXdsSwitch.addEventListener('change', () => renderTimecardReport());
 
-const groupByTlpSwitch = document.getElementById(GROUP_BY_TLP_ID) as HTMLInputElement;
+const groupByTlpSwitch = getElementById<WaSwitch>(GROUP_BY_TLP_ID);
 groupByTlpSwitch.addEventListener('change', () => renderTimecardReport());
 
 const switchSettings = [showAllDescSwitch, requireBillableSwitch, groupByXdsSwitch, groupByTlpSwitch];
@@ -568,7 +574,7 @@ function renderTimecardReport() {
   const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillableSwitch.checked,filterClientName);
   const entries = prepareTimecardEntries(filteredData, groupByXds, groupByTlp);
   const reportEl = buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp);
-  const outputEl = document.getElementById(OUTPUT_PRE_ID)!;
+  const outputEl = getElementById(OUTPUT_PRE_ID);
   outputEl.replaceChildren(reportEl);
 }
 
