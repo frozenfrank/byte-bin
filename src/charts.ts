@@ -1,3 +1,5 @@
+import { getElementById } from "./helper";
+import { WaPieChart } from "./model/web-awesome";
 import { TimeEntry } from "./time-entry/time-entry";
 import { extractPRJNumber, extractTLPCode } from "./time-entry/time-entry-processing";
 
@@ -46,7 +48,7 @@ function toChartData(secondsByKey: SecondsByKey): ChartData {
   };
 }
 
-function applyPieChartData(chartEl: HTMLElement, {labels, data}: ChartData, datasetLabel: string) {
+function applyPieChartData(chartEl: WaPieChart, {labels, data}: ChartData, datasetLabel: string) {
   chartEl.config = {
     data: {
       labels,
@@ -56,8 +58,8 @@ function applyPieChartData(chartEl: HTMLElement, {labels, data}: ChartData, data
 }
 
 export function renderSummaryCharts(filteredData: FilteredData) {
-  const prjChart = document.getElementById('prjPieChart');
-  const tlpChart = document.getElementById('tlpPieChart');
+  const prjChart = getElementById<WaPieChart>('prjPieChart');
+  const tlpChart = getElementById<WaPieChart>('tlpPieChart');
   if (prjChart) applyPieChartData(prjChart, aggregateHoursByPRJ(filteredData), 'Hours');
   if (tlpChart) applyPieChartData(tlpChart, aggregateHoursByTLP(filteredData), 'Hours');
 }

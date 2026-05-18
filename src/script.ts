@@ -1,10 +1,11 @@
 import Papa, { ParseResult } from 'papaparse';
 import { renderSummaryCharts } from './charts';
+import { getElementById } from './helper';
 import { DateValue } from './model/types';
 import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch } from './model/web-awesome';
 import { buildTimecardReportElement } from './report';
 import { EntryGrouping, PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
-import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData,  extractDLGNumber, extractPRJNumber, extractQANNumber, extractTLPCode, extractXDSNumber  } from './time-entry/time-entry-processing';
+import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData, extractDLGNumber, extractPRJNumber, extractQANNumber, extractTLPCode, extractXDSNumber } from './time-entry/time-entry-processing';
 import { getTimeEntries } from './toggl/access';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
@@ -58,11 +59,6 @@ let interpretedTimeData = {
   /** All the data from PapaParse */
   allData: null as TimeEntry[] | null,
 };
-
-/** Helper function that assumes the value is element is always in the DOM. */
-function getElementById<T = HTMLElement>(id: string): T {
-  return document.getElementById(id) as T;
-}
 
 // ### Handle File Input and Data Parsing ###
 
