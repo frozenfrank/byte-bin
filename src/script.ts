@@ -1,7 +1,8 @@
 import Papa from 'papaparse';
-import { convertParsedCsvToTimeEntryData, convertApiDataToTimeEntryData } from './time-entry/time-entry-processing.ts';
+import { convertParsedCsvToTimeEntryData, convertApiDataToTimeEntryData } from './time-entry/time-entry-processing.js';
 import { getTimeEntries } from './toggl/access.js';
 import { buildTimecardReportElement } from './report.js';
+import { TimeEntryData } from './time-entry/time-entry.js';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
 const IMPORT_METHOD_STORAGE_KEY = 'importMethod';
@@ -53,7 +54,7 @@ let interpretedTimeData = {
   hasBillableData: false,
 
   /** {TimeEntryData<any>} All the data from PapaParse */
-  allData: null,
+  allData: null as TimeEntryData<any> | null,
 };
 
 // ### Handle File Input and Data Parsing ###

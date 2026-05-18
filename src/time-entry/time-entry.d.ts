@@ -1,3 +1,4 @@
+import { ISO10DateString } from "../model/types";
 
 // ### Unified Time Entry Type ###
 
@@ -43,8 +44,6 @@ export type ProjectId = number;
 export type TaskId = number;
 export type TagId = number;
 
-/** Ex: 2025-11-27T01:07:34+00:00 */
-export type ISO10DateString = string;
 
 /** A time entry received from Toggl's /v9/me/time_entries?meta=true endpoint. */
 export interface TogglAPITimeEntryWithMetadata {
