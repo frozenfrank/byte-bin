@@ -2,7 +2,7 @@ import Papa, { ParseResult } from 'papaparse';
 import { convertParsedCsvToTimeEntryData, convertApiDataToTimeEntryData } from './time-entry/time-entry-processing';
 import { getTimeEntries } from './toggl/access';
 import { buildTimecardReportElement } from './report';
-import { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
+import { EntryGrouping, PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
 import { DateValue } from './model/types';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
@@ -606,17 +606,6 @@ function filterTimeEntriesByDateRange(timeData: TimeEntry[], minDateIncl: Date|n
     return (!minDateIncl || entryDate >= minDateIncl) &&
            (!maxDateExcl || entryDate < maxDateExcl);
   });
-}
-
-/** TimeEntry's grouped by several relevant fields */
-interface EntryGrouping<T> {
-  tlpCode: string,
-  prjNumber: string,
-  dlgNumber: string,
-  qanNumber: string,
-  xdsNumber: string,
-  totalSeconds: number,
-  entries: TimeEntry<T>[],
 }
 
 function prepareTimecardEntries<T>(timeData: TimeEntry<T>[], groupByXds=false, groupByTlp=true): EntryGrouping<T>[] {

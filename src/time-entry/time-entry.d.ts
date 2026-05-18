@@ -30,6 +30,17 @@ export interface TimeEntry<T = unknown> {
   };
 }
 
+/** TimeEntry's grouped by several relevant fields */
+export interface EntryGrouping<T> {
+  tlpCode: string;
+  prjNumber: string;
+  dlgNumber: string;
+  qanNumber: string;
+  xdsNumber: string;
+  totalSeconds: number;
+  entries: TimeEntry<T>[];
+}
+
 // ### Types from Toggle API ###
 
 
