@@ -5,7 +5,7 @@ Three-step workflow: **Import → Filter → View/Export**
 - **Data sources**: CSV upload (parsed with PapaParse) or Toggl API v9 (via cloud proxy)
 - **`time-entry.ts`** — Unified `TimeEntry<T>` interface normalizing CSV and API formats. Computed fields: `durationSeconds`, `_computedDates` (day/week/month groupings)
 - **`script.js`** — Main app logic: `processTimeEntryData()` groups entries by time scale, `renderTimecardReport()` formats output. Keyboard shortcuts: T (toggle scale), O/W/M/A (set scale), N/P (navigate), D (toggle descriptions)
-- **`toggl/access.js`** — Toggl API client with Basic Auth. Key functions: `getProfile()`, `getTimeEntries()`, `makeTogglRequest()`
+- **`toggl/access.js`** — Toggl API client with Basic Auth. Key functions: `getProfile()`, `getTimeEntries()`
 - Project codes extracted via regex patterns: DLG, TLP, PRJ, QAN, XDS
 
 Code Conventions:

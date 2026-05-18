@@ -1,6 +1,11 @@
+import { WaCopyButton, WaIcon } from "./model/web-awesome";
+import { EntryGrouping } from "./time-entry/time-entry";
+
 // ### HTML Report Rendering ###
 // Builds interactive HTML timecard report DOM elements.
 // Called from renderTimecardReport() in script.js.
+
+type Entry = EntryGrouping<unknown>;
 
 /**
  * Builds the full timecard report as a DOM element.
@@ -11,7 +16,7 @@
  * @param {boolean} groupByTlp - Whether TLP column is shown
  * @returns {HTMLElement}
  */
-export function buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp) {
+export function buildTimecardReportElement(entries: Entry[], showAllDescriptions: boolean, groupByXds: boolean, groupByTlp: boolean): HTMLElement {
   const container = document.createElement('div');
 
   // Collect stats while building the table body, so we can build the header/footer around them
@@ -36,24 +41,41 @@ export function buildTimecardReportElement(entries, showAllDescriptions, groupBy
 
 // ### Stats Collection ###
 
+interface TimecardStats {
+    uniqueTLPs: Set<number>;
+    uniquePRJs: Set<string>;
+    uniqueDLGs: Set<string>;
+    uniqueQANs: Set<string>;
+    uniqueXDSs: Set<string>;
+    uniqueDescriptions: Set<string>;
+
+    totalHours: number;
+    totalRoundedHours: number;
+    timecardLines: number;
+    representedEntries: number;
+
+    minDate: Date | null;
+    maxDate: Date | null;
+  }
+
 /**
  * Makes a single pass through entries to collect all stats needed for header, footer, and summary.
  * Only counts entries that have a TLP code and non-zero rounded hours (same rules as rendering).
  */
-function collectTimecardStats(entries, groupByTlp) {
-  const uniqueTLPs = new Set();
-  const uniquePRJs = new Set();
-  const uniqueDLGs = new Set();
-  const uniqueQANs = new Set();
-  const uniqueXDSs = new Set();
-  const uniqueDescriptions = new Set();
+function collectTimecardStats(entries: Entry[], groupByTlp: boolean): TimecardStats {
+  const uniqueTLPs = new Set<number>();
+  const uniquePRJs = new Set<string>();
+  const uniqueDLGs = new Set<string>();
+  const uniqueQANs = new Set<string>();
+  const uniqueXDSs = new Set<string>();
+  const uniqueDescriptions = new Set<string>();
 
   let totalHours = 0;
   let totalRoundedHours = 0;
   let timecardLines = 0;
   let representedEntries = 0;
-  let minDate = Infinity;
-  let maxDate = -Infinity;
+  let minDate: Date | number = Infinity;
+  let maxDate: Date | number = -Infinity;
 
   for (const entry of entries) {
     const tlpCode = +entry.tlpCode;
@@ -73,9 +95,9 @@ function collectTimecardStats(entries, groupByTlp) {
     if (entry.xdsNumber) uniqueXDSs.add(entry.xdsNumber);
 
     for (const e of entry.entries) {
-      const dateVal = e._computedDates.day;
-      if (+dateVal < minDate) minDate = dateVal;
-      if (+dateVal > maxDate) maxDate = dateVal;
+      const dateVal = e._computedDates!.day;
+      if (+dateVal < +minDate) minDate = dateVal;
+      if (+dateVal > +maxDate) maxDate = dateVal;
       if (e.description) uniqueDescriptions.add(e.description);
     }
 
@@ -87,14 +109,14 @@ function collectTimecardStats(entries, groupByTlp) {
     uniqueTLPs, uniquePRJs, uniqueDLGs, uniqueQANs, uniqueXDSs, uniqueDescriptions,
     totalHours, totalRoundedHours,
     timecardLines, representedEntries,
-    minDate: minDate === Infinity ? null : minDate,
-    maxDate: maxDate === -Infinity ? null : maxDate,
+    minDate: minDate === Infinity ? null : minDate as Date,
+    maxDate: maxDate === -Infinity ? null : maxDate as Date,
   };
 }
 
 // ### Section Builders ###
 
-function buildReportHeader(minDate, maxDate) {
+function buildReportHeader(minDate: Date | null, maxDate: Date | null) {
   const header = document.createElement('div');
   header.className = 'timecard-header';
 
@@ -119,7 +141,7 @@ function buildReportHeader(minDate, maxDate) {
   return header;
 }
 
-function buildTimecardTable(entries, stats, showAllDescriptions, groupByXds, groupByTlp) {
+function buildTimecardTable(entries: Entry[], stats: TimecardStats, showAllDescriptions: boolean, groupByXds: boolean, groupByTlp: boolean) {
   const table = document.createElement('table');
   table.className = 'timecard-table';
 
@@ -130,7 +152,7 @@ function buildTimecardTable(entries, stats, showAllDescriptions, groupByXds, gro
   return table;
 }
 
-function buildReportSummary(stats) {
+function buildReportSummary(stats: TimecardStats) {
   const div = document.createElement('div');
   div.className = 'timecard-summary wa-body-s';
 
@@ -162,7 +184,7 @@ function buildNoEntriesMessage() {
 
 // ### Table Section Builders ###
 
-function buildTableHead(groupByTlp, groupByXds, showAllDescriptions, stats) {
+function buildTableHead(groupByTlp: boolean, groupByXds: boolean, showAllDescriptions: boolean, stats: TimecardStats) {
   const thead = document.createElement('thead');
   const tr = document.createElement('tr');
 
@@ -180,8 +202,8 @@ function buildTableHead(groupByTlp, groupByXds, showAllDescriptions, stats) {
   for (const spec of headerSpecs) {
     const th = document.createElement('th');
     th.appendChild(document.createTextNode(spec.text));
-    if (spec.copySet?.size > 0) {
-      const icon = document.createElement('wa-icon');
+    if (spec.copySet?.size! > 0) {
+      const icon = document.createElement('wa-icon') as WaIcon;
       icon.setAttribute('name', 'copy');
       icon.className = 'header-copy-icon';
       th.appendChild(icon);
@@ -193,7 +215,7 @@ function buildTableHead(groupByTlp, groupByXds, showAllDescriptions, stats) {
   return thead;
 }
 
-function buildTableBody(entries, showAllDescriptions, groupByXds, groupByTlp) {
+function buildTableBody(entries: Entry[], showAllDescriptions: boolean, groupByXds: boolean, groupByTlp: boolean) {
   const tbody = document.createElement('tbody');
 
   for (const entry of entries) {
@@ -213,7 +235,7 @@ function buildTableBody(entries, showAllDescriptions, groupByXds, groupByTlp) {
   return tbody;
 }
 
-function buildTableFoot(stats, groupByXds, groupByTlp) {
+function buildTableFoot(stats: TimecardStats, groupByXds: boolean, groupByTlp: boolean) {
   const tfoot = document.createElement('tfoot');
   const tr = document.createElement('tr');
 
@@ -244,11 +266,11 @@ function buildTableFoot(stats, groupByXds, groupByTlp) {
  * Builds one or more <tr> elements for a single grouped timecard entry.
  * Returns an array: first element is the main row, subsequent are description continuation rows.
  */
-function buildEntryRows(entry, hoursRounded, showAllDescriptions, groupByXds, groupByTlp) {
+function buildEntryRows(entry: Entry, hoursRounded: number, showAllDescriptions: boolean, groupByXds: boolean, groupByTlp: boolean) {
   const tlpCode = +entry.tlpCode;
 
   // Collect distinct descriptions for this entry
-  const descSet = new Set();
+  const descSet = new Set<string>();
   for (const e of entry.entries) {
     if (e.description) descSet.add(e.description);
   }
@@ -282,13 +304,13 @@ function buildEntryRows(entry, hoursRounded, showAllDescriptions, groupByXds, gr
  * Builds a continuation row for an additional description line.
  * Code columns show a continuation marker if the entry has that code.
  */
-function buildSubsequentRow(entry, description, groupByXds, groupByTlp) {
+function buildSubsequentRow(entry: Entry, description: string, groupByXds: boolean, groupByTlp: boolean) {
   const tr = document.createElement('tr');
   tr.className = 'subsequent-row';
 
   const continuationMarker = '↳';
   const emptyCell = () => { const td = document.createElement('td'); return td; };
-  const markerCell = (hasValue) => {
+  const markerCell = (hasValue: boolean) => {
     const td = document.createElement('td');
     if (hasValue) td.textContent = continuationMarker;
     return td;
@@ -311,7 +333,7 @@ function buildSubsequentRow(entry, description, groupByXds, groupByTlp) {
  * Creates a <td> containing a code value and a <wa-copy-button>.
  * If code is falsy, returns an empty <td>.
  */
-function createCodeCell(code) {
+function createCodeCell(code: any) {
   const td = document.createElement('td');
   if (code) {
     const wrapper = document.createElement('span');
@@ -320,7 +342,7 @@ function createCodeCell(code) {
     const label = document.createElement('span');
     label.textContent = String(code);
 
-    const copyBtn = document.createElement('wa-copy-button');
+    const copyBtn = document.createElement('wa-copy-button') as WaCopyButton;
     copyBtn.setAttribute('value', String(code));
 
     wrapper.appendChild(label);
@@ -330,13 +352,13 @@ function createCodeCell(code) {
   return td;
 }
 
-function createHoursCell(hours) {
+function createHoursCell(hours: number) {
   const td = document.createElement('td');
   td.textContent = hours % 1 === 0 ? String(hours) : hours.toFixed(2);
   return td;
 }
 
-function createDescCell(text) {
+function createDescCell(text: string) {
   const td = document.createElement('td');
   td.textContent = text || '';
   return td;

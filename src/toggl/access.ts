@@ -1,3 +1,6 @@
+import { TogglAPITimeEntryWithMetadata } from "../time-entry/time-entry";
+import { TogglProfileData } from "./toggl.model";
+
 const TOGGL_BASE_URL = "https://api.track.toggl.com/api/v9"
 const DEFAULT_PROXY_URL = "https://proxy-fjuhi57saa-uc.a.run.app";
 
@@ -8,7 +11,7 @@ const DEFAULT_PROXY_URL = "https://proxy-fjuhi57saa-uc.a.run.app";
  * @param {string} token A Toggl API token
  * @returns Promise<TogglProfileData> An object containing data about the signed in user
  */
-export function getProfile(token) {
+export function getProfile(token: string): Promise<TogglProfileData> {
   if (!token) {
     throw new Error("Missing required parameter.");
   }
@@ -25,7 +28,7 @@ export function getProfile(token) {
  * @param {boolean} [includeMetaInformation=true] When true, additional information like entity names will be included in the output, instead of requiring separate queries to lookup IDs.
  * @returns Toggl's Time Entry data output
  */
-export function getTimeEntries(token,startDate,endDate=new Date,includeMetaInformation=true) {
+export function getTimeEntries(token: string, startDate: Date, endDate=new Date, includeMetaInformation=true): Promise<TogglAPITimeEntryWithMetadata[]> {
   if (!token || !startDate || !endDate) {
     throw new Error("Missing required parameter.");
   }
@@ -40,11 +43,11 @@ export function getTimeEntries(token,startDate,endDate=new Date,includeMetaInfor
   return makeTogglRequest("GET",`/me/time_entries?${parameters.join("&")}`,token);
 }
 
-function formatDate(date) {
+function formatDate(date: Date) {
   return date.toISOString().slice(0, 10);
 }
 
-export async function makeTogglRequest(method,endpoint,usernameOrToken,password="api_token",proxyUrl=DEFAULT_PROXY_URL) {
+async function makeTogglRequest<T>(method: "GET", endpoint: string, usernameOrToken: string, password="api_token", proxyUrl=DEFAULT_PROXY_URL): Promise<T> {
   // Prepare request URL
   let requestURL = TOGGL_BASE_URL+endpoint;
   if (proxyUrl) {
@@ -68,6 +71,6 @@ export async function makeTogglRequest(method,endpoint,usernameOrToken,password=
     const responseText = await response.text();
     throw new Error(`Error making Toggl request (${response.status} ${response.statusText}): ${responseText}`);
   }
-  const data = await response.json();
+  const data = await response.json() as T;
   return data;
 }

@@ -34,7 +34,7 @@ echo "Using WORKSPACE_ID: $WORKSPACE_ID"
 # Test fetching time entries
 # Including meta=true to get readable info like project names and client names
 echo -e "\nFetching time entries into time_entries.json..."
-curl  "https://api.track.toggl.com/api/v9/me/time_entries?meta=true&start_date=2025-11-01&end_date=2025-12-01" \
+curl  "https://api.track.toggl.com/api/v9/me/time_entries?meta=true&start_date=2026-03-01&end_date=2026-06-01" \
   -H "Content-Type: application/json" \
   -u $TOKEN:api_token > time_entries.json
 
