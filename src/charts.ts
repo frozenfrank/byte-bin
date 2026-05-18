@@ -1,10 +1,22 @@
+import { TimeEntry } from "./time-entry/time-entry";
+import { extractPRJNumber, extractTLPCode } from "./time-entry/time-entry-processing";
+
 // ### Chart Data Aggregation & Rendering ###
 // Produces summary pie charts of filtered time entries by PRJ and TLP.
 // Called from renderTimecardReport() in script.js.
 
 const UNTAGGED_LABEL = 'Untagged';
 
-function aggregateHoursByPRJ(filteredData) {
+type FilteredData = TimeEntry<unknown>[];
+/** Maps the number of seconds by a total accumulator represented by `key`. */
+type SecondsByKey = Map<string, number>;
+
+interface ChartData {
+  labels: string[];
+  data: number[];
+}
+
+function aggregateHoursByPRJ(filteredData: FilteredData) {
   const secondsByPRJ = new Map();
   filteredData.forEach(entry => {
     const prj = extractPRJNumber(entry);
@@ -15,8 +27,8 @@ function aggregateHoursByPRJ(filteredData) {
   return toChartData(secondsByPRJ);
 }
 
-function aggregateHoursByTLP(filteredData) {
-  const secondsByTLP = new Map();
+function aggregateHoursByTLP(filteredData: FilteredData) {
+  const secondsByTLP: SecondsByKey = new Map();
   filteredData.forEach(entry => {
     const tlp = extractTLPCode(entry);
     const key = tlp ? `TLP ${tlp}` : UNTAGGED_LABEL;
@@ -26,7 +38,7 @@ function aggregateHoursByTLP(filteredData) {
   return toChartData(secondsByTLP);
 }
 
-function toChartData(secondsByKey) {
+function toChartData(secondsByKey: SecondsByKey): ChartData {
   const sorted = [...secondsByKey.entries()].sort((a, b) => b[1] - a[1]);
   return {
     labels: sorted.map(([key]) => key),
@@ -34,7 +46,7 @@ function toChartData(secondsByKey) {
   };
 }
 
-function applyPieChartData(chartEl, {labels, data}, datasetLabel) {
+function applyPieChartData(chartEl: HTMLElement, {labels, data}: ChartData, datasetLabel: string) {
   chartEl.config = {
     data: {
       labels,
@@ -43,7 +55,7 @@ function applyPieChartData(chartEl, {labels, data}, datasetLabel) {
   };
 }
 
-export function renderSummaryCharts(filteredData) {
+export function renderSummaryCharts(filteredData: FilteredData) {
   const prjChart = document.getElementById('prjPieChart');
   const tlpChart = document.getElementById('tlpPieChart');
   if (prjChart) applyPieChartData(prjChart, aggregateHoursByPRJ(filteredData), 'Hours');

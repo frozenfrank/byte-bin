@@ -4,7 +4,7 @@ import { DateValue } from './model/types';
 import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch } from './model/web-awesome';
 import { buildTimecardReportElement } from './report';
 import { EntryGrouping, PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
-import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData } from './time-entry/time-entry-processing';
+import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData,  extractDLGNumber, extractPRJNumber, extractQANNumber, extractTLPCode, extractXDSNumber  } from './time-entry/time-entry-processing';
 import { getTimeEntries } from './toggl/access';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
@@ -32,11 +32,6 @@ const TOGGL_DOWNLOAD_BUTTON = 'download-toggl-button';
 const TOGGL_DOWNLOAD_LABEL = 'download-toggl-label';
 const TOGGL_TIP_ID = 'toggl-api-tip';
 
-const TLP_REGEX = /tlp(\d{5})/i;
-const PRJ_REGEX = /PRJ\s*(\d+)/i;
-const DLG_REGEX = /DLG\s*(\d+)/i;
-const QAN_REGEX = /QAN\s*(\d+)/i;
-const XDS_REGEX = /XDS\s*(\d+)/i;
 
 let interpretedTimeData = {
   /** Sorted list of unique projects */
@@ -660,34 +655,4 @@ function prepareTimecardEntries<T>(timeData: TimeEntry<T>[], groupByXds=false, g
     (groupByXds && a.xdsNumber.localeCompare(b.xdsNumber)) ||
     b.totalSeconds - a.totalSeconds
   );
-}
-
-function extractTLPCode(entry: TimeEntry): string|null {
-  const tags = entry.tagNames?.join(',');
-  if (!tags) return null;
-  return TLP_REGEX.exec(tags)?.[1] || null;
-}
-
-function extractPRJNumber(entry: TimeEntry): string|null {
-  let prjNum;
-
-  // Search Project field
-  prjNum = PRJ_REGEX.exec(entry.projectName)?.[1];
-  if (prjNum) return prjNum;
-
-  // Search Description field
-  prjNum = PRJ_REGEX.exec(entry.description)?.[1];
-  return prjNum || null;
-}
-
-function extractDLGNumber(entry: TimeEntry): string|null {
-  return DLG_REGEX.exec(entry.description)?.[1] || null;
-}
-
-function extractQANNumber(entry: TimeEntry): string|null {
-  return QAN_REGEX.exec(entry.description)?.[1] || null;
-}
-
-function extractXDSNumber(entry: TimeEntry): string|null {
-  return XDS_REGEX.exec(entry.description)?.[1] || null;
 }

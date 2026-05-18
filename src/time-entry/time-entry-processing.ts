@@ -1,5 +1,7 @@
 import type { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglAPITimeEntryWithMetadata, TogglExportTimeEntry } from "./time-entry";
 
+// ##### Unify to TimeEntryData #####
+
 /** Converts a string duration into the number of elapsed seconds. e.g., "01:30:00" */
 function parseDurationString(duration: string): number {
   const [h,m,s] = duration.split(':').map(Number);
@@ -102,4 +104,44 @@ export function convertParsedCsvToTimeEntryData(
     hasBillableData,
     entries,
   };
+}
+
+
+// ##### Data Extraction #####
+
+const TLP_REGEX = /tlp(\d{5})/i;
+const PRJ_REGEX = /PRJ\s*(\d+)/i;
+const DLG_REGEX = /DLG\s*(\d+)/i;
+const QAN_REGEX = /QAN\s*(\d+)/i;
+const XDS_REGEX = /XDS\s*(\d+)/i;
+
+
+export function extractTLPCode(entry: TimeEntry): string|null {
+  const tags = entry.tagNames?.join(',');
+  if (!tags) return null;
+  return TLP_REGEX.exec(tags)?.[1] || null;
+}
+
+export function extractPRJNumber(entry: TimeEntry): string|null {
+  let prjNum;
+
+  // Search Project field
+  prjNum = PRJ_REGEX.exec(entry.projectName)?.[1];
+  if (prjNum) return prjNum;
+
+  // Search Description field
+  prjNum = PRJ_REGEX.exec(entry.description)?.[1];
+  return prjNum || null;
+}
+
+export function extractDLGNumber(entry: TimeEntry): string|null {
+  return DLG_REGEX.exec(entry.description)?.[1] || null;
+}
+
+export function extractQANNumber(entry: TimeEntry): string|null {
+  return QAN_REGEX.exec(entry.description)?.[1] || null;
+}
+
+export function extractXDSNumber(entry: TimeEntry): string|null {
+  return XDS_REGEX.exec(entry.description)?.[1] || null;
 }
