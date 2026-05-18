@@ -1,8 +1,8 @@
 import Papa from 'papaparse';
-import { convertParsedCsvToTimeEntryData, convertApiDataToTimeEntryData } from './time-entry/time-entry-processing.js';
-import { getTimeEntries } from './toggl/access.js';
-import { buildTimecardReportElement } from './report.js';
-import { TimeEntryData } from './time-entry/time-entry.js';
+import { convertParsedCsvToTimeEntryData, convertApiDataToTimeEntryData } from './time-entry/time-entry-processing';
+import { getTimeEntries } from './toggl/access';
+import { buildTimecardReportElement } from './report';
+import { TimeEntryData } from './time-entry/time-entry';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
 const IMPORT_METHOD_STORAGE_KEY = 'importMethod';
