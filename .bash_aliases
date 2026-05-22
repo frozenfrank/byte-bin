@@ -101,9 +101,13 @@ alias push="git push"
 alias pull="git fetch && git rebase origin/master"
 
 # Git refspec management
-git config --global alias.make-bare '!git config --local remote.origin.fetch "+refs/heads/main:refs/remotes/origin/main"'
-git config --global alias.track-bare '!git config --local --add remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" && git fetch origin'
-git config --global alias.track-prefix '!f() { git config --add remote.origin.fetch "+refs/heads/$1*:refs/remotes/origin/$1*"; git config --add remote.origin.fetch "+refs/tags/$1*:refs/tags/$1*"; }; f'
+# Refspec helpers for bare-ish clones that start out tracking nothing but `main`.
+#   git make-bare [REMOTE]            Reset REMOTE's fetch refspec so it only pulls `main`. Defaults to origin.
+#   git track-bare [REMOTE]           Add a full `refs/heads/*` tracking refspec to REMOTE, then fetch it. Defaults to origin.
+#   git track-prefix PREFIX [REMOTE]  Add fetch refspecs for branches and tags whose names start with PREFIX. REMOTE defaults to origin.
+git config --global alias.make-bare '!f() { local REMOTE="${1:-origin}"; git config --local remote.$REMOTE.fetch "+refs/heads/main:refs/remotes/$REMOTE/main"; }; f'
+git config --global alias.track-bare '!f() { local REMOTE="${1:-origin}"; git config --local --add remote.$REMOTE.fetch "+refs/heads/*:refs/remotes/$REMOTE/*" && git fetch $REMOTE; }; f'
+git config --global alias.track-prefix '!f() { local REMOTE="${2:-origin}"; git config --add remote.$REMOTE.fetch "+refs/heads/$1*:refs/remotes/$REMOTE/$1*"; git config --add remote.$REMOTE.fetch "+refs/tags/$1*:refs/tags/$1*"; }; f'
 
 # Usage: `git pushu`. Behaves the same as `git push`, expect it also adds the current branch to the refspec for receiving updates.
 git config --global alias.pushu '!f() { branch="${1:-$(git rev-parse --abbrev-ref HEAD)}"; git config --add remote.origin.fetch "+refs/heads/$branch:refs/remotes/origin/$branch"; git push -u origin "$branch" ${@:2}; }; f'
