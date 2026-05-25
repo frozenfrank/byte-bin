@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "byte-bin"
-  }
+  },
+  "targets": {
+    "byte-bin": {
+      "hosting": {
+        "cdn": [
+          "byte-bin-cdn"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
