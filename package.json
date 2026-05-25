@@ -1,14 +1,19 @@
 {
-  "name": "toggl-to-delorean",
-  "version": "1.2.0",
+  "name": "@frozenfrank/toggl-to-delorean",
+  "version": "1.2.1",
   "description": "Loads time entries from Toggl and displays it for review & entry into Delorean.",
+  "keywords": [
+    "toggl",
+    "delorean",
+    "webawesome"
+  ],
   "homepage": "https://github.com/frozenfrank/byte-bin#readme",
   "bugs": {
     "url": "https://github.com/frozenfrank/byte-bin/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/frozenfrank/byte-bin.git"
+    "url": "git+https://github.com/frozenfrank/byte-bin.git#delorean-main"
   },
   "license": "ISC",
   "author": "James Finlinson",
@@ -18,8 +23,12 @@
     "start": "./scripts/serve.sh",
     "serve": "./scripts/serve.sh",
     "build": "./scripts/build.sh",
+    "distribute": "npm run build && npm publish --access public",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
+  "files": [
+    "dist/"
+  ],
   "devDependencies": {
     "@types/papaparse": "^5.5.2",
     "@web.awesome.me/webawesome-pro": "file:/Users/frozenfrank/Documents/Personal/webawesome-pro-v3.7.0",
