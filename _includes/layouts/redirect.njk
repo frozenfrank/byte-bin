@@ -1,0 +1,18 @@
+---
+eleventyAllowMissingExtension: true
+---
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Redirecting...</title>
+    <!-- The content="0; ..." attribute tells the browser to redirect after 0 seconds -->
+    <meta http-equiv="refresh" content="0; URL='{{ destination }}'" />
+    <!-- Canonical link helps search engines understand the new primary URL -->
+    <link rel="canonical" href="{{ destination }}">
+  </head>
+  <body>
+    <p>If you are not redirected, <a href="{{ destination }}">click here</a>.</p>
+    {{ content | safe }}
+  </body>
+</html>
