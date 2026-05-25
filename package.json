@@ -1,6 +1,6 @@
 {
   "name": "@frozenfrank/toggl-to-delorean",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Loads time entries from Toggl and displays it for review & entry into Delorean.",
   "keywords": [
     "toggl",
@@ -26,7 +26,9 @@
     "distribute": "npm run build && npm publish --access public",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "files": [ "dist/" ],
+  "files": [
+    "dist/"
+  ],
   "devDependencies": {
     "@types/papaparse": "^5.5.2",
     "@web.awesome.me/webawesome-pro": "file:/Users/frozenfrank/Documents/Personal/webawesome-pro-v3.7.0",
