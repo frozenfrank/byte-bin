@@ -23,6 +23,7 @@
     "start": "./scripts/serve.sh",
     "serve": "./scripts/serve.sh",
     "build": "./scripts/build.sh",
+    "distribute": "npm run build && npm publish --access public",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "files": [ "dist/" ],
