@@ -6,6 +6,17 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**"
-    ]
+    ],
+    "headers": [ {
+      "source": "**",
+      "headers": [ {
+        "key": "Access-Control-Allow-Origin",
+        "value": "*"
+      }, {
+        "key": "Cache-Control",
+        "value": "max-age=86400",
+        "comment": "One week cache for all files"
+      } ]
+    } ]
   }
 }
