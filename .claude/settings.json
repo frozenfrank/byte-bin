@@ -2,6 +2,8 @@
   "permissions": {
     "allow": [
       "Skill(webawesome)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
       "Read(.claude/skills/webawesome/**)",
       "Read(//Users/frozenfrank/Documents/Personal/webawesome-pro-v3.7.0/**)",
       "Read(//Users/frozenfrank/.agents/skills/webawesome/**)"
