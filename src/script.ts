@@ -592,7 +592,13 @@ async function renderTimecardReport(): Promise<void> {
   const groupByTlp = groupByTlpSwitch.checked;
   const groupByXds = groupByXdsSwitch.checked;
   const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillableSwitch.checked,filterClientName);
+  const entries = prepareTimecardEntries(filteredData, groupByXds, groupByTlp);
 
+  const reportEl = buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp);
+  const outputEl = getElementById(OUTPUT_PRE_ID);
+  outputEl.replaceChildren(reportEl);
+
+  // Summarize data for time period chart
   const allFilteredForBars = filterTimeEntriesByDateRange(timeData, null, null, requireBillableSwitch.checked, filterClientName);
   const timeScale = +timeScaleInput.value! as TimeScale;
   const activePeriodValue =
@@ -600,6 +606,7 @@ async function renderTimecardReport(): Promise<void> {
     timeScale === TimeScale.Week  ? +(weekSelect.value  || 0) :
     timeScale === TimeScale.Month ? +(monthSelect.value || 0) :
     null;
+
   await Promise.all([
     renderSummaryCharts(filteredData),
     renderTimePeriodBarChart({
@@ -611,11 +618,6 @@ async function renderTimecardReport(): Promise<void> {
       uniqueMonthValues: interpretedTimeData.uniqueMonthValues,
     }),
   ]);
-
-  const entries = prepareTimecardEntries(filteredData, groupByXds, groupByTlp);
-  const reportEl = buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp);
-  const outputEl = getElementById(OUTPUT_PRE_ID);
-  outputEl.replaceChildren(reportEl);
 }
 
 function interpretMinMaxFilterDates() {
