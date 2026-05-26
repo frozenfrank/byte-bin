@@ -201,7 +201,7 @@ function uniquePeriodValuesFor(scale: PeriodScale, input: BarChartInput): number
   }
 }
 
-export function renderTimePeriodBarChart(input: BarChartInput): void {
+export async function renderTimePeriodBarChart(input: BarChartInput): Promise<void> {
   const chartEl = getElementById<WaBarChart>('periodBarChart');
   if (!chartEl) return;
 
@@ -212,6 +212,7 @@ export function renderTimePeriodBarChart(input: BarChartInput): void {
 
   if (windowValues.length === 0) {
     chartEl.config = { data: { labels: [], datasets: [{ label: 'Hours', data: [] }] } };
+    await chartEl.updateComplete;
     return;
   }
 
@@ -221,4 +222,5 @@ export function renderTimePeriodBarChart(input: BarChartInput): void {
   const colors = resolveBarColors(chartEl);
 
   applyBarChartData(chartEl, { labels, hoursPerBar, activeIndexInWindow, colors }, 'Hours');
+  await chartEl.updateComplete;
 }

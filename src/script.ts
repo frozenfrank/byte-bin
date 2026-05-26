@@ -593,8 +593,6 @@ async function renderTimecardReport(): Promise<void> {
   const groupByXds = groupByXdsSwitch.checked;
   const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillableSwitch.checked,filterClientName);
 
-  await renderSummaryCharts(filteredData);
-
   const allFilteredForBars = filterTimeEntriesByDateRange(timeData, null, null, requireBillableSwitch.checked, filterClientName);
   const timeScale = +timeScaleInput.value! as TimeScale;
   const activePeriodValue =
@@ -602,14 +600,17 @@ async function renderTimecardReport(): Promise<void> {
     timeScale === TimeScale.Week  ? +(weekSelect.value  || 0) :
     timeScale === TimeScale.Month ? +(monthSelect.value || 0) :
     null;
-  renderTimePeriodBarChart({
-    allFiltered: allFilteredForBars,
-    timeScale,
-    activePeriodValue,
-    uniqueDayValues:   interpretedTimeData.uniqueDayValues,
-    uniqueWeekValues:  interpretedTimeData.uniqueWeekValues,
-    uniqueMonthValues: interpretedTimeData.uniqueMonthValues,
-  });
+  await Promise.all([
+    renderSummaryCharts(filteredData),
+    renderTimePeriodBarChart({
+      allFiltered: allFilteredForBars,
+      timeScale,
+      activePeriodValue,
+      uniqueDayValues:   interpretedTimeData.uniqueDayValues,
+      uniqueWeekValues:  interpretedTimeData.uniqueWeekValues,
+      uniqueMonthValues: interpretedTimeData.uniqueMonthValues,
+    }),
+  ]);
 
   const entries = prepareTimecardEntries(filteredData, groupByXds, groupByTlp);
   const reportEl = buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp);
