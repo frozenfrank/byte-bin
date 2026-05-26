@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(webawesome)",
+      "Read(.claude/skills/webawesome/**)",
+      "Read(//Users/frozenfrank/Documents/Personal/webawesome-pro-v3.7.0/**)",
+      "Read(//Users/frozenfrank/.agents/skills/webawesome/**)"
+    ]
+  }
+}
