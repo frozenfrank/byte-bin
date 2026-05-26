@@ -450,6 +450,10 @@ async function populateClientSelector(clients: string[], hasClientData: boolean)
     opt.setAttribute('selected', '');
     opt.setAttribute('disabled', '');
     clientSelect.appendChild(opt);
+    if (!hasClientData) {
+      clientSelect.disabled = !interpretedTimeData.hasClientData;
+    }
+
     await clientSelect.updateComplete;
     return;
   }
