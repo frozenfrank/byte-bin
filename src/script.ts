@@ -1,7 +1,7 @@
 import Papa, { ParseResult } from 'papaparse';
-import { renderSummaryCharts } from './charts';
+import { renderSummaryCharts, renderTimePeriodBarChart } from './charts';
 import { getElementById } from './helper';
-import { DateValue } from './model/types';
+import { DateValue, TimeScale } from './model/types';
 import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch } from './model/web-awesome';
 import { buildTimecardReportElement } from './report';
 import { EntryGrouping, PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
@@ -592,7 +592,25 @@ async function renderTimecardReport(): Promise<void> {
   const groupByTlp = groupByTlpSwitch.checked;
   const groupByXds = groupByXdsSwitch.checked;
   const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillableSwitch.checked,filterClientName);
+
   await renderSummaryCharts(filteredData);
+
+  const allFilteredForBars = filterTimeEntriesByDateRange(timeData, null, null, requireBillableSwitch.checked, filterClientName);
+  const timeScale = +timeScaleInput.value! as TimeScale;
+  const activePeriodValue =
+    timeScale === TimeScale.Day   ? +(daySelect.value   || 0) :
+    timeScale === TimeScale.Week  ? +(weekSelect.value  || 0) :
+    timeScale === TimeScale.Month ? +(monthSelect.value || 0) :
+    null;
+  renderTimePeriodBarChart({
+    allFiltered: allFilteredForBars,
+    timeScale,
+    activePeriodValue,
+    uniqueDayValues:   interpretedTimeData.uniqueDayValues,
+    uniqueWeekValues:  interpretedTimeData.uniqueWeekValues,
+    uniqueMonthValues: interpretedTimeData.uniqueMonthValues,
+  });
+
   const entries = prepareTimecardEntries(filteredData, groupByXds, groupByTlp);
   const reportEl = buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp);
   const outputEl = getElementById(OUTPUT_PRE_ID);

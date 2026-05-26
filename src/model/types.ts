@@ -7,3 +7,11 @@ export type ISO8601DateString = string;
 
 /** The numerical representation of a Date. Example: `+new Date()` */
 export type DateValue = number;
+
+/** Selected time scale in the Step 2 radio group. Values mirror the `value` attributes in fragment.html. */
+export enum TimeScale {
+  Day   = 1,
+  Week  = 2,
+  Month = 3,
+  All   = 4,
+}

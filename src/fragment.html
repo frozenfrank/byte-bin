@@ -126,19 +126,27 @@
     </wa-button>
   </div>
 
-  <div id="timecardCharts" class="wa-cluster wa-align-items-start">
-    <wa-pie-chart id="prjPieChart"
-      label="Hours by PRJ"
-      description="Total filtered hours grouped by Project"
-      legend-position="right"
-      style="flex: 1 1 22rem;">
-    </wa-pie-chart>
-    <wa-pie-chart id="tlpPieChart"
-      label="Hours by TLP"
-      description="Total filtered hours grouped by TLP code"
-      legend-position="right"
-      style="flex: 1 1 22rem;">
-    </wa-pie-chart>
+  <div id="timecardCharts" class="wa-stack">
+    <wa-bar-chart id="periodBarChart"
+      label="Hours by Period"
+      description="Total filtered hours per period; current period highlighted"
+      without-legend
+      grid="y">
+    </wa-bar-chart>
+    <div class="wa-cluster wa-align-items-start">
+      <wa-pie-chart id="prjPieChart"
+        label="Hours by PRJ"
+        description="Total filtered hours grouped by Project"
+        legend-position="right"
+        style="flex: 1 1 22rem;">
+      </wa-pie-chart>
+      <wa-pie-chart id="tlpPieChart"
+        label="Hours by TLP"
+        description="Total filtered hours grouped by TLP code"
+        legend-position="right"
+        style="flex: 1 1 22rem;">
+      </wa-pie-chart>
+    </div>
   </div>
 
   <div id="timecardReport">
