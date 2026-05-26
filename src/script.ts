@@ -176,6 +176,7 @@ function processTimeEntryData(timeEntryData: TimeEntryData<any>) {
   });
   populateDateSelector(MONTH_SELECT_ID, uniqueMonths, "month", m => m.toLocaleString('default', { month: 'long', year: 'numeric' }));
 
+  clientSelect.disabled = !interpretedTimeData.hasClientData;
   populateClientSelector(uniqueClients, interpretedTimeData.hasClientData);
 
   const mostRecentDay = interpretedTimeData.uniqueDayValues[interpretedTimeData.uniqueDayValues.length - 1];
