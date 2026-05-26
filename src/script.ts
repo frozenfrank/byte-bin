@@ -347,7 +347,7 @@ function handleMonthChange(e: Event) {
  * @param {number} dateValue - The date value to set (as a number, or Date object).
  * @param {boolean} suppressEvent - Whether to suppress change events for the selectors.
  */
-function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=false) {
+async function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=false) {
   const computedDates = prepareComputedDateValues(new Date(dateValue));
   const dayValue = Number(computedDates.day);
   const weekValue = Number(computedDates.week);
@@ -356,6 +356,17 @@ function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=false) {
   daySelect.value = ""+interpretedTimeData.uniqueDayValues.find(d => d >= dayValue);
   weekSelect.value = ""+interpretedTimeData.uniqueWeekValues.find(w => w >= weekValue);
   monthSelect.value = ""+interpretedTimeData.uniqueMonthValues.find(m => m >= monthValue);
+
+  // After populateDateSelector() replaces a wa-select's options, its options
+  // cache is briefly stale (refreshed via a queued microtask), and reading
+  // back daySelect.value returns null until that completes. Await each
+  // select's updateComplete so the subsequent value reads in
+  // interpretMinMaxFilterDates() pick up the new selection.
+  await Promise.all([
+    daySelect.updateComplete,
+    weekSelect.updateComplete,
+    monthSelect.updateComplete,
+  ]);
 
   if (!suppressEvent) {
     const changedSelector = +(timeScaleInput.value || 0);
