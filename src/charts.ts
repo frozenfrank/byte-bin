@@ -9,6 +9,7 @@ import { extractPRJNumber, extractTLPCode } from "./time-entry/time-entry-proces
 // plus a bar chart of total hours per time period.
 // Called from renderTimecardReport() in script.ts.
 
+const NO_PRJ_LABEL = 'No Project';
 const UNTAGGED_LABEL = 'Untagged';
 
 /** Maximum number of bars shown in the period bar chart. Single source of truth; may become dynamic. */
@@ -32,7 +33,7 @@ function aggregateHoursByPRJ(filteredData: FilteredData) {
   const secondsByPRJ = new Map();
   filteredData.forEach(entry => {
     const prj = extractPRJNumber(entry);
-    const key = prj ? `PRJ ${prj}` : UNTAGGED_LABEL;
+    const key = prj ? `PRJ ${prj}` : NO_PRJ_LABEL;
     const seconds = entry.durationSeconds || 0;
     secondsByPRJ.set(key, (secondsByPRJ.get(key) || 0) + seconds);
   });
