@@ -57,9 +57,17 @@ function applyPieChartData(chartEl: WaPieChart, {labels, data}: ChartData, datas
   };
 }
 
-export function renderSummaryCharts(filteredData: FilteredData) {
+export async function renderSummaryCharts(filteredData: FilteredData): Promise<void> {
   const prjChart = getElementById<WaPieChart>('prjPieChart');
   const tlpChart = getElementById<WaPieChart>('tlpPieChart');
-  if (prjChart) applyPieChartData(prjChart, aggregateHoursByPRJ(filteredData), 'Hours');
-  if (tlpChart) applyPieChartData(tlpChart, aggregateHoursByTLP(filteredData), 'Hours');
+  const updates: Array<Promise<boolean>> = [];
+  if (prjChart) {
+    applyPieChartData(prjChart, aggregateHoursByPRJ(filteredData), 'Hours');
+    updates.push(prjChart.updateComplete);
+  }
+  if (tlpChart) {
+    applyPieChartData(tlpChart, aggregateHoursByTLP(filteredData), 'Hours');
+    updates.push(tlpChart.updateComplete);
+  }
+  await Promise.all(updates);
 }

@@ -161,6 +161,7 @@ async function processTimeEntryData(timeEntryData: TimeEntryData<any>): Promise<
   const prevDayValue = +(daySelect.value || 0);
 
   await Promise.all([
+    requireBillableSwitch.updateComplete,
     populateDateSelector(DAY_SELECT_ID, uniqueDays, "date", d => d.toLocaleDateString('default', { year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' })),
     populateDateSelector(WEEK_SELECT_ID, uniqueWeeks, "week", w => {
       const end = new Date(w);
@@ -177,7 +178,7 @@ async function processTimeEntryData(timeEntryData: TimeEntryData<any>): Promise<
     ? prevDayValue
     : mostRecentDay;
   await setDateSelectValues(targetDay);
-  updatePrevNextLabels();
+  await updatePrevNextLabels();
 }
 
 function prepareComputedDateValues(start: Date) {
@@ -224,15 +225,16 @@ customElements.whenDefined('wa-switch')
   .then(() => Promise.all(switchSettings.map(sw => sw.updateComplete)))
   .then(() => applySavedSwitchSettings());
 
-function applySavedSwitchSettings() {
+async function applySavedSwitchSettings(): Promise<void> {
   for (const sw of switchSettings) {
     const saved = localStorage.getItem(sw.id);
     if (saved !== null) sw.checked = saved === 'true';
   }
+  await Promise.all(switchSettings.map(sw => sw.updateComplete));
 }
 
 togglTokenInput.addEventListener('input', handleTogglTokenChange);
-function handleTogglTokenChange(e: Event) {
+async function handleTogglTokenChange(e: Event): Promise<void> {
   const token = (e.target as HTMLInputElement).value;
 
   if (!token?.length) {
@@ -241,15 +243,17 @@ function handleTogglTokenChange(e: Event) {
   }
   const tokenInputValid = token?.length>=32
   togglSubmitButton.disabled=!tokenInputValid;
+  await togglSubmitButton.updateComplete;
 }
 
 togglForm.addEventListener('submit', handleTogglFormSubmit);
-function handleTogglFormSubmit(e: Event) {
+async function handleTogglFormSubmit(e: Event): Promise<void> {
   e.preventDefault();  // Skip default form submit behavior
   if (togglSubmitButton.loading) return; // Ensure no double-submitting
 
   togglSubmitButton.loading = true;
   togglSubmitLabel.innerText = "Refresh Data";
+  await togglSubmitButton.updateComplete;
 
   const token = togglTokenInput.value;
 
@@ -261,8 +265,9 @@ function handleTogglFormSubmit(e: Event) {
     console.warn('Could not save Toggl token to localStorage', err);
   }
 
-  void downloadTogglTimeEntries(token)
-    .then(() => togglSubmitButton.loading = false);
+  await downloadTogglTimeEntries(token);
+  togglSubmitButton.loading = false;
+  await togglSubmitButton.updateComplete;
 }
 
 async function downloadTogglTimeEntries(token: string) {
@@ -286,23 +291,23 @@ const monthSelect = getElementById<WaSelect>(MONTH_SELECT_ID);
 const clientSelect = getElementById<WaSelect>(CLIENT_SELECT_ID);
 
 clientSelect.addEventListener('change', handleClientChange);
-function handleClientChange(_e?: Event) {
+async function handleClientChange(_e?: Event): Promise<void> {
   try {
     localStorage.setItem(CLIENT_FILTER_STORAGE_KEY, clientSelect.value as string); // We only allow selecting a single Client
   } catch (err) {
     console.warn('Could not save client filter to localStorage', err);
   }
-  renderTimecardReport();
+  await renderTimecardReport();
 }
 
 timeScaleInput.addEventListener('change', handleTimeScaleChange);
-document.addEventListener('DOMContentLoaded', updatePrevNextLabels);
-function handleTimeScaleChange(_e: Event) {
-  updatePrevNextLabels();
-  renderTimecardReport();
+document.addEventListener('DOMContentLoaded', () => void updatePrevNextLabels());
+async function handleTimeScaleChange(_e: Event): Promise<void> {
+  await updatePrevNextLabels();
+  await renderTimecardReport();
 }
 
-function updatePrevNextLabels() {
+async function updatePrevNextLabels(): Promise<void> {
   let labelText = "";
   let buttonsDisabled = false;
   let displaySelect = null;
@@ -326,24 +331,26 @@ function updatePrevNextLabels() {
   for (const selectEl of [daySelect, weekSelect, monthSelect]) {
     selectEl.style.display = (selectEl === displaySelect) ? '' : 'none';
   }
+
+  await Promise.all([nextButton.updateComplete, prevButton.updateComplete]);
 }
 
 daySelect.addEventListener('change', handleDayChange);
 function handleDayChange(e: Event) {
   const selectedDay = (e.target as HTMLInputElement).value;
-  setDateSelectValues(+selectedDay,true);
+  void setDateSelectValues(+selectedDay,true);
 }
 
 weekSelect.addEventListener('change', handleWeekChange);
 function handleWeekChange(e: Event) {
   const selectedWeek = (e.target as HTMLInputElement).value;
-  setDateSelectValues(+selectedWeek,true);
+  void setDateSelectValues(+selectedWeek,true);
 }
 
 monthSelect.addEventListener('change', handleMonthChange);
 function handleMonthChange(e: Event) {
   const selectedMonth = (e.target as HTMLInputElement).value;
-  setDateSelectValues(+selectedMonth,true);
+  void setDateSelectValues(+selectedMonth,true);
 }
 
 /** Updates all date selectors with the provided date value.
@@ -378,7 +385,7 @@ async function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=fals
     (changedSelector === 3) && monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  renderTimecardReport();
+  await renderTimecardReport();
 }
 
 /**
@@ -463,10 +470,10 @@ async function populateClientSelector(clients: string[], hasClientData: boolean)
 
 // Attach event listeners to next/prev buttons
 const nextButton = getElementById<WaButton>(NEXT_DAY_BUTTON_ID);
-nextButton.addEventListener('click', () => incrementSelectedDate(false));
+nextButton.addEventListener('click', () => void incrementSelectedDate(false));
 
 const prevButton = getElementById<WaButton>(PREV_DAY_BUTTON_ID);
-prevButton.addEventListener('click', () => incrementSelectedDate(true));
+prevButton.addEventListener('click', () => void incrementSelectedDate(true));
 
 // Keyboard shortcuts: N = next, P = previous
 document.addEventListener('keydown', (e) => {
@@ -479,18 +486,18 @@ document.addEventListener('keydown', (e) => {
 
   const key = e.key.toLowerCase();
   switch (key) {
-    case 'n':  incrementSelectedDate(false);  break;
-    case 'p':  incrementSelectedDate(true);   break;
-    case 'd':  showAllDescSwitch.click();     break;
-    case 'b':  requireBillableSwitch.click();  break;
-    case 'l':  groupByTlpSwitch.click();       break;
-    case 'x':  groupByXdsSwitch.click();       break;
-    case 't':  incrementTimeScale(false);     break;
+    case 'n':  void incrementSelectedDate(false);  break;
+    case 'p':  void incrementSelectedDate(true);   break;
+    case 'd':  showAllDescSwitch.click();          break;
+    case 'b':  requireBillableSwitch.click();      break;
+    case 'l':  groupByTlpSwitch.click();           break;
+    case 'x':  groupByXdsSwitch.click();           break;
+    case 't':  void incrementTimeScale(false);     break;
 
-    case 'o':  setTimeScale(1);               break;
-    case 'w':  setTimeScale(2);               break;
-    case 'm':  setTimeScale(3);               break;
-    case 'a':  setTimeScale(4);               break;
+    case 'o':  void setTimeScale(1);               break;
+    case 'w':  void setTimeScale(2);               break;
+    case 'm':  void setTimeScale(3);               break;
+    case 'a':  void setTimeScale(4);               break;
 
     default:
       return; // ignore other keys
@@ -498,7 +505,7 @@ document.addEventListener('keydown', (e) => {
   e.preventDefault();
 });
 
-function incrementSelectedDate(backward=false) {
+async function incrementSelectedDate(backward=false): Promise<void> {
   let dateValuesArr;
   let dateSelect;
   switch (+(timeScaleInput.value || 0)) {
@@ -522,41 +529,41 @@ function incrementSelectedDate(backward=false) {
   const direction = backward ? -1 : 1;
   const nextIndex = (currentIndex + direction + numValues) % numValues;
   const nextValue = dateValuesArr[nextIndex];
-  setDateSelectValues(nextValue);
+  await setDateSelectValues(nextValue);
 }
 
-function incrementTimeScale(backward=false) {
+async function incrementTimeScale(backward=false): Promise<void> {
   const numValues = 4; // Day, Week, Month, All [Ranged 1-4]
 
   const currentScale = +(timeScaleInput.value || 0);
   const direction = backward ? -1 : 1;
   const nextScale = ((currentScale - 1 + direction + numValues) % numValues) + 1; // Shift to 0-based, mod, shift back to 1-based
-  setTimeScale(nextScale);
+  await setTimeScale(nextScale);
 }
 
 async function setTimeScale(scaleValue: number): Promise<void> {
   timeScaleInput.value = ""+scaleValue;
   await timeScaleInput.updateComplete;
-  updatePrevNextLabels();
-  renderTimecardReport();
+  await updatePrevNextLabels();
+  await renderTimecardReport();
 }
 
 // Allow toggling display of all descriptions
 const showAllDescSwitch = getElementById<WaSwitch>(SHOW_ALL_DESC_ID);
 showAllDescSwitch.addEventListener('change', handleShowAllDescChange);
-function handleShowAllDescChange(_e: Event) {
-  renderTimecardReport();
+async function handleShowAllDescChange(_e: Event): Promise<void> {
+  await renderTimecardReport();
 }
 
 // Allow toggling require-billable filter
 const requireBillableSwitch = getElementById<WaSwitch>(REQUIRE_BILLABLE_ID);
-requireBillableSwitch.addEventListener('change', () => renderTimecardReport());
+requireBillableSwitch.addEventListener('change', () => void renderTimecardReport());
 
 const groupByXdsSwitch = getElementById<WaSwitch>(GROUP_BY_XDS_ID);
-groupByXdsSwitch.addEventListener('change', () => renderTimecardReport());
+groupByXdsSwitch.addEventListener('change', () => void renderTimecardReport());
 
 const groupByTlpSwitch = getElementById<WaSwitch>(GROUP_BY_TLP_ID);
-groupByTlpSwitch.addEventListener('change', () => renderTimecardReport());
+groupByTlpSwitch.addEventListener('change', () => void renderTimecardReport());
 
 const switchSettings = [showAllDescSwitch, requireBillableSwitch, groupByXdsSwitch, groupByTlpSwitch];
 
@@ -574,7 +581,7 @@ for (const sw of switchSettings) {
 
 // ### Extract and Prepare Timecard Entries ###
 
-function renderTimecardReport() {
+async function renderTimecardReport(): Promise<void> {
   // Retrieve current settings from UI
   const timeData = interpretedTimeData.allData ?? [];
   const showAllDescriptions = showAllDescSwitch.checked;
@@ -585,7 +592,7 @@ function renderTimecardReport() {
   const groupByTlp = groupByTlpSwitch.checked;
   const groupByXds = groupByXdsSwitch.checked;
   const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillableSwitch.checked,filterClientName);
-  renderSummaryCharts(filteredData);
+  await renderSummaryCharts(filteredData);
   const entries = prepareTimecardEntries(filteredData, groupByXds, groupByTlp);
   const reportEl = buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp);
   const outputEl = getElementById(OUTPUT_PRE_ID);
