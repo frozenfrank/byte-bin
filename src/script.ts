@@ -66,9 +66,10 @@ let interpretedTimeData = {
 const importMethodInput = getElementById<WaRadioGroup>(IMPORT_METHOD_INPUT_ID);
 customElements.whenDefined('wa-radio-group')
   .then(() => importMethodInput.updateComplete)
-  .then(() => {
+  .then(async () => {
     const saved = localStorage.getItem(IMPORT_METHOD_STORAGE_KEY);
     if (saved !== null) importMethodInput.value = saved;
+    await importMethodInput.updateComplete;
     handleImportMethodChange();
   });
 importMethodInput.addEventListener('change', handleImportMethodChange);
@@ -105,10 +106,10 @@ function handleInputFileChange(e: Event) {
 // Respond to data parsing
 function handleDataParsed(results: ParseResult<TogglExportTimeEntry>) {
   const timeEntryData = convertParsedCsvToTimeEntryData(results as PapaParseCSVResult<TogglExportTimeEntry>);
-  processTimeEntryData(timeEntryData);
+  void processTimeEntryData(timeEntryData);
 }
 
-function processTimeEntryData(timeEntryData: TimeEntryData<any>) {
+async function processTimeEntryData(timeEntryData: TimeEntryData<any>): Promise<void> {
   /** Maps some numeric value to a unique Date value */
   type DateMap = Map<number, Date>;
 
@@ -159,22 +160,23 @@ function processTimeEntryData(timeEntryData: TimeEntryData<any>) {
 
   const prevDayValue = +(daySelect.value || 0);
 
-  populateDateSelector(DAY_SELECT_ID, uniqueDays, "date", d => d.toLocaleDateString('default', { year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' }));
-  populateDateSelector(WEEK_SELECT_ID, uniqueWeeks, "week", w => {
-    const end = new Date(w);
-    end.setDate(end.getDate() + 6);
-    return w.toLocaleDateString('default', { month: 'short', day: 'numeric' }) + " – "
-       + end.toLocaleDateString('default', { month: 'short', day: 'numeric', year: '2-digit' });
-  });
-  populateDateSelector(MONTH_SELECT_ID, uniqueMonths, "month", m => m.toLocaleString('default', { month: 'long', year: 'numeric' }));
-
-  populateClientSelector(uniqueClients, interpretedTimeData.hasClientData);
+  await Promise.all([
+    populateDateSelector(DAY_SELECT_ID, uniqueDays, "date", d => d.toLocaleDateString('default', { year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' })),
+    populateDateSelector(WEEK_SELECT_ID, uniqueWeeks, "week", w => {
+      const end = new Date(w);
+      end.setDate(end.getDate() + 6);
+      return w.toLocaleDateString('default', { month: 'short', day: 'numeric' }) + " – "
+         + end.toLocaleDateString('default', { month: 'short', day: 'numeric', year: '2-digit' });
+    }),
+    populateDateSelector(MONTH_SELECT_ID, uniqueMonths, "month", m => m.toLocaleString('default', { month: 'long', year: 'numeric' })),
+    populateClientSelector(uniqueClients, interpretedTimeData.hasClientData),
+  ]);
 
   const mostRecentDay = interpretedTimeData.uniqueDayValues[interpretedTimeData.uniqueDayValues.length - 1];
   const targetDay = prevDayValue && interpretedTimeData.uniqueDayValues.some(d => d >= prevDayValue)
     ? prevDayValue
     : mostRecentDay;
-  setDateSelectValues(targetDay);
+  await setDateSelectValues(targetDay);
   updatePrevNextLabels();
 }
 
@@ -205,11 +207,12 @@ function setTogglTipVisible(visible: boolean) {
 
 // Restore saved token (if any) when the page loads and update UI
 document.addEventListener('DOMContentLoaded', applySavedTogglToken);
-function applySavedTogglToken() {
+async function applySavedTogglToken(): Promise<void> {
   const _savedToken = localStorage.getItem(TOGGL_TOKEN_STORAGE_KEY);
   if (!_savedToken) return;
 
   togglTokenInput.value = _savedToken;
+  await togglTokenInput.updateComplete;
   togglTokenInput.dispatchEvent(new Event('input', { bubbles: true }));
   setTogglTipVisible(false);
 }
@@ -268,7 +271,7 @@ async function downloadTogglTimeEntries(token: string) {
   const togglApiData = await getTimeEntries(token, downloadStartDate);
 
   const timeEntryData = convertApiDataToTimeEntryData(togglApiData);
-  processTimeEntryData(timeEntryData);
+  await processTimeEntryData(timeEntryData);
   setTogglTipVisible(false);
 }
 
@@ -387,9 +390,9 @@ async function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=fals
  * @param {Function<Date,string>} dateFormatter - A function to format the date for display.
  * @returns {void}
  */
-function populateDateSelector(selectId: string, dates: Date[], entityNameSingular: string, dateFormatter: (date: Date) => string): void {
+async function populateDateSelector(selectId: string, dates: Date[], entityNameSingular: string, dateFormatter: (date: Date) => string): Promise<void> {
   // Get select element
-  const select = document.getElementById(selectId);
+  const select = document.getElementById(selectId) as WaSelect | null;
   if (!select) {
     console.error(`Date selector element with ID '${selectId}' not found.`);
     return;
@@ -401,6 +404,7 @@ function populateDateSelector(selectId: string, dates: Date[], entityNameSingula
   // Empty state
   if (!dates.length) {
     select.appendChild(createOptionElement('', `-- No available ${entityNameSingular}s --`));
+    await select.updateComplete;
     return;
   }
 
@@ -412,6 +416,8 @@ function populateDateSelector(selectId: string, dates: Date[], entityNameSingula
     const formattedDate = dateFormatter(date);
     select.appendChild(createOptionElement(+date, formattedDate));
   });
+
+  await select.updateComplete;
 }
 
 function createOptionElement(value: string|number, text: string): WaOption {
@@ -429,7 +435,7 @@ function createOptionElement(value: string|number, text: string): WaOption {
  * @param {string[]} clients - Sorted array of unique client names.
  * @param {boolean} hasClientData - Whether the dataset includes client info.
  */
-function populateClientSelector(clients: string[], hasClientData: boolean) {
+async function populateClientSelector(clients: string[], hasClientData: boolean): Promise<void> {
   clientSelect.innerHTML = '';
 
   if (!hasClientData || !clients.length) {
@@ -437,6 +443,7 @@ function populateClientSelector(clients: string[], hasClientData: boolean) {
     opt.setAttribute('selected', '');
     opt.setAttribute('disabled', '');
     clientSelect.appendChild(opt);
+    await clientSelect.updateComplete;
     return;
   }
 
@@ -449,6 +456,8 @@ function populateClientSelector(clients: string[], hasClientData: boolean) {
   } else {
     clientSelect.value = '';
   }
+
+  await clientSelect.updateComplete;
 }
 
 
@@ -525,8 +534,9 @@ function incrementTimeScale(backward=false) {
   setTimeScale(nextScale);
 }
 
-function setTimeScale(scaleValue: number) {
+async function setTimeScale(scaleValue: number): Promise<void> {
   timeScaleInput.value = ""+scaleValue;
+  await timeScaleInput.updateComplete;
   updatePrevNextLabels();
   renderTimecardReport();
 }
