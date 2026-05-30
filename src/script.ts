@@ -275,8 +275,7 @@ async function handleTogglFormSubmit(e: Event): Promise<void> {
 }
 
 async function downloadTogglTimeEntries(token: string) {
-  const downloadStartDate = new Date();
-  downloadStartDate.setMonth(downloadStartDate.getMonth() - 2,1); // First of the month, two months ago
+  const downloadStartDate = new Date(+new Date() - 1000*60*60*24*89); // most recent 89 days
   const togglApiData = await getTimeEntries(token, downloadStartDate);
 
   const timeEntryData = convertApiDataToTimeEntryData(togglApiData);
@@ -742,4 +741,3 @@ async function handleExportMonthlyClick(): Promise<void> {
 
 // Set the button to a sensible disabled state before any data is loaded.
 document.addEventListener('DOMContentLoaded', () => void updateExportButtonLabel());
-
