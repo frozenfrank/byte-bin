@@ -99,6 +99,8 @@ alias fetch="git fetch"
 alias prune="git fetch --prune"
 alias push="git push"
 alias pull="git fetch && git rebase origin/master"
+alias rebaseu="git rebase --autosquash @{u}"
+alias diffu="git diff @{u}..@"
 
 # Git refspec management
 # Refspec helpers for bare-ish clones that start out tracking nothing but `main`.
