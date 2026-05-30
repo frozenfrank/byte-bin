@@ -3,6 +3,7 @@ import { renderSummaryCharts, renderTimePeriodBarChart } from './charts';
 import { getElementById } from './helper';
 import { DateValue, TimeScale } from './model/types';
 import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch } from './model/web-awesome';
+import { buildMonthlyMarkdownReport } from './markdown-report';
 import { buildTimecardReportElement } from './report';
 import { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
 import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData } from './time-entry/time-entry-processing';
@@ -27,6 +28,8 @@ const GROUP_BY_TLP_ID = 'groupByTlpSwitch';
 const NEXT_DAY_BUTTON_ID = 'nextDayButton';
 const PREV_DAY_BUTTON_ID = 'prevDayButton';
 const PREV_NEXT_LABEL_CLASS = 'prevNextLabel';
+const EXPORT_MONTHLY_BUTTON_ID = 'exportMonthlyButton';
+const EXPORT_MONTHLY_LABEL_ID = 'exportMonthlyLabel';
 
 const TOGGL_FORM = 'download-toggl-form';
 const TOGGL_TOKEN_ID = 'download-toggl-token';
@@ -480,6 +483,10 @@ nextButton.addEventListener('click', () => void incrementSelectedDate(false));
 const prevButton = getElementById<WaButton>(PREV_DAY_BUTTON_ID);
 prevButton.addEventListener('click', () => void incrementSelectedDate(true));
 
+const exportMonthlyButton = getElementById<WaButton>(EXPORT_MONTHLY_BUTTON_ID);
+const exportMonthlyLabel = getElementById(EXPORT_MONTHLY_LABEL_ID);
+exportMonthlyButton.addEventListener('click', () => void handleExportMonthlyClick());
+
 // Keyboard shortcuts: N = next, P = previous
 document.addEventListener('keydown', (e) => {
   // ignore when modifier keys are held
@@ -622,6 +629,7 @@ async function renderTimecardReport(): Promise<void> {
       uniqueWeekValues:  interpretedTimeData.uniqueWeekValues,
       uniqueMonthValues: interpretedTimeData.uniqueMonthValues,
     }),
+    updateExportButtonLabel(),
   ]);
 }
 
@@ -650,4 +658,88 @@ function interpretMinMaxFilterDates() {
 
   return { minDateIncl, maxDateExcl };
 }
+
+// ### Monthly Markdown Report Export ###
+
+/**
+ * Resolve the month the Export button should target, based on the current time
+ * scale and selection. For All Time (4) we fall back to the most recent month
+ * that has data so the user doesn't have to narrow the selection first.
+ */
+function getCurrentlySelectedMonth(): Date | null {
+  let sourceValue: number;
+  switch (+(timeScaleInput.value || 0)) {
+    case 1: sourceValue = +(daySelect.value   || 0); break;
+    case 2: sourceValue = +(weekSelect.value  || 0); break;
+    case 3: sourceValue = +(monthSelect.value || 0); break;
+    case 4: {
+      const months = interpretedTimeData.uniqueMonthValues;
+      sourceValue = months.length ? months[months.length - 1] : 0;
+      break;
+    }
+    default: return null;
+  }
+  if (!sourceValue) return null;
+  const d = new Date(sourceValue);
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+}
+
+async function updateExportButtonLabel(): Promise<void> {
+  const month = getCurrentlySelectedMonth();
+  const hasData = !!interpretedTimeData.allData?.length;
+  if (!month || !hasData) {
+    exportMonthlyLabel.textContent = 'Export Monthly';
+    exportMonthlyButton.disabled = true;
+  } else {
+    const label = month.toLocaleString('default', { month: 'long', year: 'numeric' });
+    exportMonthlyLabel.textContent = `Export ${label} data`;
+    exportMonthlyButton.disabled = false;
+  }
+  await exportMonthlyButton.updateComplete;
+}
+
+/**
+ * Produces names like "toggl-to-delorean-jan2026-543.md". The salt is the
+ * number of minutes past midnight at generation time, which makes most
+ * same-month exports get distinct filenames without needing a counter.
+ */
+function generateReportFilename(monthDate: Date): string {
+  const monthShort = monthDate.toLocaleString('en-US', { month: 'short' }).toLowerCase();
+  const year = monthDate.getFullYear();
+  const now = new Date();
+  const salt = now.getHours() * 60 + now.getMinutes();
+  return `toggl-to-delorean-${monthShort}${year}-${salt}.md`;
+}
+
+function triggerDownload(filename: string, content: string, mimeType = 'text/markdown'): void {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function handleExportMonthlyClick(): Promise<void> {
+  const monthDate = getCurrentlySelectedMonth();
+  if (!monthDate) return;
+  const timeData = interpretedTimeData.allData ?? [];
+  if (!timeData.length) return;
+
+  const content = buildMonthlyMarkdownReport({
+    timeData, monthDate,
+    requireBillable:     requireBillableSwitch.checked,
+    clientName:          (clientSelect.value as string) || null,
+    showAllDescriptions: showAllDescSwitch.checked,
+    groupByTlp:          groupByTlpSwitch.checked,
+    groupByXds:          groupByXdsSwitch.checked,
+  });
+  triggerDownload(generateReportFilename(monthDate), content);
+}
+
+// Set the button to a sensible disabled state before any data is loaded.
+document.addEventListener('DOMContentLoaded', () => void updateExportButtonLabel());
 
