@@ -3,9 +3,11 @@ import { renderSummaryCharts, renderTimePeriodBarChart } from './charts';
 import { getElementById } from './helper';
 import { DateValue, TimeScale } from './model/types';
 import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch } from './model/web-awesome';
+import { buildMonthlyMarkdownReport } from './markdown-report';
 import { buildTimecardReportElement } from './report';
-import { EntryGrouping, PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
-import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData, extractDLGNumber, extractPRJNumber, extractQANNumber, extractTLPCode, extractXDSNumber } from './time-entry/time-entry-processing';
+import { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
+import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData } from './time-entry/time-entry-processing';
+import { filterTimeEntriesByDateRange, prepareTimecardEntries } from './time-entry/timecard-grouping';
 import { getTimeEntries } from './toggl/access';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
@@ -26,6 +28,8 @@ const GROUP_BY_TLP_ID = 'groupByTlpSwitch';
 const NEXT_DAY_BUTTON_ID = 'nextDayButton';
 const PREV_DAY_BUTTON_ID = 'prevDayButton';
 const PREV_NEXT_LABEL_CLASS = 'prevNextLabel';
+const EXPORT_MONTHLY_BUTTON_ID = 'exportMonthlyButton';
+const EXPORT_MONTHLY_LABEL_ID = 'exportMonthlyLabel';
 
 const TOGGL_FORM = 'download-toggl-form';
 const TOGGL_TOKEN_ID = 'download-toggl-token';
@@ -271,8 +275,7 @@ async function handleTogglFormSubmit(e: Event): Promise<void> {
 }
 
 async function downloadTogglTimeEntries(token: string) {
-  const downloadStartDate = new Date();
-  downloadStartDate.setMonth(downloadStartDate.getMonth() - 2,1); // First of the month, two months ago
+  const downloadStartDate = new Date(+new Date() - 1000*60*60*24*89); // most recent 89 days
   const togglApiData = await getTimeEntries(token, downloadStartDate);
 
   const timeEntryData = convertApiDataToTimeEntryData(togglApiData);
@@ -479,6 +482,10 @@ nextButton.addEventListener('click', () => void incrementSelectedDate(false));
 const prevButton = getElementById<WaButton>(PREV_DAY_BUTTON_ID);
 prevButton.addEventListener('click', () => void incrementSelectedDate(true));
 
+const exportMonthlyButton = getElementById<WaButton>(EXPORT_MONTHLY_BUTTON_ID);
+const exportMonthlyLabel = getElementById(EXPORT_MONTHLY_LABEL_ID);
+exportMonthlyButton.addEventListener('click', () => void handleExportMonthlyClick());
+
 // Keyboard shortcuts: N = next, P = previous
 document.addEventListener('keydown', (e) => {
   // ignore when modifier keys are held
@@ -621,6 +628,7 @@ async function renderTimecardReport(): Promise<void> {
       uniqueWeekValues:  interpretedTimeData.uniqueWeekValues,
       uniqueMonthValues: interpretedTimeData.uniqueMonthValues,
     }),
+    updateExportButtonLabel(),
   ]);
 }
 
@@ -650,58 +658,86 @@ function interpretMinMaxFilterDates() {
   return { minDateIncl, maxDateExcl };
 }
 
-function filterTimeEntriesByDateRange(timeData: TimeEntry[], minDateIncl: Date|null, maxDateExcl: Date|null, requireBillable=false, clientName: string|null=null) {
-  if (!timeData?.length) return [];
+// ### Monthly Markdown Report Export ###
 
-  return timeData.filter(entry => {
-    if (requireBillable && !entry.billable) return false;
-    if (clientName && (entry.clientName !== clientName)) return false;
-
-    const entryDate = entry.start;
-    return (!minDateIncl || entryDate >= minDateIncl) &&
-           (!maxDateExcl || entryDate < maxDateExcl);
-  });
-}
-
-function prepareTimecardEntries<T>(timeData: TimeEntry<T>[], groupByXds=false, groupByTlp=true): EntryGrouping<T>[] {
-  if (!timeData?.length) {
-    return [];
-  }
-
-  const groupedEntries: Record<string, EntryGrouping<T>> = {};
-  timeData.forEach(entry => {
-    const tlpCode = extractTLPCode(entry) || "";
-    const prjNumber = extractPRJNumber(entry) || "";
-    const dlgNumber = extractDLGNumber(entry) || "";
-    const qanNumber = extractQANNumber(entry) || "";
-    const xdsNumber = extractXDSNumber(entry) || "";
-
-    const groupingTlp = (!groupByTlp && tlpCode) ? "00000" : tlpCode; // Treat all entries *with a TLP* as equivalent
-    let groupKey = `${groupingTlp}|${prjNumber}|${dlgNumber}|${qanNumber}`;
-    if (groupByXds) groupKey += `|${xdsNumber}`;
-    if (!groupedEntries[groupKey]) {
-      groupedEntries[groupKey] = {
-        tlpCode,
-        prjNumber,
-        dlgNumber,
-        qanNumber,
-        xdsNumber,
-        totalSeconds: 0,
-        entries: [],
-      };
+/**
+ * Resolve the month the Export button should target, based on the current time
+ * scale and selection. For All Time (4) we fall back to the most recent month
+ * that has data so the user doesn't have to narrow the selection first.
+ */
+function getCurrentlySelectedMonth(): Date | null {
+  let sourceValue: number;
+  switch (+(timeScaleInput.value || 0)) {
+    case 1: sourceValue = +(daySelect.value   || 0); break;
+    case 2: sourceValue = +(weekSelect.value  || 0); break;
+    case 3: sourceValue = +(monthSelect.value || 0); break;
+    case 4: {
+      const months = interpretedTimeData.uniqueMonthValues;
+      sourceValue = months.length ? months[months.length - 1] : 0;
+      break;
     }
-
-    groupedEntries[groupKey].totalSeconds += entry.durationSeconds || 0;
-    groupedEntries[groupKey].entries.push(entry);
-  });
-
-  // Return a sorted array of grouped entries
-  return Object.values(groupedEntries).sort((a,b) =>
-    a.prjNumber.localeCompare(b.prjNumber) ||
-    (groupByTlp && a.tlpCode.localeCompare(b.tlpCode)) ||
-    a.dlgNumber.localeCompare(b.dlgNumber) ||
-    a.qanNumber.localeCompare(b.qanNumber) ||
-    (groupByXds && a.xdsNumber.localeCompare(b.xdsNumber)) ||
-    b.totalSeconds - a.totalSeconds
-  );
+    default: return null;
+  }
+  if (!sourceValue) return null;
+  const d = new Date(sourceValue);
+  return new Date(d.getFullYear(), d.getMonth(), 1);
 }
+
+async function updateExportButtonLabel(): Promise<void> {
+  const month = getCurrentlySelectedMonth();
+  const hasData = !!interpretedTimeData.allData?.length;
+  if (!month || !hasData) {
+    exportMonthlyLabel.textContent = 'Export Monthly';
+    exportMonthlyButton.disabled = true;
+  } else {
+    const label = month.toLocaleString('default', { month: 'long', year: 'numeric' });
+    exportMonthlyLabel.textContent = `Export ${label} data`;
+    exportMonthlyButton.disabled = false;
+  }
+  await exportMonthlyButton.updateComplete;
+}
+
+/**
+ * Produces names like "toggl-to-delorean-jan2026-543.md". The salt is the
+ * number of minutes past midnight at generation time, which makes most
+ * same-month exports get distinct filenames without needing a counter.
+ */
+function generateReportFilename(monthDate: Date): string {
+  const monthShort = monthDate.toLocaleString('en-US', { month: 'short' }).toLowerCase();
+  const year = monthDate.getFullYear();
+  const now = new Date();
+  const salt = now.getHours() * 60 + now.getMinutes();
+  return `toggl-to-delorean-${monthShort}${year}-${salt}.md`;
+}
+
+function triggerDownload(filename: string, content: string, mimeType = 'text/markdown'): void {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+async function handleExportMonthlyClick(): Promise<void> {
+  const monthDate = getCurrentlySelectedMonth();
+  if (!monthDate) return;
+  const timeData = interpretedTimeData.allData ?? [];
+  if (!timeData.length) return;
+
+  const content = buildMonthlyMarkdownReport({
+    timeData, monthDate,
+    requireBillable:     requireBillableSwitch.checked,
+    clientName:          (clientSelect.value as string) || null,
+    showAllDescriptions: showAllDescSwitch.checked,
+    groupByTlp:          groupByTlpSwitch.checked,
+    groupByXds:          groupByXdsSwitch.checked,
+  });
+  triggerDownload(generateReportFilename(monthDate), content);
+}
+
+// Set the button to a sensible disabled state before any data is loaded.
+document.addEventListener('DOMContentLoaded', () => void updateExportButtonLabel());
