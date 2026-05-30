@@ -1,10 +1,12 @@
 import Papa, { ParseResult } from 'papaparse';
-import { convertParsedCsvToTimeEntryData, convertApiDataToTimeEntryData } from './time-entry/time-entry-processing';
-import { getTimeEntries } from './toggl/access';
+import { renderSummaryCharts, renderTimePeriodBarChart } from './charts';
+import { getElementById } from './helper';
+import { DateValue, TimeScale } from './model/types';
+import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch } from './model/web-awesome';
 import { buildTimecardReportElement } from './report';
 import { EntryGrouping, PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
-import { DateValue } from './model/types';
-import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch } from './model/web-awesome';
+import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData, extractDLGNumber, extractPRJNumber, extractQANNumber, extractTLPCode, extractXDSNumber } from './time-entry/time-entry-processing';
+import { getTimeEntries } from './toggl/access';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
 const IMPORT_METHOD_STORAGE_KEY = 'importMethod';
@@ -31,11 +33,6 @@ const TOGGL_DOWNLOAD_BUTTON = 'download-toggl-button';
 const TOGGL_DOWNLOAD_LABEL = 'download-toggl-label';
 const TOGGL_TIP_ID = 'toggl-api-tip';
 
-const TLP_REGEX = /tlp(\d{5})/i;
-const PRJ_REGEX = /PRJ\s*(\d+)/i;
-const DLG_REGEX = /DLG\s*(\d+)/i;
-const QAN_REGEX = /QAN\s*(\d+)/i;
-const XDS_REGEX = /XDS\s*(\d+)/i;
 
 let interpretedTimeData = {
   /** Sorted list of unique projects */
@@ -63,20 +60,16 @@ let interpretedTimeData = {
   allData: null as TimeEntry[] | null,
 };
 
-/** Helper function that assumes the value is element is always in the DOM. */
-function getElementById<T = HTMLElement>(id: string): T {
-  return document.getElementById(id) as T;
-}
-
 // ### Handle File Input and Data Parsing ###
 
 // Dynamically display input options
 const importMethodInput = getElementById<WaRadioGroup>(IMPORT_METHOD_INPUT_ID);
 customElements.whenDefined('wa-radio-group')
   .then(() => importMethodInput.updateComplete)
-  .then(() => {
+  .then(async () => {
     const saved = localStorage.getItem(IMPORT_METHOD_STORAGE_KEY);
     if (saved !== null) importMethodInput.value = saved;
+    await importMethodInput.updateComplete;
     handleImportMethodChange();
   });
 importMethodInput.addEventListener('change', handleImportMethodChange);
@@ -113,10 +106,10 @@ function handleInputFileChange(e: Event) {
 // Respond to data parsing
 function handleDataParsed(results: ParseResult<TogglExportTimeEntry>) {
   const timeEntryData = convertParsedCsvToTimeEntryData(results as PapaParseCSVResult<TogglExportTimeEntry>);
-  processTimeEntryData(timeEntryData);
+  void processTimeEntryData(timeEntryData);
 }
 
-function processTimeEntryData(timeEntryData: TimeEntryData<any>) {
+async function processTimeEntryData(timeEntryData: TimeEntryData<any>): Promise<void> {
   /** Maps some numeric value to a unique Date value */
   type DateMap = Map<number, Date>;
 
@@ -167,24 +160,25 @@ function processTimeEntryData(timeEntryData: TimeEntryData<any>) {
 
   const prevDayValue = +(daySelect.value || 0);
 
-  populateDateSelector(DAY_SELECT_ID, uniqueDays, "date", d => d.toLocaleDateString('default', { year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' }));
-  populateDateSelector(WEEK_SELECT_ID, uniqueWeeks, "week", w => {
-    const end = new Date(w);
-    end.setDate(end.getDate() + 6);
-    return w.toLocaleDateString('default', { month: 'short', day: 'numeric' }) + " – "
-       + end.toLocaleDateString('default', { month: 'short', day: 'numeric', year: '2-digit' });
-  });
-  populateDateSelector(MONTH_SELECT_ID, uniqueMonths, "month", m => m.toLocaleString('default', { month: 'long', year: 'numeric' }));
-
-  clientSelect.disabled = !interpretedTimeData.hasClientData;
-  populateClientSelector(uniqueClients, interpretedTimeData.hasClientData);
+  await Promise.all([
+    requireBillableSwitch.updateComplete,
+    populateDateSelector(DAY_SELECT_ID, uniqueDays, "date", d => d.toLocaleDateString('default', { year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short' })),
+    populateDateSelector(WEEK_SELECT_ID, uniqueWeeks, "week", w => {
+      const end = new Date(w);
+      end.setDate(end.getDate() + 6);
+      return w.toLocaleDateString('default', { month: 'short', day: 'numeric' }) + " – "
+         + end.toLocaleDateString('default', { month: 'short', day: 'numeric', year: '2-digit' });
+    }),
+    populateDateSelector(MONTH_SELECT_ID, uniqueMonths, "month", m => m.toLocaleString('default', { month: 'long', year: 'numeric' })),
+    populateClientSelector(uniqueClients, interpretedTimeData.hasClientData),
+  ]);
 
   const mostRecentDay = interpretedTimeData.uniqueDayValues[interpretedTimeData.uniqueDayValues.length - 1];
   const targetDay = prevDayValue && interpretedTimeData.uniqueDayValues.some(d => d >= prevDayValue)
     ? prevDayValue
     : mostRecentDay;
-  setDateSelectValues(targetDay);
-  updatePrevNextLabels();
+  await setDateSelectValues(targetDay);
+  await updatePrevNextLabels();
 }
 
 function prepareComputedDateValues(start: Date) {
@@ -214,11 +208,12 @@ function setTogglTipVisible(visible: boolean) {
 
 // Restore saved token (if any) when the page loads and update UI
 document.addEventListener('DOMContentLoaded', applySavedTogglToken);
-function applySavedTogglToken() {
+async function applySavedTogglToken(): Promise<void> {
   const _savedToken = localStorage.getItem(TOGGL_TOKEN_STORAGE_KEY);
   if (!_savedToken) return;
 
   togglTokenInput.value = _savedToken;
+  await togglTokenInput.updateComplete;
   togglTokenInput.dispatchEvent(new Event('input', { bubbles: true }));
   setTogglTipVisible(false);
 }
@@ -230,15 +225,16 @@ customElements.whenDefined('wa-switch')
   .then(() => Promise.all(switchSettings.map(sw => sw.updateComplete)))
   .then(() => applySavedSwitchSettings());
 
-function applySavedSwitchSettings() {
+async function applySavedSwitchSettings(): Promise<void> {
   for (const sw of switchSettings) {
     const saved = localStorage.getItem(sw.id);
     if (saved !== null) sw.checked = saved === 'true';
   }
+  await Promise.all(switchSettings.map(sw => sw.updateComplete));
 }
 
 togglTokenInput.addEventListener('input', handleTogglTokenChange);
-function handleTogglTokenChange(e: Event) {
+async function handleTogglTokenChange(e: Event): Promise<void> {
   const token = (e.target as HTMLInputElement).value;
 
   if (!token?.length) {
@@ -247,15 +243,17 @@ function handleTogglTokenChange(e: Event) {
   }
   const tokenInputValid = token?.length>=32
   togglSubmitButton.disabled=!tokenInputValid;
+  await togglSubmitButton.updateComplete;
 }
 
 togglForm.addEventListener('submit', handleTogglFormSubmit);
-function handleTogglFormSubmit(e: Event) {
+async function handleTogglFormSubmit(e: Event): Promise<void> {
   e.preventDefault();  // Skip default form submit behavior
   if (togglSubmitButton.loading) return; // Ensure no double-submitting
 
   togglSubmitButton.loading = true;
   togglSubmitLabel.innerText = "Refresh Data";
+  await togglSubmitButton.updateComplete;
 
   const token = togglTokenInput.value;
 
@@ -267,8 +265,9 @@ function handleTogglFormSubmit(e: Event) {
     console.warn('Could not save Toggl token to localStorage', err);
   }
 
-  void downloadTogglTimeEntries(token)
-    .then(() => togglSubmitButton.loading = false);
+  await downloadTogglTimeEntries(token);
+  togglSubmitButton.loading = false;
+  await togglSubmitButton.updateComplete;
 }
 
 async function downloadTogglTimeEntries(token: string) {
@@ -277,7 +276,7 @@ async function downloadTogglTimeEntries(token: string) {
   const togglApiData = await getTimeEntries(token, downloadStartDate);
 
   const timeEntryData = convertApiDataToTimeEntryData(togglApiData);
-  processTimeEntryData(timeEntryData);
+  await processTimeEntryData(timeEntryData);
   setTogglTipVisible(false);
 }
 
@@ -292,23 +291,23 @@ const monthSelect = getElementById<WaSelect>(MONTH_SELECT_ID);
 const clientSelect = getElementById<WaSelect>(CLIENT_SELECT_ID);
 
 clientSelect.addEventListener('change', handleClientChange);
-function handleClientChange(_e?: Event) {
+async function handleClientChange(_e?: Event): Promise<void> {
   try {
     localStorage.setItem(CLIENT_FILTER_STORAGE_KEY, clientSelect.value as string); // We only allow selecting a single Client
   } catch (err) {
     console.warn('Could not save client filter to localStorage', err);
   }
-  renderTimecardReport();
+  await renderTimecardReport();
 }
 
 timeScaleInput.addEventListener('change', handleTimeScaleChange);
-document.addEventListener('DOMContentLoaded', updatePrevNextLabels);
-function handleTimeScaleChange(_e: Event) {
-  updatePrevNextLabels();
-  renderTimecardReport();
+document.addEventListener('DOMContentLoaded', () => void updatePrevNextLabels());
+async function handleTimeScaleChange(_e: Event): Promise<void> {
+  await updatePrevNextLabels();
+  await renderTimecardReport();
 }
 
-function updatePrevNextLabels() {
+async function updatePrevNextLabels(): Promise<void> {
   let labelText = "";
   let buttonsDisabled = false;
   let displaySelect = null;
@@ -332,31 +331,33 @@ function updatePrevNextLabels() {
   for (const selectEl of [daySelect, weekSelect, monthSelect]) {
     selectEl.style.display = (selectEl === displaySelect) ? '' : 'none';
   }
+
+  await Promise.all([nextButton.updateComplete, prevButton.updateComplete]);
 }
 
 daySelect.addEventListener('change', handleDayChange);
 function handleDayChange(e: Event) {
   const selectedDay = (e.target as HTMLInputElement).value;
-  setDateSelectValues(+selectedDay,true);
+  void setDateSelectValues(+selectedDay,true);
 }
 
 weekSelect.addEventListener('change', handleWeekChange);
 function handleWeekChange(e: Event) {
   const selectedWeek = (e.target as HTMLInputElement).value;
-  setDateSelectValues(+selectedWeek,true);
+  void setDateSelectValues(+selectedWeek,true);
 }
 
 monthSelect.addEventListener('change', handleMonthChange);
 function handleMonthChange(e: Event) {
   const selectedMonth = (e.target as HTMLInputElement).value;
-  setDateSelectValues(+selectedMonth,true);
+  void setDateSelectValues(+selectedMonth,true);
 }
 
 /** Updates all date selectors with the provided date value.
  * @param {number} dateValue - The date value to set (as a number, or Date object).
  * @param {boolean} suppressEvent - Whether to suppress change events for the selectors.
  */
-function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=false) {
+async function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=false) {
   const computedDates = prepareComputedDateValues(new Date(dateValue));
   const dayValue = Number(computedDates.day);
   const weekValue = Number(computedDates.week);
@@ -366,6 +367,17 @@ function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=false) {
   weekSelect.value = ""+interpretedTimeData.uniqueWeekValues.find(w => w >= weekValue);
   monthSelect.value = ""+interpretedTimeData.uniqueMonthValues.find(m => m >= monthValue);
 
+  // After populateDateSelector() replaces a wa-select's options, its options
+  // cache is briefly stale (refreshed via a queued microtask), and reading
+  // back daySelect.value returns null until that completes. Await each
+  // select's updateComplete so the subsequent value reads in
+  // interpretMinMaxFilterDates() pick up the new selection.
+  await Promise.all([
+    daySelect.updateComplete,
+    weekSelect.updateComplete,
+    monthSelect.updateComplete,
+  ]);
+
   if (!suppressEvent) {
     const changedSelector = +(timeScaleInput.value || 0);
     (changedSelector === 1) && daySelect.dispatchEvent(new Event('change', { bubbles: true }));
@@ -373,7 +385,7 @@ function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=false) {
     (changedSelector === 3) && monthSelect.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  renderTimecardReport();
+  await renderTimecardReport();
 }
 
 /**
@@ -385,9 +397,9 @@ function setDateSelectValues(dateValue: Date|DateValue, suppressEvent=false) {
  * @param {Function<Date,string>} dateFormatter - A function to format the date for display.
  * @returns {void}
  */
-function populateDateSelector(selectId: string, dates: Date[], entityNameSingular: string, dateFormatter: (date: Date) => string): void {
+async function populateDateSelector(selectId: string, dates: Date[], entityNameSingular: string, dateFormatter: (date: Date) => string): Promise<void> {
   // Get select element
-  const select = document.getElementById(selectId);
+  const select = document.getElementById(selectId) as WaSelect | null;
   if (!select) {
     console.error(`Date selector element with ID '${selectId}' not found.`);
     return;
@@ -399,6 +411,7 @@ function populateDateSelector(selectId: string, dates: Date[], entityNameSingula
   // Empty state
   if (!dates.length) {
     select.appendChild(createOptionElement('', `-- No available ${entityNameSingular}s --`));
+    await select.updateComplete;
     return;
   }
 
@@ -410,6 +423,8 @@ function populateDateSelector(selectId: string, dates: Date[], entityNameSingula
     const formattedDate = dateFormatter(date);
     select.appendChild(createOptionElement(+date, formattedDate));
   });
+
+  await select.updateComplete;
 }
 
 function createOptionElement(value: string|number, text: string): WaOption {
@@ -427,7 +442,7 @@ function createOptionElement(value: string|number, text: string): WaOption {
  * @param {string[]} clients - Sorted array of unique client names.
  * @param {boolean} hasClientData - Whether the dataset includes client info.
  */
-function populateClientSelector(clients: string[], hasClientData: boolean) {
+async function populateClientSelector(clients: string[], hasClientData: boolean): Promise<void> {
   clientSelect.innerHTML = '';
 
   if (!hasClientData || !clients.length) {
@@ -435,6 +450,11 @@ function populateClientSelector(clients: string[], hasClientData: boolean) {
     opt.setAttribute('selected', '');
     opt.setAttribute('disabled', '');
     clientSelect.appendChild(opt);
+    if (!hasClientData) {
+      clientSelect.disabled = !interpretedTimeData.hasClientData;
+    }
+
+    await clientSelect.updateComplete;
     return;
   }
 
@@ -447,15 +467,17 @@ function populateClientSelector(clients: string[], hasClientData: boolean) {
   } else {
     clientSelect.value = '';
   }
+
+  await clientSelect.updateComplete;
 }
 
 
 // Attach event listeners to next/prev buttons
 const nextButton = getElementById<WaButton>(NEXT_DAY_BUTTON_ID);
-nextButton.addEventListener('click', () => incrementSelectedDate(false));
+nextButton.addEventListener('click', () => void incrementSelectedDate(false));
 
 const prevButton = getElementById<WaButton>(PREV_DAY_BUTTON_ID);
-prevButton.addEventListener('click', () => incrementSelectedDate(true));
+prevButton.addEventListener('click', () => void incrementSelectedDate(true));
 
 // Keyboard shortcuts: N = next, P = previous
 document.addEventListener('keydown', (e) => {
@@ -468,18 +490,18 @@ document.addEventListener('keydown', (e) => {
 
   const key = e.key.toLowerCase();
   switch (key) {
-    case 'n':  incrementSelectedDate(false);  break;
-    case 'p':  incrementSelectedDate(true);   break;
-    case 'd':  showAllDescSwitch.click();     break;
-    case 'b':  requireBillableSwitch.click();  break;
-    case 'l':  groupByTlpSwitch.click();       break;
-    case 'x':  groupByXdsSwitch.click();       break;
-    case 't':  incrementTimeScale(false);     break;
+    case 'n':  void incrementSelectedDate(false);  break;
+    case 'p':  void incrementSelectedDate(true);   break;
+    case 'd':  showAllDescSwitch.click();          break;
+    case 'b':  requireBillableSwitch.click();      break;
+    case 'l':  groupByTlpSwitch.click();           break;
+    case 'x':  groupByXdsSwitch.click();           break;
+    case 't':  void incrementTimeScale(false);     break;
 
-    case 'o':  setTimeScale(1);               break;
-    case 'w':  setTimeScale(2);               break;
-    case 'm':  setTimeScale(3);               break;
-    case 'a':  setTimeScale(4);               break;
+    case 'o':  void setTimeScale(1);               break;
+    case 'w':  void setTimeScale(2);               break;
+    case 'm':  void setTimeScale(3);               break;
+    case 'a':  void setTimeScale(4);               break;
 
     default:
       return; // ignore other keys
@@ -487,7 +509,7 @@ document.addEventListener('keydown', (e) => {
   e.preventDefault();
 });
 
-function incrementSelectedDate(backward=false) {
+async function incrementSelectedDate(backward=false): Promise<void> {
   let dateValuesArr;
   let dateSelect;
   switch (+(timeScaleInput.value || 0)) {
@@ -511,40 +533,41 @@ function incrementSelectedDate(backward=false) {
   const direction = backward ? -1 : 1;
   const nextIndex = (currentIndex + direction + numValues) % numValues;
   const nextValue = dateValuesArr[nextIndex];
-  setDateSelectValues(nextValue);
+  await setDateSelectValues(nextValue);
 }
 
-function incrementTimeScale(backward=false) {
+async function incrementTimeScale(backward=false): Promise<void> {
   const numValues = 4; // Day, Week, Month, All [Ranged 1-4]
 
   const currentScale = +(timeScaleInput.value || 0);
   const direction = backward ? -1 : 1;
   const nextScale = ((currentScale - 1 + direction + numValues) % numValues) + 1; // Shift to 0-based, mod, shift back to 1-based
-  setTimeScale(nextScale);
+  await setTimeScale(nextScale);
 }
 
-function setTimeScale(scaleValue: number) {
+async function setTimeScale(scaleValue: number): Promise<void> {
   timeScaleInput.value = ""+scaleValue;
-  updatePrevNextLabels();
-  renderTimecardReport();
+  await timeScaleInput.updateComplete;
+  await updatePrevNextLabels();
+  await renderTimecardReport();
 }
 
 // Allow toggling display of all descriptions
 const showAllDescSwitch = getElementById<WaSwitch>(SHOW_ALL_DESC_ID);
 showAllDescSwitch.addEventListener('change', handleShowAllDescChange);
-function handleShowAllDescChange(_e: Event) {
-  renderTimecardReport();
+async function handleShowAllDescChange(_e: Event): Promise<void> {
+  await renderTimecardReport();
 }
 
 // Allow toggling require-billable filter
 const requireBillableSwitch = getElementById<WaSwitch>(REQUIRE_BILLABLE_ID);
-requireBillableSwitch.addEventListener('change', () => renderTimecardReport());
+requireBillableSwitch.addEventListener('change', () => void renderTimecardReport());
 
 const groupByXdsSwitch = getElementById<WaSwitch>(GROUP_BY_XDS_ID);
-groupByXdsSwitch.addEventListener('change', () => renderTimecardReport());
+groupByXdsSwitch.addEventListener('change', () => void renderTimecardReport());
 
 const groupByTlpSwitch = getElementById<WaSwitch>(GROUP_BY_TLP_ID);
-groupByTlpSwitch.addEventListener('change', () => renderTimecardReport());
+groupByTlpSwitch.addEventListener('change', () => void renderTimecardReport());
 
 const switchSettings = [showAllDescSwitch, requireBillableSwitch, groupByXdsSwitch, groupByTlpSwitch];
 
@@ -562,7 +585,7 @@ for (const sw of switchSettings) {
 
 // ### Extract and Prepare Timecard Entries ###
 
-function renderTimecardReport() {
+async function renderTimecardReport(): Promise<void> {
   // Retrieve current settings from UI
   const timeData = interpretedTimeData.allData ?? [];
   const showAllDescriptions = showAllDescSwitch.checked;
@@ -574,9 +597,31 @@ function renderTimecardReport() {
   const groupByXds = groupByXdsSwitch.checked;
   const filteredData = filterTimeEntriesByDateRange(timeData,minDateIncl,maxDateExcl,requireBillableSwitch.checked,filterClientName);
   const entries = prepareTimecardEntries(filteredData, groupByXds, groupByTlp);
+
   const reportEl = buildTimecardReportElement(entries, showAllDescriptions, groupByXds, groupByTlp);
   const outputEl = getElementById(OUTPUT_PRE_ID);
   outputEl.replaceChildren(reportEl);
+
+  // Summarize data for time period chart
+  const allFilteredForBars = filterTimeEntriesByDateRange(timeData, null, null, requireBillableSwitch.checked, filterClientName);
+  const timeScale = +timeScaleInput.value! as TimeScale;
+  const activePeriodValue =
+    timeScale === TimeScale.Day   ? +(daySelect.value   || 0) :
+    timeScale === TimeScale.Week  ? +(weekSelect.value  || 0) :
+    timeScale === TimeScale.Month ? +(monthSelect.value || 0) :
+    null;
+
+  await Promise.all([
+    renderSummaryCharts(filteredData),
+    renderTimePeriodBarChart({
+      allFiltered: allFilteredForBars,
+      timeScale,
+      activePeriodValue,
+      uniqueDayValues:   interpretedTimeData.uniqueDayValues,
+      uniqueWeekValues:  interpretedTimeData.uniqueWeekValues,
+      uniqueMonthValues: interpretedTimeData.uniqueMonthValues,
+    }),
+  ]);
 }
 
 function interpretMinMaxFilterDates() {
@@ -659,34 +704,4 @@ function prepareTimecardEntries<T>(timeData: TimeEntry<T>[], groupByXds=false, g
     (groupByXds && a.xdsNumber.localeCompare(b.xdsNumber)) ||
     b.totalSeconds - a.totalSeconds
   );
-}
-
-function extractTLPCode(entry: TimeEntry): string|null {
-  const tags = entry.tagNames?.join(',');
-  if (!tags) return null;
-  return TLP_REGEX.exec(tags)?.[1] || null;
-}
-
-function extractPRJNumber(entry: TimeEntry): string|null {
-  let prjNum;
-
-  // Search Project field
-  prjNum = PRJ_REGEX.exec(entry.projectName)?.[1];
-  if (prjNum) return prjNum;
-
-  // Search Description field
-  prjNum = PRJ_REGEX.exec(entry.description)?.[1];
-  return prjNum || null;
-}
-
-function extractDLGNumber(entry: TimeEntry): string|null {
-  return DLG_REGEX.exec(entry.description)?.[1] || null;
-}
-
-function extractQANNumber(entry: TimeEntry): string|null {
-  return QAN_REGEX.exec(entry.description)?.[1] || null;
-}
-
-function extractXDSNumber(entry: TimeEntry): string|null {
-  return XDS_REGEX.exec(entry.description)?.[1] || null;
 }
