@@ -1,4 +1,59 @@
-import type { EntryGrouping } from './time-entry/time-entry';
+import type { EntryGrouping, TimeEntry } from './time-entry/time-entry';
+import { filterTimeEntriesByDateRange, prepareTimecardEntries } from './time-entry/timecard-grouping';
+
+export interface MonthlyExportOptions {
+  timeData: TimeEntry[];
+  /** Any Date within the target month. Internally normalized to the first of the month. */
+  monthDate: Date;
+  requireBillable: boolean;
+  clientName: string | null;
+  showAllDescriptions: boolean;
+  groupByTlp: boolean;
+  groupByXds: boolean;
+}
+
+/**
+ * Build a Markdown report for an entire month, one section per day with entries.
+ * Days without entries (after filters) are omitted. Empty months produce a
+ * report with just the header.
+ */
+export function buildMonthlyMarkdownReport(opts: MonthlyExportOptions): string {
+  const { timeData, requireBillable, clientName, showAllDescriptions, groupByTlp, groupByXds } = opts;
+
+  const monthStart = new Date(opts.monthDate.getFullYear(), opts.monthDate.getMonth(), 1);
+  const monthEnd = new Date(opts.monthDate.getFullYear(), opts.monthDate.getMonth() + 1, 1);
+  const monthLabel = monthStart.toLocaleString('default', { month: 'long', year: 'numeric' });
+
+  let out = `# DeLorean Transfer Timecard Report — ${monthLabel}\n\n`;
+  out += `Generated on: ${new Date().toLocaleString()}\n\n`;
+
+  // One pass to filter, then in-memory bucket by day. Avoids re-filtering 30+ times.
+  const monthFiltered = filterTimeEntriesByDateRange(timeData, monthStart, monthEnd, requireBillable, clientName);
+  const dayBuckets = new Map<number, TimeEntry[]>();
+  for (const entry of monthFiltered) {
+    const dayValue = +entry._computedDates!.day;
+    let bucket = dayBuckets.get(dayValue);
+    if (!bucket) {
+      bucket = [];
+      dayBuckets.set(dayValue, bucket);
+    }
+    bucket.push(entry);
+  }
+
+  const sortedDayValues = Array.from(dayBuckets.keys()).sort((a, b) => a - b);
+  for (const dayValue of sortedDayValues) {
+    const dayDate = new Date(dayValue);
+    const dayEntries = dayBuckets.get(dayValue)!;
+    const grouped = prepareTimecardEntries(dayEntries, groupByXds, groupByTlp);
+
+    out += `## ${dayDate.toLocaleDateString('default', { dateStyle: 'full' })}\n\n`;
+    out += '```\n';
+    out += formatTimecardEntries(grouped, showAllDescriptions, groupByXds, groupByTlp);
+    out += '```\n\n';
+  }
+
+  return out;
+}
 
 // Restored from commit a0be62d (the original single-period text formatter),
 // with the introduction title, "Report date" line, and "Generated on" footer
