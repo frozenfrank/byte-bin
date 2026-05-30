@@ -7,9 +7,6 @@ export interface MonthlyExportOptions {
   monthDate: Date;
   requireBillable: boolean;
   clientName: string | null;
-  showAllDescriptions: boolean;
-  groupByTlp: boolean;
-  groupByXds: boolean;
 }
 
 /**
@@ -18,7 +15,12 @@ export interface MonthlyExportOptions {
  * report with just the header.
  */
 export function buildMonthlyMarkdownReport(opts: MonthlyExportOptions): string {
-  const { timeData, requireBillable, clientName, showAllDescriptions, groupByTlp, groupByXds } = opts;
+  const { timeData, requireBillable, clientName } = opts;
+
+  // Hard-code these parameters to match what Delorean expects
+  const showAllDescriptions = false;
+  const groupByTlp = true;
+  const groupByXds = false;
 
   const monthStart = new Date(opts.monthDate.getFullYear(), opts.monthDate.getMonth(), 1);
   const monthEnd = new Date(opts.monthDate.getFullYear(), opts.monthDate.getMonth() + 1, 1);

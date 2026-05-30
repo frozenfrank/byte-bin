@@ -732,9 +732,6 @@ async function handleExportMonthlyClick(): Promise<void> {
     timeData, monthDate,
     requireBillable:     requireBillableSwitch.checked,
     clientName:          (clientSelect.value as string) || null,
-    showAllDescriptions: showAllDescSwitch.checked,
-    groupByTlp:          groupByTlpSwitch.checked,
-    groupByXds:          groupByXdsSwitch.checked,
   });
   triggerDownload(generateReportFilename(monthDate), content);
 }
