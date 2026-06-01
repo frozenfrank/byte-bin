@@ -5,6 +5,19 @@ layout: layouts/base.njk
 <link rel="stylesheet" href="https://cdn.wheatharvest.llc/webawesome-pro/latest/styles/webawesome.css" />
 <script type="module" src="https://cdn.wheatharvest.llc/webawesome-pro/latest/webawesome.loader.js"></script>
 
+<script>
+  (() => {
+    // Support dark-mode. See: https://github.com/shoelace-style/webawesome/issues/1304
+    const mql = matchMedia('(prefers-color-scheme: dark)');
+    const apply = () => {
+      document.documentElement.classList.toggle('wa-dark', mql.matches);
+      document.documentElement.classList.toggle('wa-light', !mql.matches);
+    };
+    apply();
+    mql.addEventListener('change', apply);
+  })();
+</script>
+
 
 <style type="text/css">
   [slot='banner'] {
