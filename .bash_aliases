@@ -107,7 +107,7 @@ alias diffu="git diff @{u}..@"
 #   git make-bare [REMOTE]            Reset REMOTE's fetch refspec so it only pulls `main`. Defaults to origin.
 #   git track-bare [REMOTE]           Add a full `refs/heads/*` tracking refspec to REMOTE, then fetch it. Defaults to origin.
 #   git track-prefix PREFIX [REMOTE]  Add fetch refspecs for branches and tags whose names start with PREFIX. REMOTE defaults to origin.
-git config --global alias.make-bare '!f() { local REMOTE="${1:-origin}"; git config --local remote.$REMOTE.fetch "+refs/heads/main:refs/remotes/$REMOTE/main"; }; f'
+git config --global alias.make-bare '!f() { local REMOTE="${1:-origin}"; local BRANCH="${2:-$(git symbolic-ref --short HEAD)}"; git config --local remote.$REMOTE.fetch "+refs/heads/$BRANCH:refs/remotes/$REMOTE/$BRANCH"; }; f'
 git config --global alias.track-bare '!f() { local REMOTE="${1:-origin}"; git config --local --add remote.$REMOTE.fetch "+refs/heads/*:refs/remotes/$REMOTE/*" && git fetch $REMOTE; }; f'
 git config --global alias.track-prefix '!f() { local REMOTE="${2:-origin}"; git config --add remote.$REMOTE.fetch "+refs/heads/$1*:refs/remotes/$REMOTE/$1*"; git config --add remote.$REMOTE.fetch "+refs/tags/$1*:refs/tags/$1*"; }; f'
 
