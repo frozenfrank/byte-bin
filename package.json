@@ -1,19 +1,20 @@
 {
   "name": "@frozenfrank/toggl-to-delorean",
   "version": "1.3.0",
-  "description": "Loads time entries from Toggl and displays it for review & entry into Delorean.",
+  "description": "Pull time entries from Toggl (or CSV), review and chart them, and format timecards for entry into DeLorean.",
   "keywords": [
     "toggl",
     "delorean",
+    "timecard",
     "webawesome"
   ],
-  "homepage": "https://github.com/frozenfrank/byte-bin#readme",
+  "homepage": "https://github.com/frozenfrank/toggl-to-delorean#readme",
   "bugs": {
-    "url": "https://github.com/frozenfrank/byte-bin/issues"
+    "url": "https://github.com/frozenfrank/toggl-to-delorean/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/frozenfrank/byte-bin.git#delorean-main"
+    "url": "git+https://github.com/frozenfrank/toggl-to-delorean.git"
   },
   "license": "ISC",
   "author": "James Finlinson",

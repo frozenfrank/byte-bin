@@ -2,14 +2,18 @@
 
 Three-step workflow: **Import → Filter → View/Export**
 
+Bundled to `dist/` with esbuild (`src/index.ts` is the entry point); served locally via `scripts/serve.sh`.
+
 - **Data sources**: CSV upload (parsed with PapaParse) or Toggl API v9 (via cloud proxy)
-- **`time-entry.ts`** — Unified `TimeEntry<T>` interface normalizing CSV and API formats. Computed fields: `durationSeconds`, `_computedDates` (day/week/month groupings)
-- **`script.js`** — Main app logic: `processTimeEntryData()` groups entries by time scale, `renderTimecardReport()` formats output. Keyboard shortcuts: T (toggle scale), O/W/M/A (set scale), N/P (navigate), D (toggle descriptions)
-- **`toggl/access.js`** — Toggl API client with Basic Auth. Key functions: `getProfile()`, `getTimeEntries()`
+- **`time-entry/`** — Unified `TimeEntry<T>` interface normalizing CSV and API formats, plus grouping/processing helpers. Computed fields: `durationSeconds`, `_computedDates` (day/week/month groupings)
+- **`script.ts`** — Main app logic: groups entries by time scale and renders output. Keyboard shortcuts: T (toggle scale), O/W/M/A (set scale), N/P (navigate), D (toggle descriptions)
+- **`report.ts` / `markdown-report.ts`** — Timecard report builder and the per-day monthly Markdown export (`buildMonthlyMarkdownReport`)
+- **`charts.ts`** — Chart rendering for visual summaries
+- **`toggl/access.ts`** — Toggl API client with Basic Auth. Key functions: `getProfile()`, `getTimeEntries()`
 - Project codes extracted via regex patterns: DLG, TLP, PRJ, QAN, XDS
 
 Code Conventions:
-- Frontend is vanilla ES2017+ JavaScript with no bundler; dependencies loaded from CDN (WebAwesome, PapaParse)
+- Frontend is vanilla TypeScript (no framework) bundled with esbuild; Web Awesome Pro is a local `devDependency`, PapaParse loaded as a module
 - Week boundaries run Sunday → Saturday
 - Toggl API tokens are stored in localStorage for convenience
 
