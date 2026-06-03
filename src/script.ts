@@ -122,6 +122,17 @@ function handleDataParsed(results: ParseResult<TogglExportTimeEntry>) {
 const tabGroup = document.querySelector<WaTabGroup>('wa-tab-group')!;
 const gatedTabs = Array.from(tabGroup.querySelectorAll<WaTab>('wa-tab')).slice(1);
 
+// Tab strip sits on the side for desktop, but moves to the top on tablet and
+// smaller viewports where horizontal space is scarce. See dark-mode handler in
+// index.html for the matchMedia pattern this mirrors.
+const compactTabsQuery = matchMedia('(max-width: 768px)');
+async function applyTabPlacement(): Promise<void> {
+  tabGroup.placement = compactTabsQuery.matches ? 'top' : 'start';
+  await tabGroup.updateComplete;
+}
+void applyTabPlacement();
+compactTabsQuery.addEventListener('change', () => void applyTabPlacement());
+
 /**
  * Enables every workflow step after the first when `available` is true, and
  * disables them (leaving only "Import Data" reachable) when false.
