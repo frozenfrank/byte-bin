@@ -1,0 +1,61 @@
+import { getElementById } from './helper';
+import { WaCallout, WaIcon } from './model/web-awesome';
+import { TimeEntry } from './time-entry/time-entry';
+
+// Status indicator on the "Import Data" tab. Signals whether a CSV/API import
+// produced usable time entries, since the downstream filter/view controls (the
+// old implicit success signal) now live on separate, hidden tabs.
+
+const DATA_STATUS_CALLOUT_ID = 'dataStatusCallout';
+const DATA_STATUS_ICON_ID = 'dataStatusIcon';
+const DATA_STATUS_CONTENT_ID = 'dataStatusContent';
+
+/** Formats a duration in seconds as a human-readable "Hh Mm" string. */
+function formatDuration(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.round((totalSeconds % 3600) / 60);
+  return `${hours}h ${minutes}m`;
+}
+
+const formatDate = (d: Date) =>
+  d.toLocaleDateString('default', { year: 'numeric', month: 'short', day: 'numeric' });
+
+/**
+ * Reflects the current data-availability state in the Import Data status callout.
+ * - `allData === null`: no data imported yet (neutral / waiting).
+ * - `allData.length === 0`: data imported but no usable entries (danger / error).
+ * - otherwise: success, summarizing count, total duration, and date range.
+ */
+export async function updateDataStatus(allData: TimeEntry[] | null, uniqueDays: Date[]): Promise<void> {
+  const callout = getElementById<WaCallout>(DATA_STATUS_CALLOUT_ID);
+  const icon = getElementById<WaIcon>(DATA_STATUS_ICON_ID);
+  const content = getElementById(DATA_STATUS_CONTENT_ID);
+
+  if (allData === null) {
+    callout.variant = 'neutral';
+    icon.name = 'hourglass-half';
+    content.innerHTML =
+      '<strong>Waiting for data…</strong><br />'
+      + 'Import a Toggl CSV file or download from the API to get started.';
+  } else if (allData.length === 0) {
+    callout.variant = 'danger';
+    icon.name = 'circle-exclamation';
+    content.innerHTML =
+      '<strong>No time entries found</strong><br />'
+      + 'The imported data did not contain any usable time entries. '
+      + 'Check your file or download and try again.';
+  } else {
+    const totalSeconds = allData.reduce((sum, e) => sum + (e.durationSeconds || 0), 0);
+    const minDate = uniqueDays[0];
+    const maxDate = uniqueDays[uniqueDays.length - 1];
+
+    callout.variant = 'success';
+    icon.name = 'circle-check';
+    content.innerHTML =
+      `<strong>${allData.length} time ${allData.length === 1 ? 'entry' : 'entries'} loaded</strong><br />`
+      + `Total tracked: ${formatDuration(totalSeconds)}<br />`
+      + `Date range: ${formatDate(minDate)} – ${formatDate(maxDate)}`;
+  }
+
+  await Promise.all([callout.updateComplete, icon.updateComplete]);
+}

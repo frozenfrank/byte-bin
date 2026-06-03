@@ -1,6 +1,7 @@
 import Papa, { ParseResult } from 'papaparse';
 import { renderSummaryCharts, renderTimePeriodBarChart } from './charts';
 import { getElementById } from './helper';
+import { updateDataStatus } from './import-data';
 import { DateValue, TimeScale } from './model/types';
 import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch, WaTab, WaTabGroup } from './model/web-awesome';
 import { buildMonthlyMarkdownReport } from './markdown-report';
@@ -200,7 +201,10 @@ async function processTimeEntryData(timeEntryData: TimeEntryData<any>): Promise<
     : mostRecentDay;
   await setDateSelectValues(targetDay);
   await updatePrevNextLabels();
-  await setStepsAvailable(true);
+  await Promise.all([
+    updateDataStatus(interpretedTimeData.allData, interpretedTimeData.uniqueDays),
+    setStepsAvailable(true),
+  ]);
 }
 
 function prepareComputedDateValues(start: Date) {

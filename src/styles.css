@@ -2,6 +2,18 @@
   width: 30em;
 }
 
+#dataStatusCallout,
+#dataStatusCallout::part(message),
+#dataStatusCallout::part(icon) {
+  transition:
+    background-color var(--wa-transition-normal) var(--wa-transition-easing),
+    border-color var(--wa-transition-normal) var(--wa-transition-easing),
+    color var(--wa-transition-normal) var(--wa-transition-easing);
+}
+#dataStatusIcon {
+  font-size: 2em; /* big check / X */
+}
+
 .timecard-table {
   border-collapse: collapse;
   width: 100%;
