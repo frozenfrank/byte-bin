@@ -9,6 +9,19 @@
     <link rel="stylesheet" href="/webawesome-dist/styles/webawesome.css" />
     <script type="module" src="/webawesome-dist/webawesome.loader.js"></script>
 
+    <script>
+      (() => {
+        // Support dark-mode. See: https://github.com/shoelace-style/webawesome/issues/1304
+        const mql = matchMedia('(prefers-color-scheme: dark)');
+        const apply = () => {
+          document.documentElement.classList.toggle('wa-dark', mql.matches);
+          document.documentElement.classList.toggle('wa-light', !mql.matches);
+        };
+        apply();
+        mql.addEventListener('change', apply);
+      })();
+    </script>
+
     <link href="styles.css" type="text/css" />
 
     <style type="text/css">

@@ -6,7 +6,7 @@
     <wa-radio appearance="button" value="2">File Import</wa-radio>
   </wa-radio-group>
   <span show-data-for="import-data-method" data-value="2">
-    <wa-callout size="small">
+    <wa-callout size="s">
       <wa-icon slot="icon" name="lightbulb" variant="regular"></wa-icon>
       Upload a CSV file exported from your <a target="_blank" href="https://track.toggl.com/reports/detailed">Toggl Reports (Detailed) page</a>. Apply appropriate filters and turn on relevant columns before generating the export.
     </wa-callout>
@@ -31,7 +31,7 @@
   </span>
   <span show-data-for="import-data-method" data-value="1">
     <form id="download-toggl-form">
-      <wa-callout size="small" id="toggl-api-tip">
+      <wa-callout size="s" id="toggl-api-tip">
         <wa-icon slot="icon" name="lightbulb" variant="regular"></wa-icon>
         Your Toggl API token can be revealed at the bottom of
         <a target="_blank" href="https://track.toggl.com/profile">your profile page</a>.
@@ -110,7 +110,7 @@
 <div class="wa-stack">
   <div class="wa-flank:end wa-align-items-start">
     <div class="wa-cluster wa-align-items-baseline">
-      <wa-button size="small" id="prevDayButton">
+      <wa-button size="s" id="prevDayButton">
         <wa-icon slot="start" name="arrow-left"></wa-icon>
         <u>P</u>revious <span class="prevNextLabel">Day</span>
       </wa-button>
@@ -120,14 +120,14 @@
         <wa-switch id="groupByXdsSwitch">Group by <u>X</u>DS</wa-switch>
       </div>
     </div>
-    <wa-button size="small" id="nextDayButton">
+    <wa-button size="s" id="nextDayButton">
       <wa-icon slot="end" name="arrow-right"></wa-icon>
       <u>N</u>ext <span class="prevNextLabel">Day</span>
     </wa-button>
   </div>
 
   <div class="wa-cluster">
-    <wa-button id="exportMonthlyButton" size="small" variant="brand" disabled>
+    <wa-button id="exportMonthlyButton" size="s" variant="brand" disabled>
       <wa-icon slot="start" name="file-arrow-down"></wa-icon>
       <span id="exportMonthlyLabel">Export Monthly</span>
     </wa-button>
