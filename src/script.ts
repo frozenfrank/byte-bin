@@ -2,7 +2,7 @@ import Papa, { ParseResult } from 'papaparse';
 import { renderSummaryCharts, renderTimePeriodBarChart } from './charts';
 import { getElementById } from './helper';
 import { DateValue, TimeScale } from './model/types';
-import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch } from './model/web-awesome';
+import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch, WaTab, WaTabGroup } from './model/web-awesome';
 import { buildMonthlyMarkdownReport } from './markdown-report';
 import { buildTimecardReportElement } from './report';
 import { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
@@ -113,6 +113,23 @@ function handleDataParsed(results: ParseResult<TogglExportTimeEntry>) {
   void processTimeEntryData(timeEntryData);
 }
 
+// ### Workflow Step Gating ###
+
+// All steps after the first ("Import Data"). Referenced positionally so we never
+// depend on a tab's id or panel attribute. The initial disabled state lives in the
+// HTML (fragment.html); we only re-toggle it as data becomes available/unavailable.
+const tabGroup = document.querySelector<WaTabGroup>('wa-tab-group')!;
+const gatedTabs = Array.from(tabGroup.querySelectorAll<WaTab>('wa-tab')).slice(1);
+
+/**
+ * Enables every workflow step after the first when `available` is true, and
+ * disables them (leaving only "Import Data" reachable) when false.
+ */
+async function setStepsAvailable(available: boolean): Promise<void> {
+  gatedTabs.forEach(tab => { tab.disabled = !available; });
+  await Promise.all(gatedTabs.map(tab => tab.updateComplete));
+}
+
 async function processTimeEntryData(timeEntryData: TimeEntryData<any>): Promise<void> {
   /** Maps some numeric value to a unique Date value */
   type DateMap = Map<number, Date>;
@@ -183,6 +200,7 @@ async function processTimeEntryData(timeEntryData: TimeEntryData<any>): Promise<
     : mostRecentDay;
   await setDateSelectValues(targetDay);
   await updatePrevNextLabels();
+  await setStepsAvailable(true);
 }
 
 function prepareComputedDateValues(start: Date) {
