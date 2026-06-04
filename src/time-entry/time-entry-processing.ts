@@ -110,10 +110,10 @@ export function convertParsedCsvToTimeEntryData(
 // ##### Data Extraction #####
 
 const TLP_REGEX = /tlp(\d{5})/i;
-const PRJ_REGEX = /PRJ\s*(\d+)/i;
-const DLG_REGEX = /DLG\s*(\d+)/i;
-const QAN_REGEX = /QAN\s*(\d+)/i;
-const XDS_REGEX = /XDS\s*(\d+)/i;
+const PRJ_REGEX = /\bPRJ\s*(\d+)\b/i;
+const DLG_REGEX = /\bDLG\s*([A-Z]{0,2}\d{5,})\b/i;
+const QAN_REGEX = /\bQAN\s*(\d+)\b/i;
+const XDS_REGEX = /\bXDS\s*(\d+)\b/i;
 
 
 export function extractTLPCode(entry: TimeEntry): string|null {
