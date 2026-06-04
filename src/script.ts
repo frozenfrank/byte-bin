@@ -487,15 +487,13 @@ function createOptionElement(value: string|number, text: string): WaOption {
  */
 async function populateClientSelector(clients: string[], hasClientData: boolean): Promise<void> {
   clientSelect.innerHTML = '';
+  clientSelect.disabled = !hasClientData;
 
   if (!hasClientData || !clients.length) {
     const opt = createOptionElement('', '-- No Clients --');
     opt.setAttribute('selected', '');
     opt.setAttribute('disabled', '');
     clientSelect.appendChild(opt);
-    if (!hasClientData) {
-      clientSelect.disabled = !interpretedTimeData.hasClientData;
-    }
 
     await clientSelect.updateComplete;
     return;
