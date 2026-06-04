@@ -99,6 +99,7 @@ fileInput.addEventListener('change', handleInputFileChange);
 function handleInputFileChange(e: Event) {
   const files = (e.target as HTMLInputElement).files;
   if (!files?.length) {
+    updateDataStatus(null);
     return;
   }
 
@@ -110,6 +111,12 @@ function handleInputFileChange(e: Event) {
 
 // Respond to data parsing
 function handleDataParsed(results: ParseResult<TogglExportTimeEntry>) {
+  if (results.errors?.length) {
+    console.error("Errors parsing the input file: \n  " + results.errors.map(e => e.message).join("\n  ") + "\n", results.errors);
+    updateDataStatus([]);
+    return;
+  }
+
   const timeEntryData = convertParsedCsvToTimeEntryData(results as PapaParseCSVResult<TogglExportTimeEntry>);
   void processTimeEntryData(timeEntryData);
 }
@@ -137,7 +144,7 @@ compactTabsQuery.addEventListener('change', () => void applyTabPlacement());
  * Enables every workflow step after the first when `available` is true, and
  * disables them (leaving only "Import Data" reachable) when false.
  */
-async function setStepsAvailable(available: boolean): Promise<void> {
+export async function setStepsAvailable(available: boolean): Promise<void> {
   gatedTabs.forEach(tab => { tab.disabled = !available; });
   await Promise.all(gatedTabs.map(tab => tab.updateComplete));
 }
@@ -211,10 +218,10 @@ async function processTimeEntryData(timeEntryData: TimeEntryData<any>): Promise<
     ? prevDayValue
     : mostRecentDay;
   await setDateSelectValues(targetDay);
-  await updatePrevNextLabels();
+
   await Promise.all([
+    updatePrevNextLabels(),
     updateDataStatus(interpretedTimeData.allData, interpretedTimeData.uniqueDays),
-    setStepsAvailable(true),
   ]);
 }
 

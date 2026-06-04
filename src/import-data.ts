@@ -1,5 +1,6 @@
 import { getElementById } from './helper';
 import { WaCallout, WaIcon } from './model/web-awesome';
+import { setStepsAvailable } from './script';
 import { TimeEntry } from './time-entry/time-entry';
 
 // Status indicator on the "Import Data" tab. Signals whether a CSV/API import
@@ -26,10 +27,14 @@ const formatDate = (d: Date) =>
  * - `allData.length === 0`: data imported but no usable entries (danger / error).
  * - otherwise: success, summarizing count, total duration, and date range.
  */
-export async function updateDataStatus(allData: TimeEntry[] | null, uniqueDays: Date[]): Promise<void> {
+export async function updateDataStatus(allData: [] | null): Promise<void>
+export async function updateDataStatus(allData: TimeEntry[] | null, uniqueDays: Date[]): Promise<void>
+export async function updateDataStatus(allData: TimeEntry[] | null, uniqueDays?: Date[]): Promise<void> {
   const callout = getElementById<WaCallout>(DATA_STATUS_CALLOUT_ID);
   const icon = getElementById<WaIcon>(DATA_STATUS_ICON_ID);
   const content = getElementById(DATA_STATUS_CONTENT_ID);
+
+  let hasData = false;
 
   if (allData === null) {
     callout.variant = 'neutral';
@@ -45,6 +50,12 @@ export async function updateDataStatus(allData: TimeEntry[] | null, uniqueDays: 
       + 'The imported data did not contain any usable time entries. '
       + 'Check your file or download and try again.';
   } else {
+    if (uniqueDays === undefined) {
+      throw new Error("Expected uniqueDays to not be undefined when all data is provided")
+    }
+
+    hasData = true;
+
     const totalSeconds = allData.reduce((sum, e) => sum + (e.durationSeconds || 0), 0);
     const minDate = uniqueDays[0];
     const maxDate = uniqueDays[uniqueDays.length - 1];
@@ -57,5 +68,9 @@ export async function updateDataStatus(allData: TimeEntry[] | null, uniqueDays: 
       + `Date range: ${formatDate(minDate)} – ${formatDate(maxDate)}`;
   }
 
-  await Promise.all([callout.updateComplete, icon.updateComplete]);
+  await Promise.all([
+    setStepsAvailable(hasData),
+    callout.updateComplete,
+    icon.updateComplete,
+  ]);
 }
