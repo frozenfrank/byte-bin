@@ -101,6 +101,7 @@ alias push="git push"
 alias pull="git fetch && git rebase origin/master"
 alias rebaseu="git rebase --autosquash @{u}"
 alias diffu="git diff @{u}..@"
+alias mergeu="git merge --no-ff --no-edit @{u}"
 
 # Git refspec management
 # Refspec helpers for bare-ish clones that start out tracking nothing but `main`.
