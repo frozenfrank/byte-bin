@@ -1,6 +1,6 @@
 {
   "name": "@frozenfrank/toggl-to-delorean",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "Pull time entries from Toggl (or CSV), review and chart them, and format timecards for entry into DeLorean.",
   "keywords": [
     "toggl",
