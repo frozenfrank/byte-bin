@@ -1,12 +1,13 @@
 import Papa, { ParseResult } from 'papaparse';
 import { renderSummaryCharts, renderTimePeriodBarChart } from './charts';
 import { getElementById } from './helper';
+import { updateDataStatus, updateDataStatusMissingColumns } from './import-data';
 import { DateValue, TimeScale } from './model/types';
-import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch } from './model/web-awesome';
+import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch, WaTab, WaTabGroup } from './model/web-awesome';
 import { buildMonthlyMarkdownReport } from './markdown-report';
 import { buildTimecardReportElement } from './report';
 import { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
-import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData } from './time-entry/time-entry-processing';
+import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData, findMissingRequiredColumns } from './time-entry/time-entry-processing';
 import { filterTimeEntriesByDateRange, prepareTimecardEntries } from './time-entry/timecard-grouping';
 import { getTimeEntries } from './toggl/access';
 
@@ -98,6 +99,7 @@ fileInput.addEventListener('change', handleInputFileChange);
 function handleInputFileChange(e: Event) {
   const files = (e.target as HTMLInputElement).files;
   if (!files?.length) {
+    updateDataStatus(null);
     return;
   }
 
@@ -109,8 +111,51 @@ function handleInputFileChange(e: Event) {
 
 // Respond to data parsing
 function handleDataParsed(results: ParseResult<TogglExportTimeEntry>) {
-  const timeEntryData = convertParsedCsvToTimeEntryData(results as PapaParseCSVResult<TogglExportTimeEntry>);
+  if (results.errors?.length) {
+    console.error("Errors parsing the input file: \n  " + results.errors.map(e => e.message).join("\n  ") + "\n", results.errors);
+    updateDataStatus([]);
+    return;
+  }
+
+  const parsed = results as PapaParseCSVResult<TogglExportTimeEntry>;
+
+  const missing = findMissingRequiredColumns(parsed);
+  if (missing.length) {
+    console.error('Import missing required columns: ' + missing.join(', '));
+    void updateDataStatusMissingColumns(missing);
+    return;
+  }
+
+  const timeEntryData = convertParsedCsvToTimeEntryData(parsed);
   void processTimeEntryData(timeEntryData);
+}
+
+// ### Workflow Step Gating ###
+
+// All steps after the first ("Import Data"). Referenced positionally so we never
+// depend on a tab's id or panel attribute. The initial disabled state lives in the
+// HTML (fragment.html); we only re-toggle it as data becomes available/unavailable.
+const tabGroup = document.querySelector<WaTabGroup>('wa-tab-group')!;
+const gatedTabs = Array.from(tabGroup.querySelectorAll<WaTab>('wa-tab')).slice(1);
+
+// Tab strip sits on the side for desktop, but moves to the top on tablet and
+// smaller viewports where horizontal space is scarce. See dark-mode handler in
+// index.html for the matchMedia pattern this mirrors.
+const compactTabsQuery = matchMedia('(max-width: 768px)');
+async function applyTabPlacement(): Promise<void> {
+  tabGroup.placement = compactTabsQuery.matches ? 'top' : 'start';
+  await tabGroup.updateComplete;
+}
+void applyTabPlacement();
+compactTabsQuery.addEventListener('change', () => void applyTabPlacement());
+
+/**
+ * Enables every workflow step after the first when `available` is true, and
+ * disables them (leaving only "Import Data" reachable) when false.
+ */
+export async function setStepsAvailable(available: boolean): Promise<void> {
+  gatedTabs.forEach(tab => { tab.disabled = !available; });
+  await Promise.all(gatedTabs.map(tab => tab.updateComplete));
 }
 
 async function processTimeEntryData(timeEntryData: TimeEntryData<any>): Promise<void> {
@@ -182,7 +227,11 @@ async function processTimeEntryData(timeEntryData: TimeEntryData<any>): Promise<
     ? prevDayValue
     : mostRecentDay;
   await setDateSelectValues(targetDay);
-  await updatePrevNextLabels();
+
+  await Promise.all([
+    updatePrevNextLabels(),
+    updateDataStatus(interpretedTimeData.allData, interpretedTimeData.uniqueDays),
+  ]);
 }
 
 function prepareComputedDateValues(start: Date) {
@@ -447,15 +496,13 @@ function createOptionElement(value: string|number, text: string): WaOption {
  */
 async function populateClientSelector(clients: string[], hasClientData: boolean): Promise<void> {
   clientSelect.innerHTML = '';
+  clientSelect.disabled = !hasClientData;
 
   if (!hasClientData || !clients.length) {
     const opt = createOptionElement('', '-- No Clients --');
     opt.setAttribute('selected', '');
     opt.setAttribute('disabled', '');
     clientSelect.appendChild(opt);
-    if (!hasClientData) {
-      clientSelect.disabled = !interpretedTimeData.hasClientData;
-    }
 
     await clientSelect.updateComplete;
     return;

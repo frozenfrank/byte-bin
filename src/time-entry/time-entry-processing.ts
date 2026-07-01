@@ -59,6 +59,19 @@ export function convertApiDataToTimeEntryData(
   };
 }
 
+/** CSV headers that must be present for an import to be usable. */
+export const REQUIRED_CSV_COLUMNS = [
+  'Description', 'Start date', 'Start time', 'Tags', 'Project',
+] as const;
+
+/** Returns the required CSV headers absent from a parsed result (empty if all present). */
+export function findMissingRequiredColumns(
+  parsed: PapaParseCSVResult<TogglExportTimeEntry>,
+): string[] {
+  const fields = parsed.meta?.fields ?? [];
+  return REQUIRED_CSV_COLUMNS.filter(col => !fields.includes(col));
+}
+
 /** @public Convert Toggl CSV data into our standard format */
 export function convertParsedCsvToTimeEntryData(
   parsed: PapaParseCSVResult<TogglExportTimeEntry>,
@@ -110,10 +123,10 @@ export function convertParsedCsvToTimeEntryData(
 // ##### Data Extraction #####
 
 const TLP_REGEX = /tlp(\d{5})/i;
-const PRJ_REGEX = /PRJ\s*(\d+)/i;
-const DLG_REGEX = /DLG\s*(\d+)/i;
-const QAN_REGEX = /QAN\s*(\d+)/i;
-const XDS_REGEX = /XDS\s*(\d+)/i;
+const PRJ_REGEX = /\bPRJ\s*(\d+)\b/i;
+const DLG_REGEX = /\bDLG\s*([A-Z]{0,2}\d{5,})\b/i;
+const QAN_REGEX = /\bQAN\s*(\d+)\b/i;
+const XDS_REGEX = /\bXDS\s*(\d+)\b/i;
 
 
 export function extractTLPCode(entry: TimeEntry): string|null {
