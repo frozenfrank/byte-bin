@@ -74,3 +74,24 @@ export async function updateDataStatus(allData: TimeEntry[] | null, uniqueDays?:
     icon.updateComplete,
   ]);
 }
+
+/** Danger callout naming the required CSV columns that were missing. */
+export async function updateDataStatusMissingColumns(missing: string[]): Promise<void> {
+  const callout = getElementById<WaCallout>(DATA_STATUS_CALLOUT_ID);
+  const icon = getElementById<WaIcon>(DATA_STATUS_ICON_ID);
+  const content = getElementById(DATA_STATUS_CONTENT_ID);
+
+  callout.variant = 'danger';
+  icon.name = 'circle-exclamation';
+  content.innerHTML =
+    '<strong>Missing required columns</strong><br />'
+    + 'The imported file is missing these required column(s): '
+    + `<b>${missing.join(', ')}</b>.<br />`
+    + 'Enable them in Toggl before exporting and try again.';
+
+  await Promise.all([
+    setStepsAvailable(false),
+    callout.updateComplete,
+    icon.updateComplete,
+  ]);
+}

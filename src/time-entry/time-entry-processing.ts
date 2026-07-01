@@ -59,6 +59,19 @@ export function convertApiDataToTimeEntryData(
   };
 }
 
+/** CSV headers that must be present for an import to be usable. */
+export const REQUIRED_CSV_COLUMNS = [
+  'Description', 'Start date', 'Start time', 'Tags', 'Project',
+] as const;
+
+/** Returns the required CSV headers absent from a parsed result (empty if all present). */
+export function findMissingRequiredColumns(
+  parsed: PapaParseCSVResult<TogglExportTimeEntry>,
+): string[] {
+  const fields = parsed.meta?.fields ?? [];
+  return REQUIRED_CSV_COLUMNS.filter(col => !fields.includes(col));
+}
+
 /** @public Convert Toggl CSV data into our standard format */
 export function convertParsedCsvToTimeEntryData(
   parsed: PapaParseCSVResult<TogglExportTimeEntry>,

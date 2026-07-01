@@ -1,13 +1,13 @@
 import Papa, { ParseResult } from 'papaparse';
 import { renderSummaryCharts, renderTimePeriodBarChart } from './charts';
 import { getElementById } from './helper';
-import { updateDataStatus } from './import-data';
+import { updateDataStatus, updateDataStatusMissingColumns } from './import-data';
 import { DateValue, TimeScale } from './model/types';
 import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch, WaTab, WaTabGroup } from './model/web-awesome';
 import { buildMonthlyMarkdownReport } from './markdown-report';
 import { buildTimecardReportElement } from './report';
 import { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
-import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData } from './time-entry/time-entry-processing';
+import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData, findMissingRequiredColumns } from './time-entry/time-entry-processing';
 import { filterTimeEntriesByDateRange, prepareTimecardEntries } from './time-entry/timecard-grouping';
 import { getTimeEntries } from './toggl/access';
 
@@ -117,7 +117,16 @@ function handleDataParsed(results: ParseResult<TogglExportTimeEntry>) {
     return;
   }
 
-  const timeEntryData = convertParsedCsvToTimeEntryData(results as PapaParseCSVResult<TogglExportTimeEntry>);
+  const parsed = results as PapaParseCSVResult<TogglExportTimeEntry>;
+
+  const missing = findMissingRequiredColumns(parsed);
+  if (missing.length) {
+    console.error('Import missing required columns: ' + missing.join(', '));
+    void updateDataStatusMissingColumns(missing);
+    return;
+  }
+
+  const timeEntryData = convertParsedCsvToTimeEntryData(parsed);
   void processTimeEntryData(timeEntryData);
 }
 
