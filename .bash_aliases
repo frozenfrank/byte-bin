@@ -129,6 +129,7 @@ function is-ancestor() {
 
 
 ## Non-Git Aliases
+alias pbpaste='powershell.exe -command "Get-Clipboard"'
 function mktouch() {
   mkdir -p "$(dirname "$1")" && touch "$1"
 }
