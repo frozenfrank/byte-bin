@@ -27,6 +27,7 @@ const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
 const REQUIRE_BILLABLE_ID = 'requireBillableSwitch';
 const GROUP_BY_XDS_ID = 'groupByXdsSwitch';
 const GROUP_BY_TLP_ID = 'groupByTlpSwitch';
+const PERCENT_STACKED_ID = 'percentStackedSwitch';
 const NEXT_DAY_BUTTON_ID = 'nextDayButton';
 const PREV_DAY_BUTTON_ID = 'prevDayButton';
 const PREV_NEXT_LABEL_CLASS = 'prevNextLabel';
@@ -552,6 +553,7 @@ document.addEventListener('keydown', (e) => {
     case 'b':  requireBillableSwitch.click();      break;
     case 'l':  groupByTlpSwitch.click();           break;
     case 'x':  groupByXdsSwitch.click();           break;
+    case 'c':  percentStackedSwitch.click();       break;
     case 't':  void incrementTimeScale(false);     break;
 
     case 'o':  void setTimeScale(1);               break;
@@ -625,7 +627,11 @@ groupByXdsSwitch.addEventListener('change', () => void renderTimecardReport());
 const groupByTlpSwitch = getElementById<WaSwitch>(GROUP_BY_TLP_ID);
 groupByTlpSwitch.addEventListener('change', () => void renderTimecardReport());
 
-const switchSettings = [showAllDescSwitch, requireBillableSwitch, groupByXdsSwitch, groupByTlpSwitch];
+// Allow plotting the stacked type charts as each period's 0-100% composition
+const percentStackedSwitch = getElementById<WaSwitch>(PERCENT_STACKED_ID);
+percentStackedSwitch.addEventListener('change', () => void renderTimecardReport());
+
+const switchSettings = [showAllDescSwitch, requireBillableSwitch, groupByXdsSwitch, groupByTlpSwitch, percentStackedSwitch];
 
 function saveSwitchSettings() {
   try {
@@ -673,6 +679,7 @@ async function renderTimecardReport(): Promise<void> {
       allFiltered: allFilteredForBars,
       timeScale,
       activePeriodValue,
+      stackAsPercent: percentStackedSwitch.checked,
       uniqueDayValues:   interpretedTimeData.uniqueDayValues,
       uniqueWeekValues:  interpretedTimeData.uniqueWeekValues,
       uniqueMonthValues: interpretedTimeData.uniqueMonthValues,

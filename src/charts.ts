@@ -36,6 +36,16 @@ function toHours(seconds: number): number {
   return Math.round((seconds / 3600) * 10) / 10;
 }
 
+/**
+ * A slice's share of its period, 0–100, rounded to one decimal. The alternate unit for the
+ * stacked charts. Rounding leaves a bar summing to 100 ± ~0.2, which is imperceptible against
+ * the axis max, and keeps the hover tooltip from reading as a long float.
+ */
+function toPercent(seconds: number, totalSeconds: number): number {
+  if (!totalSeconds) return 0;
+  return Math.round((seconds / totalSeconds) * 1000) / 10;
+}
+
 function aggregateHoursByPRJ(filteredData: FilteredData): ChartData {
   return toChartData(filteredData, entry => {
     const prj = extractPRJNumber(entry);
@@ -118,6 +128,8 @@ interface BarChartInput {
   timeScale: TimeScale;
   /** Numeric ms value of the currently-active period; null in All Time mode. */
   activePeriodValue: number | null;
+  /** Plot the stacked charts as each period's 0–100% composition instead of hours. */
+  stackAsPercent: boolean;
   uniqueDayValues:   number[];
   uniqueWeekValues:  number[];
   uniqueMonthValues: number[];
@@ -275,6 +287,8 @@ async function renderTimePeriodBarChart(input: BarChartInput, periodWindow: Peri
 interface CategorySeries {
   /** Element id of the <wa-bar-chart stacked> to render into. */
   elementId: string;
+  /** Everything after the unit in the chart title, which changes with the unit. */
+  titleSubject: string;
   /** Enum member names in numeric order. Index === dataset index === color slot. */
   labels: string[];
   /** The entry's category index, or null to exclude it. */
@@ -284,11 +298,13 @@ interface CategorySeries {
 const STACKED_TYPE_SERIES: CategorySeries[] = [
   {
     elementId: 'prjTypeBarChart',
+    titleSubject: 'by PRJ Type over Time',
     labels: enumLabelsByValue(PrjType),
     categoryIndexOf: entry => entry._analysis?.prjType ?? null,
   },
   {
     elementId: 'tlpTypeBarChart',
+    titleSubject: 'by TLP Type over Time',
     labels: enumLabelsByValue(TlpType),
     categoryIndexOf: entry => entry._analysis?.tlpType ?? null,
   },
@@ -317,16 +333,28 @@ async function renderStackedTypeBarChart(
   const chartEl = getElementById<WaBarChart>(series.elementId);
   if (!chartEl) return;
 
+  const { stackAsPercent } = input;
   const sumsByPeriod = aggregateHoursByPeriodAndCategory(input.allFiltered, periodWindow.scale, series);
+  const barValue = (periodMs: number, categoryIndex: number): number => {
+    const byCategory = sumsByPeriod.get(periodMs);
+    const seconds = byCategory?.[categoryIndex] ?? 0;
+    if (!stackAsPercent) return toHours(seconds);
+    return toPercent(seconds, byCategory?.reduce((total, s) => total + s, 0) ?? 0);
+  };
+
   chartEl.config = {
     data: {
       labels: periodWindow.labels,
       datasets: series.labels.map((label, categoryIndex) => ({
         label,
-        data: periodWindow.windowValues.map(ms => toHours(sumsByPeriod.get(ms)?.[categoryIndex] ?? 0)),
+        data: periodWindow.windowValues.map(ms => barValue(ms, categoryIndex)),
       })),
     },
   };
+  // Pin the axis to a whole period in percent mode; otherwise let it fit the hours.
+  chartEl.max = stackAsPercent ? 100 : null;
+  chartEl.yLabel = stackAsPercent ? '% of period' : null;
+  chartEl.label = `${stackAsPercent ? 'Percent' : 'Hours'} ${series.titleSubject}`;
   await chartEl.updateComplete;
 }
 
