@@ -3,6 +3,7 @@ import { TimeScale } from "./model/types";
 import { WaBarChart, WaPieChart } from "./model/web-awesome";
 import { TimeEntry } from "./time-entry/time-entry";
 import { extractPRJNumber, extractTLPCode } from "./time-entry/time-entry-processing";
+import { PrjType, TlpType } from "./time-entry/analysis";
 
 // ### Chart Data Aggregation & Rendering ###
 // Produces summary pie charts of filtered time entries by PRJ and TLP,
@@ -51,6 +52,29 @@ function aggregateHoursByTLP(filteredData: FilteredData) {
   return toChartData(secondsByTLP);
 }
 
+function aggregateHoursByTlpType(filteredData: FilteredData) {
+  const secondsByType: SecondsByKey = new Map();
+  filteredData.forEach(entry => {
+    if (!entry._analysis) return;
+    // Untagged (no TLP tag) gets its own slice; tagged entries use the TlpType member name.
+    const key = extractTLPCode(entry) ? TlpType[entry._analysis.tlpType] : UNTAGGED_LABEL;
+    const seconds = entry.durationSeconds || 0;
+    secondsByType.set(key, (secondsByType.get(key) || 0) + seconds);
+  });
+  return toChartData(secondsByType);
+}
+
+function aggregateHoursByPrjType(filteredData: FilteredData) {
+  const secondsByType: SecondsByKey = new Map();
+  filteredData.forEach(entry => {
+    if (!entry._analysis) return;
+    const key = PrjType[entry._analysis.prjType]; // reverse map → "My Project", "Cred Prj", …
+    const seconds = entry.durationSeconds || 0;
+    secondsByType.set(key, (secondsByType.get(key) || 0) + seconds);
+  });
+  return toChartData(secondsByType);
+}
+
 function toChartData(secondsByKey: SecondsByKey): ChartData {
   const sorted = [...secondsByKey.entries()].sort((a, b) => b[1] - a[1]);
   return {
@@ -71,6 +95,8 @@ function applyPieChartData(chartEl: WaPieChart, {labels, data}: ChartData, datas
 export async function renderSummaryCharts(filteredData: FilteredData): Promise<void> {
   const prjChart = getElementById<WaPieChart>('prjPieChart');
   const tlpChart = getElementById<WaPieChart>('tlpPieChart');
+  const prjTypeChart = getElementById<WaPieChart>('prjTypePieChart');
+  const tlpTypeChart = getElementById<WaPieChart>('tlpTypePieChart');
   const updates: Array<Promise<boolean>> = [];
   if (prjChart) {
     applyPieChartData(prjChart, aggregateHoursByPRJ(filteredData), 'Hours');
@@ -79,6 +105,14 @@ export async function renderSummaryCharts(filteredData: FilteredData): Promise<v
   if (tlpChart) {
     applyPieChartData(tlpChart, aggregateHoursByTLP(filteredData), 'Hours');
     updates.push(tlpChart.updateComplete);
+  }
+  if (prjTypeChart) {
+    applyPieChartData(prjTypeChart, aggregateHoursByPrjType(filteredData), 'Hours');
+    updates.push(prjTypeChart.updateComplete);
+  }
+  if (tlpTypeChart) {
+    applyPieChartData(tlpTypeChart, aggregateHoursByTlpType(filteredData), 'Hours');
+    updates.push(tlpTypeChart.updateComplete);
   }
   await Promise.all(updates);
 }

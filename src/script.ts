@@ -8,6 +8,7 @@ import { buildMonthlyMarkdownReport } from './markdown-report';
 import { buildTimecardReportElement } from './report';
 import { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
 import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData, findMissingRequiredColumns } from './time-entry/time-entry-processing';
+import { analyzeTimeEntry } from './time-entry/analysis';
 import { filterTimeEntriesByDateRange, prepareTimecardEntries } from './time-entry/timecard-grouping';
 import { getTimeEntries } from './toggl/access';
 
@@ -173,6 +174,7 @@ async function processTimeEntryData(timeEntryData: TimeEntryData<any>): Promise<
     if (entry.clientName) allClients.add(entry.clientName);
 
     entry._computedDates = prepareComputedDateValues(entry.start);
+    entry._analysis = analyzeTimeEntry(entry);
     allDates.set(+entry._computedDates.day, entry._computedDates.day);
     allWeeks.set(+entry._computedDates.week, entry._computedDates.week);
     allMonths.set(+entry._computedDates.month, entry._computedDates.month);
