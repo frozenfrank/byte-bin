@@ -11,6 +11,21 @@ export type TlpAuditIssue =
   /** The description opens with a TLP code that disagrees with the tag. */
   | 'tlp-mismatch';
 
+/**
+ * How much attention an issue deserves, ordered least → most severe.
+ * `info` has no producer yet; it exists so a future low-stakes check can be
+ * added without touching the presentation layer.
+ */
+export type TlpAuditSeverity = 'info' | 'warning' | 'error';
+
+const SEVERITY_RANK: Record<TlpAuditSeverity, number> = { info: 0, warning: 1, error: 2 };
+
+/** Severity is a property of the issue kind, not of the individual entry. */
+export const ISSUE_SEVERITY: Record<TlpAuditIssue, TlpAuditSeverity> = {
+  'tlp-missing': 'error',    // reports drop these entries entirely, so the timecard is wrong
+  'tlp-mismatch': 'warning', // cosmetic drift; reports still come out correct
+};
+
 export interface TlpAuditFinding<T = unknown> {
   entry: TimeEntry<T>;
   issue: TlpAuditIssue;
@@ -41,4 +56,15 @@ export function auditTlpCodes<T>(entries: TimeEntry<T>[]): TlpAuditFinding<T>[] 
   }
 
   return findings.sort((a, b) => +a.entry.start - +b.entry.start);
+}
+
+/** The distinct severities the findings carry, most severe first. */
+export function severitiesPresent(findings: TlpAuditFinding[]): TlpAuditSeverity[] {
+  const severities = new Set(findings.map(f => ISSUE_SEVERITY[f.issue]));
+  return [...severities].sort((a, b) => SEVERITY_RANK[b] - SEVERITY_RANK[a]);
+}
+
+/** The severity the whole audit should present as; `null` when nothing was flagged. */
+export function mostSevereSeverity(findings: TlpAuditFinding[]): TlpAuditSeverity|null {
+  return severitiesPresent(findings)[0] ?? null;
 }

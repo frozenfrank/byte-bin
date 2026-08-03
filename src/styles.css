@@ -87,7 +87,17 @@
 }
 .tlp-audit-table .audit-issue-cell {
   white-space: nowrap;
+}
+/* Web Awesome calls its error variant "danger" and its informational variant
+   "brand"; there is no --wa-color-error-* or --wa-color-info-* token. */
+.tlp-audit-table .audit-severity-error {
+  color: var(--wa-color-danger-on-quiet);
+}
+.tlp-audit-table .audit-severity-warning {
   color: var(--wa-color-warning-on-quiet);
+}
+.tlp-audit-table .audit-severity-info {
+  color: var(--wa-color-brand-on-quiet);
 }
 .tlp-audit-table .audit-description-cell {
   max-width: 24em;

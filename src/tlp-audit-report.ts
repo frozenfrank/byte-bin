@@ -1,6 +1,7 @@
 import { formatDuration } from './helper';
 import type { WaCallout, WaDetails, WaIcon } from './model/web-awesome';
-import type { TlpAuditFinding, TlpAuditIssue } from './time-entry/tlp-audit';
+import type { TlpAuditFinding, TlpAuditIssue, TlpAuditSeverity } from './time-entry/tlp-audit';
+import { ISSUE_SEVERITY, mostSevereSeverity, severitiesPresent } from './time-entry/tlp-audit';
 
 // Renders the TLP audit findings for the "Filter Entries" tab. Built imperatively
 // with textContent (never innerHTML) because every cell holds user-authored text
@@ -11,9 +12,20 @@ const ISSUE_LABELS: Record<TlpAuditIssue, string> = {
   'tlp-mismatch': 'Tag ≠ description',
 };
 
+// Web Awesome names its error variant "danger" and its informational variant
+// "brand" — there is no `error`/`info` variant to reach for.
+// `octagon-exclamation` (the literal stop sign) is Font Awesome Pro; this project
+// has no kit code, so it would 403. `circle-exclamation` is the free equivalent.
+const SEVERITY_PRESENTATION: Record<TlpAuditSeverity, { variant: string; icon: string }> = {
+  error:   { variant: 'danger',  icon: 'circle-exclamation' },
+  warning: { variant: 'warning', icon: 'triangle-exclamation' },
+  info:    { variant: 'brand',   icon: 'circle-info' },
+};
+
 /**
- * Builds the warning callout and the collapsible table of flagged entries.
- * Returns `null` when there is nothing to warn about.
+ * Builds the audit callout and the collapsible table of flagged entries. The
+ * callout takes on the most severe severity present.
+ * Returns `null` when there is nothing to report.
  */
 export function buildTlpAuditElement(findings: TlpAuditFinding[]): HTMLElement|null {
   if (!findings.length) return null;
@@ -27,13 +39,16 @@ export function buildTlpAuditElement(findings: TlpAuditFinding[]): HTMLElement|n
 }
 
 function buildAuditCallout(findings: TlpAuditFinding[]) {
+  // Non-null: buildTlpAuditElement() already bailed out on an empty findings list.
+  const { variant, icon: iconName } = SEVERITY_PRESENTATION[mostSevereSeverity(findings)!];
+
   const callout = document.createElement('wa-callout') as WaCallout;
-  callout.setAttribute('variant', 'warning');
+  callout.setAttribute('variant', variant);
   callout.setAttribute('size', 's');
 
   const icon = document.createElement('wa-icon') as WaIcon;
   icon.setAttribute('slot', 'icon');
-  icon.setAttribute('name', 'triangle-exclamation');
+  icon.setAttribute('name', iconName);
   callout.appendChild(icon);
 
   const headline = document.createElement('strong');
@@ -46,16 +61,25 @@ function buildAuditCallout(findings: TlpAuditFinding[]) {
   return callout;
 }
 
-/** Describes only the issue kinds actually present, e.g. "3 with no TLP tag". */
+const ISSUE_SUMMARIES: Record<TlpAuditIssue, (count: number) => string> = {
+  'tlp-missing': n => `${n} with no TLP tag`,
+  'tlp-mismatch': n => `${n} where the description disagrees with the tag`,
+};
+
+/**
+ * Describes only the issue kinds actually present, most severe first,
+ * e.g. "3 with no TLP tag · 1 where the description disagrees with the tag".
+ */
 function summarizeIssues(findings: TlpAuditFinding[]): string {
-  const missing = findings.filter(f => f.issue === 'tlp-missing').length;
-  const mismatched = findings.length - missing;
+  const counts = new Map<TlpAuditIssue, number>();
+  for (const { issue } of findings) counts.set(issue, (counts.get(issue) ?? 0) + 1);
 
-  const parts: string[] = [];
-  if (missing) parts.push(`${missing} with no TLP tag`);
-  if (mismatched) parts.push(`${mismatched} where the description disagrees with the tag`);
-
-  return parts.join(' · ');
+  // Grouped by severity so errors always lead, then by the issue order within each.
+  return severitiesPresent(findings)
+    .flatMap(severity => [...counts]
+      .filter(([issue]) => ISSUE_SEVERITY[issue] === severity)
+      .map(([issue, count]) => ISSUE_SUMMARIES[issue](count)))
+    .join(' · ');
 }
 
 function buildAuditDetails(findings: TlpAuditFinding[]) {
@@ -97,7 +121,9 @@ function buildAuditTableBody(findings: TlpAuditFinding[]) {
     const { entry } = finding;
     const tr = document.createElement('tr');
 
-    tr.appendChild(createCell(ISSUE_LABELS[finding.issue], 'audit-issue-cell'));
+    tr.appendChild(createCell(
+      ISSUE_LABELS[finding.issue],
+      `audit-issue-cell audit-severity-${ISSUE_SEVERITY[finding.issue]}`));
     tr.appendChild(createCell(entry.description, 'audit-description-cell'));
     tr.appendChild(createCell(formatStartDateTime(entry.start)));
     tr.appendChild(createCell(entry.durationSeconds === null ? '—' : formatDuration(entry.durationSeconds)));
