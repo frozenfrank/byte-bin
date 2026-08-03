@@ -3,12 +3,14 @@ import { renderSummaryCharts, renderTimePeriodBarChart } from './charts';
 import { getElementById } from './helper';
 import { updateDataStatus, updateDataStatusMissingColumns } from './import-data';
 import { DateValue, TimeScale } from './model/types';
-import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch, WaTab, WaTabGroup } from './model/web-awesome';
+import { WaButton, WaCallout, WaDetails, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch, WaTab, WaTabGroup } from './model/web-awesome';
 import { buildMonthlyMarkdownReport } from './markdown-report';
 import { buildTimecardReportElement } from './report';
+import { buildTlpAuditElement } from './tlp-audit-report';
 import { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
 import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData, findMissingRequiredColumns } from './time-entry/time-entry-processing';
 import { filterTimeEntriesByDateRange, prepareTimecardEntries } from './time-entry/timecard-grouping';
+import { auditTlpCodes } from './time-entry/tlp-audit';
 import { getTimeEntries } from './toggl/access';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
@@ -22,6 +24,7 @@ const MONTH_SELECT_ID = 'monthSelect';
 const CLIENT_SELECT_ID = 'clientSelect';
 const CLIENT_FILTER_STORAGE_KEY = 'clientFilter';
 const OUTPUT_PRE_ID = 'timecardReport';
+const TLP_AUDIT_ID = 'tlpAuditWarnings';
 const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
 const REQUIRE_BILLABLE_ID = 'requireBillableSwitch';
 const GROUP_BY_XDS_ID = 'groupByXdsSwitch';
@@ -676,7 +679,19 @@ async function renderTimecardReport(): Promise<void> {
       uniqueMonthValues: interpretedTimeData.uniqueMonthValues,
     }),
     updateExportButtonLabel(),
+    renderTlpAudit(filteredData),
   ]);
+}
+
+/** Surfaces TLP code problems in the filtered data on the "Filter Entries" tab. */
+async function renderTlpAudit(filteredData: TimeEntry[]): Promise<void> {
+  const host = getElementById(TLP_AUDIT_ID);
+  const auditEl = buildTlpAuditElement(auditTlpCodes(filteredData));
+  host.replaceChildren(...(auditEl ? [auditEl] : []));
+  if (!auditEl) return;
+
+  const waElements = auditEl.querySelectorAll<WaCallout|WaDetails>('wa-callout, wa-details');
+  await Promise.all([...waElements].map(el => el.updateComplete));
 }
 
 function interpretMinMaxFilterDates() {

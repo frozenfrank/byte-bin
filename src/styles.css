@@ -69,3 +69,27 @@
   margin-left: 0.2em;
   vertical-align: middle;
 }
+
+.tlp-audit-table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 0.9em;
+}
+.tlp-audit-table th,
+.tlp-audit-table td {
+  padding: 0.3em 0.6em;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--wa-color-neutral-border-normal);
+}
+.tlp-audit-table thead tr {
+  border-bottom: 2px solid var(--wa-color-neutral-border-loud);
+}
+.tlp-audit-table .audit-issue-cell {
+  white-space: nowrap;
+  color: var(--wa-color-warning-on-quiet);
+}
+.tlp-audit-table .audit-description-cell {
+  max-width: 24em;
+  overflow-wrap: anywhere;
+}
