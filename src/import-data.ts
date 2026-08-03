@@ -1,4 +1,4 @@
-import { getElementById } from './helper';
+import { formatDuration, getElementById } from './helper';
 import { WaCallout, WaIcon } from './model/web-awesome';
 import { setStepsAvailable } from './script';
 import { TimeEntry } from './time-entry/time-entry';
@@ -10,13 +10,6 @@ import { TimeEntry } from './time-entry/time-entry';
 const DATA_STATUS_CALLOUT_ID = 'dataStatusCallout';
 const DATA_STATUS_ICON_ID = 'dataStatusIcon';
 const DATA_STATUS_CONTENT_ID = 'dataStatusContent';
-
-/** Formats a duration in seconds as a human-readable "Hh Mm" string. */
-function formatDuration(totalSeconds: number): string {
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.round((totalSeconds % 3600) / 60);
-  return `${hours}h ${minutes}m`;
-}
 
 const formatDate = (d: Date) =>
   d.toLocaleDateString('default', { year: 'numeric', month: 'short', day: 'numeric' });

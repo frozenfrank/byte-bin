@@ -123,6 +123,13 @@ export function convertParsedCsvToTimeEntryData(
 // ##### Data Extraction #####
 
 const TLP_REGEX = /tlp(\d{5})\b/i;
+/**
+ * Matches the TLP code that, by convention, opens a description — e.g.
+ * "12345 Fixed the thing" or "TLP12345: ...". Unlike the tag form, description
+ * codes are not zero-padded, so fewer than 5 digits is expected. The trailing
+ * `\b` keeps a longer leading number ("12345678 ...") from being misread.
+ */
+const DESCRIPTION_TLP_REGEX = /^\s*(?:tlp\s*)?(\d{1,5})\b/i;
 export const PRJ_REGEX = /\bPRJ\s*(\d+)\b/i;
 const DLG_REGEX = /\bDLG\s*([A-Z]{0,2}\d{5,})\b/i;
 const QAN_REGEX = /\bQAN\s*(\d+)\b/i;
@@ -133,6 +140,14 @@ export function extractTLPCode(entry: TimeEntry): string|null {
   const tags = entry.tagNames?.join(',');
   if (!tags) return null;
   return TLP_REGEX.exec(tags)?.[1] || null;
+}
+
+/**
+ * Extracts the TLP code the *description* claims, by convention its first word.
+ * Returned unpadded, so compare against {@link extractTLPCode} numerically.
+ */
+export function extractDescriptionTLPCode(entry: TimeEntry): string|null {
+  return DESCRIPTION_TLP_REGEX.exec(entry.description)?.[1] || null;
 }
 
 export function extractPRJNumber(entry: TimeEntry): string|null {

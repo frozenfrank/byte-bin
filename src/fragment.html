@@ -75,7 +75,11 @@
     </div>
   </wa-tab-panel>
 
-  <wa-tab panel="filter-entries" disabled>2: Filter Entries</wa-tab>
+  <wa-tab panel="filter-entries" disabled>
+    2: Filter Entries
+    <!-- Severity badge for the TLP audit; name/label/color set by applyAuditSeverityToTab(). -->
+    <wa-icon id="filterEntriesAuditIcon" class="tab-audit-icon" hidden></wa-icon>
+  </wa-tab>
   <wa-tab-panel name="filter-entries">
     <div class="wa-stack">
       <wa-select id="clientSelect" label="Filter by Client" hint="Show entries for a specific client">
@@ -113,6 +117,9 @@
       >
         <wa-option value="" selected disabled>-- Import data first --</wa-option>
       </wa-select>
+
+      <!-- Populated by renderTlpAudit(); stays empty when the filtered data is clean. -->
+      <div id="tlpAuditWarnings"></div>
     </div>
   </wa-tab-panel>
 

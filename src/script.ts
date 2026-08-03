@@ -3,13 +3,15 @@ import { renderPeriodBarCharts, renderSummaryCharts } from './charts';
 import { getElementById } from './helper';
 import { updateDataStatus, updateDataStatusMissingColumns } from './import-data';
 import { DateValue, TimeScale } from './model/types';
-import { WaButton, WaCallout, WaFileInput, WaOption, WaRadioGroup, WaSelect, WaSwitch, WaTab, WaTabGroup } from './model/web-awesome';
+import { WaButton, WaCallout, WaDetails, WaFileInput, WaIcon, WaOption, WaRadioGroup, WaSelect, WaSwitch, WaTab, WaTabGroup } from './model/web-awesome';
 import { buildMonthlyMarkdownReport } from './markdown-report';
 import { buildTimecardReportElement } from './report';
+import { buildTlpAuditElement, SEVERITY_PRESENTATION } from './tlp-audit-report';
 import { PapaParseCSVResult, TimeEntry, TimeEntryData, TogglExportTimeEntry } from './time-entry/time-entry';
 import { convertApiDataToTimeEntryData, convertParsedCsvToTimeEntryData, findMissingRequiredColumns } from './time-entry/time-entry-processing';
 import { analyzeTimeEntry } from './time-entry/analysis';
 import { filterTimeEntriesByDateRange, prepareTimecardEntries } from './time-entry/timecard-grouping';
+import { auditTlpCodes, mostSevereSeverity, TlpAuditSeverity } from './time-entry/tlp-audit';
 import { getTimeEntries } from './toggl/access';
 
 const IMPORT_METHOD_INPUT_ID = 'import-data-method';
@@ -23,6 +25,8 @@ const MONTH_SELECT_ID = 'monthSelect';
 const CLIENT_SELECT_ID = 'clientSelect';
 const CLIENT_FILTER_STORAGE_KEY = 'clientFilter';
 const OUTPUT_PRE_ID = 'timecardReport';
+const TLP_AUDIT_ID = 'tlpAuditWarnings';
+const FILTER_TAB_AUDIT_ICON_ID = 'filterEntriesAuditIcon';
 const SHOW_ALL_DESC_ID = 'showAllDescriptionsSwitch';
 const REQUIRE_BILLABLE_ID = 'requireBillableSwitch';
 const GROUP_BY_XDS_ID = 'groupByXdsSwitch';
@@ -134,11 +138,15 @@ function handleDataParsed(results: ParseResult<TogglExportTimeEntry>) {
 
 // ### Workflow Step Gating ###
 
-// All steps after the first ("Import Data"). Referenced positionally so we never
-// depend on a tab's id or panel attribute. The initial disabled state lives in the
-// HTML (fragment.html); we only re-toggle it as data becomes available/unavailable.
+// Steps are referenced positionally so we never depend on a tab's id or panel
+// attribute. The initial disabled state lives in the HTML (fragment.html); we only
+// re-toggle it as the gating conditions change.
 const tabGroup = document.querySelector<WaTabGroup>('wa-tab-group')!;
-const gatedTabs = Array.from(tabGroup.querySelectorAll<WaTab>('wa-tab')).slice(1);
+const allTabs = Array.from(tabGroup.querySelectorAll<WaTab>('wa-tab'));
+/** Everything after "Import Data" — unreachable until some data is loaded. */
+const gatedTabs = allTabs.slice(1);
+/** Everything after "Filter Entries" — additionally gated on a clean audit. */
+const outputTabs = allTabs.slice(2);
 
 // Tab strip sits on the side for desktop, but moves to the top on tablet and
 // smaller viewports where horizontal space is scarce. See dark-mode handler in
@@ -151,13 +159,41 @@ async function applyTabPlacement(): Promise<void> {
 void applyTabPlacement();
 compactTabsQuery.addEventListener('change', () => void applyTabPlacement());
 
+// Two independent conditions gate the workflow, and they are updated from
+// unrelated code paths (import-data.ts vs. renderTlpAudit). Holding them as flags
+// and deriving the disabled state from both means neither setter can clobber the
+// other, whatever order they run in.
+let hasImportedData = false; // matches the `disabled` attributes in fragment.html
+let auditHasErrors = false;
+
+async function applyTabGating(): Promise<void> {
+  gatedTabs.forEach(tab => { tab.disabled = !hasImportedData; });
+  // A subset of gatedTabs, so this deliberately runs second and narrows the above.
+  outputTabs.forEach(tab => { tab.disabled = !hasImportedData || auditHasErrors; });
+  await Promise.all(gatedTabs.map(tab => tab.updateComplete));
+}
+
 /**
- * Enables every workflow step after the first when `available` is true, and
- * disables them (leaving only "Import Data" reachable) when false.
+ * Records whether usable data is loaded. False disables every step after
+ * "Import Data"; true re-enables them, except any the audit still holds back.
  */
 export async function setStepsAvailable(available: boolean): Promise<void> {
-  gatedTabs.forEach(tab => { tab.disabled = !available; });
-  await Promise.all(gatedTabs.map(tab => tab.updateComplete));
+  hasImportedData = available;
+  if (available) return applyTabGating();
+
+  // A rejected import never reaches renderTlpAudit(), so clear the audit here or
+  // the previous import's badge lingers over a tab whose data is gone.
+  auditHasErrors = false;
+  await Promise.all([applyTabGating(), applyAuditSeverityToTab(null)]);
+}
+
+/**
+ * Blocks the "View Graphs" and "View Table" steps while the audit reports an
+ * error. Errors mean reports silently drop entries, so the output would be wrong.
+ */
+async function setAuditHasErrors(hasErrors: boolean): Promise<void> {
+  auditHasErrors = hasErrors;
+  await applyTabGating();
 }
 
 async function processTimeEntryData(timeEntryData: TimeEntryData<any>): Promise<void> {
@@ -685,7 +721,50 @@ async function renderTimecardReport(): Promise<void> {
       uniqueMonthValues: interpretedTimeData.uniqueMonthValues,
     }),
     updateExportButtonLabel(),
+    renderTlpAudit(filteredData),
   ]);
+}
+
+/** Surfaces TLP code problems in the filtered data on the "Filter Entries" tab. */
+async function renderTlpAudit(filteredData: TimeEntry[]): Promise<void> {
+  const findings = auditTlpCodes(filteredData);
+  const severity = mostSevereSeverity(findings); // null when nothing was flagged
+
+  const host = getElementById(TLP_AUDIT_ID);
+  const auditEl = buildTlpAuditElement(findings);
+  host.replaceChildren(...(auditEl ? [auditEl] : []));
+
+  // No early return on a clean audit: the badge still has to clear and the gate
+  // still has to release.
+  const waElements = auditEl?.querySelectorAll<WaCallout|WaDetails>('wa-callout, wa-details') ?? [];
+  await Promise.all([
+    applyAuditSeverityToTab(severity),
+    setAuditHasErrors(severity === 'error'),
+    ...[...waElements].map(el => el.updateComplete),
+  ]);
+}
+
+const SEVERITY_TAB_LABELS: Record<TlpAuditSeverity, string> = {
+  error:   'TLP audit found errors',
+  warning: 'TLP audit found warnings',
+  info:    'TLP audit found notes',
+};
+
+/** Mirrors the audit's worst severity onto the "Filter Entries" tab label. */
+async function applyAuditSeverityToTab(severity: TlpAuditSeverity|null): Promise<void> {
+  const icon = getElementById<WaIcon>(FILTER_TAB_AUDIT_ICON_ID);
+
+  icon.classList.remove(...Object.keys(SEVERITY_TAB_LABELS).map(s => `audit-severity-${s}`));
+  if (!severity) {
+    icon.hidden = true;
+    return;
+  }
+
+  icon.classList.add(`audit-severity-${severity}`);
+  icon.name = SEVERITY_PRESENTATION[severity].icon;
+  icon.label = SEVERITY_TAB_LABELS[severity];
+  icon.hidden = false;
+  await icon.updateComplete;
 }
 
 function interpretMinMaxFilterDates() {
