@@ -122,7 +122,7 @@ export function convertParsedCsvToTimeEntryData(
 
 // ##### Data Extraction #####
 
-const TLP_REGEX = /tlp(\d{5})/i;
+const TLP_REGEX = /tlp(\d{5})\b/i;
 export const PRJ_REGEX = /\bPRJ\s*(\d+)\b/i;
 const DLG_REGEX = /\bDLG\s*([A-Z]{0,2}\d{5,})\b/i;
 const QAN_REGEX = /\bQAN\s*(\d+)\b/i;
