@@ -30,52 +30,36 @@ interface ChartData {
   data: number[];
 }
 
-function aggregateHoursByPRJ(filteredData: FilteredData) {
-  const secondsByPRJ = new Map();
-  filteredData.forEach(entry => {
+function aggregateHoursByPRJ(filteredData: FilteredData): ChartData {
+  return toChartData(filteredData, entry => {
     const prj = extractPRJNumber(entry);
-    const key = prj ? `PRJ ${prj}` : NO_PRJ_LABEL;
-    const seconds = entry.durationSeconds || 0;
-    secondsByPRJ.set(key, (secondsByPRJ.get(key) || 0) + seconds);
+    return prj ? `PRJ ${prj}` : NO_PRJ_LABEL;
   });
-  return toChartData(secondsByPRJ);
 }
 
-function aggregateHoursByTLP(filteredData: FilteredData) {
-  const secondsByTLP: SecondsByKey = new Map();
-  filteredData.forEach(entry => {
+function aggregateHoursByTLP(filteredData: FilteredData): ChartData {
+  return toChartData(filteredData, entry => {
     const tlp = extractTLPCode(entry);
-    const key = tlp ? `TLP ${tlp}` : UNTAGGED_LABEL;
-    const seconds = entry.durationSeconds || 0;
-    secondsByTLP.set(key, (secondsByTLP.get(key) || 0) + seconds);
+    return tlp ? `TLP ${tlp}` : UNTAGGED_LABEL;
   });
-  return toChartData(secondsByTLP);
 }
 
-function aggregateHoursByTlpType(filteredData: FilteredData) {
-  const secondsByType: SecondsByKey = new Map();
+function aggregateHoursByTlpType(filteredData: FilteredData): ChartData {
+  return toChartData(filteredData, entry => (entry._analysis && TlpType[entry._analysis.tlpType]) ?? UNTAGGED_LABEL);
+}
+
+function aggregateHoursByPrjType(filteredData: FilteredData): ChartData {
+  return toChartData(filteredData, entry => (entry._analysis && PrjType[entry._analysis.prjType]) ?? NO_PRJ_LABEL);
+}
+
+function toChartData(filteredData: FilteredData, getKey: (entry: TimeEntry) => string): ChartData {
+  const secondsByKey: SecondsByKey = new Map();
   filteredData.forEach(entry => {
-    if (!entry._analysis) return;
-    // Untagged (no TLP tag) gets its own slice; tagged entries use the TlpType member name.
-    const key = extractTLPCode(entry) ? TlpType[entry._analysis.tlpType] : UNTAGGED_LABEL;
+    const key = getKey(entry);
     const seconds = entry.durationSeconds || 0;
-    secondsByType.set(key, (secondsByType.get(key) || 0) + seconds);
+    secondsByKey.set(key, (secondsByKey.get(key) || 0) + seconds);
   });
-  return toChartData(secondsByType);
-}
 
-function aggregateHoursByPrjType(filteredData: FilteredData) {
-  const secondsByType: SecondsByKey = new Map();
-  filteredData.forEach(entry => {
-    if (!entry._analysis) return;
-    const key = PrjType[entry._analysis.prjType]; // reverse map → "My Project", "Cred Prj", …
-    const seconds = entry.durationSeconds || 0;
-    secondsByType.set(key, (secondsByType.get(key) || 0) + seconds);
-  });
-  return toChartData(secondsByType);
-}
-
-function toChartData(secondsByKey: SecondsByKey): ChartData {
   const sorted = [...secondsByKey.entries()].sort((a, b) => b[1] - a[1]);
   return {
     labels: sorted.map(([key]) => key),

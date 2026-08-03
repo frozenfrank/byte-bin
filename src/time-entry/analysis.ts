@@ -34,6 +34,14 @@ export enum PrjType {
   "Non-Prj",
 }
 
+/** Compute the full analysis payload for an entry, delegating to the per-field classifiers. */
+export function analyzeTimeEntry(entry: TimeEntry): TimeEntryAnalysis {
+  return {
+    tlpType: classifyTlpType(entry),
+    prjType: classifyPrjType(entry),
+  };
+}
+
 /** Bucket an entry's TLP code (5-digit zero-padded, from {@linkcode extractTLPCode}) into a TlpType. */
 function classifyTlpType(entry: TimeEntry): TlpType {
   switch (extractTLPCode(entry)) {
@@ -57,12 +65,4 @@ function classifyPrjType(entry: TimeEntry): PrjType {
   }
 
   return PrjType["Non-Prj"];
-}
-
-/** Compute the full analysis payload for an entry, delegating to the per-field classifiers. */
-export function analyzeTimeEntry(entry: TimeEntry): TimeEntryAnalysis {
-  return {
-    tlpType: classifyTlpType(entry),
-    prjType: classifyPrjType(entry),
-  };
 }
