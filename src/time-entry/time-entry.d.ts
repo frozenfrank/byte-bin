@@ -1,6 +1,6 @@
 import type { ParseMeta, ParseResult } from "papaparse";
 import { ISO10DateString } from "../model/types";
-import type { TlpType, PrjType } from "./analysis";
+import type { TimeEntryAnalysis } from "./analysis";
 
 // ### Unified Time Entry Type ###
 
@@ -31,10 +31,7 @@ export interface TimeEntry<T = unknown> {
   };
 
   /** Additional analysis layered on top of the raw data. */
-  _analysis?: {
-    tlpType: TlpType,
-    prjType: PrjType,
-  };
+  _analysis?: TimeEntryAnalysis;
 }
 
 /** TimeEntry's grouped by several relevant fields */

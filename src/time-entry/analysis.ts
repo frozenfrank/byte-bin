@@ -7,6 +7,11 @@ import { extractTLPCode, PRJ_REGEX } from "./time-entry-processing";
 // Enums are regular (non-const) so their runtime reverse map (e.g. PrjType[value]) doubles as
 // the chart label. All enum-member references live in this file.
 
+export interface TimeEntryAnalysis {
+  tlpType: TlpType,
+  prjType: PrjType,
+};
+
 export enum TlpType {
   /** Directly connected to code. Ex: TLP 13, 14 */
   Coding,
@@ -43,15 +48,19 @@ function classifyTlpType(entry: TimeEntry): TlpType {
 
 /** Bucket an entry into a PrjType based on where (and whether) a PRJ number appears. */
 function classifyPrjType(entry: TimeEntry): PrjType {
-  if (PRJ_REGEX.test(entry.projectName)) return PrjType["My Project"];             // PRJ # in Project field
-  const prjInDescription = PRJ_REGEX.test(entry.description);
-  if (/cred/i.test(entry.projectName) && prjInDescription) return PrjType["Cred Prj"]; // "Cred" project + PRJ # in description
-  if (prjInDescription) return PrjType["Other Prj"];                               // PRJ # somewhere, but not the above
-  return PrjType["Non-Prj"];                                                       // no PRJ # anywhere
+  if (PRJ_REGEX.test(entry.projectName)) {
+    return PrjType["My Project"];
+  }
+
+  if (PRJ_REGEX.test(entry.description)) {
+    return /cred/i.test(entry.projectName) ? PrjType["Cred Prj"] : PrjType["Other Prj"];
+  }
+
+  return PrjType["Non-Prj"];
 }
 
 /** Compute the full analysis payload for an entry, delegating to the per-field classifiers. */
-export function analyzeTimeEntry(entry: TimeEntry): { tlpType: TlpType; prjType: PrjType } {
+export function analyzeTimeEntry(entry: TimeEntry): TimeEntryAnalysis {
   return {
     tlpType: classifyTlpType(entry),
     prjType: classifyPrjType(entry),
