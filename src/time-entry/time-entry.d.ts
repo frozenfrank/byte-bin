@@ -1,5 +1,6 @@
 import type { ParseMeta, ParseResult } from "papaparse";
 import { ISO10DateString } from "../model/types";
+import type { TlpType, PrjType } from "./analysis";
 
 // ### Unified Time Entry Type ###
 
@@ -34,28 +35,6 @@ export interface TimeEntry<T = unknown> {
     tlpType: TlpType,
     prjType: PrjType,
   };
-}
-
-export const enum TlpType {
-  /** Directly connected to code. Ex: TLP 13, 14 */
-  Coding,
-  /** Directly connected to designs. Ex: TLP 12, 16 */
-  Design,
-  /** Meetings. Ex: TLP 7091 */
-  Meeting,
-  /** Dealing with fixes. Ex: TLP 13279, 5513 */
-  Fixes,
-  /** Immersion/travel. Ex: TLP 3048, 20239, 47818, 57064 */
-  Research,
-  /** Catch all for everything else. Ex: TLP 4, 3, 154, 119, 47808 */
-  Other,
-}
-
-export const enum PrjType {
-  "My Project",
-  "Cred Prj",
-  "Other Prj",
-  "Non-Prj",
 }
 
 /** TimeEntry's grouped by several relevant fields */
