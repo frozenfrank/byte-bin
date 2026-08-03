@@ -88,18 +88,36 @@
 .tlp-audit-table .audit-issue-cell {
   white-space: nowrap;
 }
-/* Web Awesome calls its error variant "danger" and its informational variant
-   "brand"; there is no --wa-color-error-* or --wa-color-info-* token. */
-.tlp-audit-table .audit-severity-error {
-  color: var(--wa-color-danger-on-quiet);
-}
-.tlp-audit-table .audit-severity-warning {
-  color: var(--wa-color-warning-on-quiet);
-}
-.tlp-audit-table .audit-severity-info {
-  color: var(--wa-color-brand-on-quiet);
-}
 .tlp-audit-table .audit-description-cell {
   max-width: 24em;
   overflow-wrap: anywhere;
+}
+
+/* Severity colors, shared by the audit table's issue cells and the "Filter
+   Entries" tab badge -- deliberately unscoped so both can use them.
+   Web Awesome calls its error variant "danger" and its informational variant
+   "brand"; there is no --wa-color-error-* or --wa-color-info-* token. */
+.audit-severity-error {
+  color: var(--wa-color-danger-on-quiet);
+}
+.audit-severity-warning {
+  color: var(--wa-color-warning-on-quiet);
+}
+.audit-severity-info {
+  color: var(--wa-color-brand-on-quiet);
+}
+
+/* wa-tab styles `::slotted(wa-icon:first-child)` and `:last-child` separately, and
+   the badge is its tab's only element child -- so it matches both and would pick up
+   a trailing margin that shoves the label off-center. Set both sides explicitly. */
+.tab-audit-icon {
+  margin-inline-start: 0.5em;
+  margin-inline-end: 0;
+}
+/* wa-icon's shadow stylesheet sets `:host { display: inline-flex }` and never
+   handles [hidden]. That author-origin declaration beats the UA stylesheet's
+   `[hidden] { display: none }`, so the attribute alone would not hide it. An
+   outer-tree rule wins over :host, so this one does the job. */
+.tab-audit-icon[hidden] {
+  display: none;
 }

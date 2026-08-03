@@ -16,7 +16,9 @@ const ISSUE_LABELS: Record<TlpAuditIssue, string> = {
 // "brand" — there is no `error`/`info` variant to reach for.
 // `octagon-exclamation` (the literal stop sign) is Font Awesome Pro; this project
 // has no kit code, so it would 403. `circle-exclamation` is the free equivalent.
-const SEVERITY_PRESENTATION: Record<TlpAuditSeverity, { variant: string; icon: string }> = {
+// Exported so the "Filter Entries" tab badge draws its icon from the same table
+// the callout does, rather than keeping a second copy in sync.
+export const SEVERITY_PRESENTATION: Record<TlpAuditSeverity, { variant: string; icon: string }> = {
   error:   { variant: 'danger',  icon: 'circle-exclamation' },
   warning: { variant: 'warning', icon: 'triangle-exclamation' },
   info:    { variant: 'brand',   icon: 'circle-info' },
