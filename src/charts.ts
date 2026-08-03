@@ -352,8 +352,9 @@ async function renderStackedTypeBarChart(
     },
   };
   // Pin the axis to a whole period in percent mode; otherwise let it fit the hours.
+  // yLabel is always set — every bar chart carries one so toggling doesn't reflow the plot area.
   chartEl.max = stackAsPercent ? 100 : null;
-  chartEl.yLabel = stackAsPercent ? '% of period' : null;
+  chartEl.yLabel = stackAsPercent ? '% of period' : 'Hours';
   chartEl.label = `${stackAsPercent ? 'Percent' : 'Hours'} ${series.titleSubject}`;
   await chartEl.updateComplete;
 }
