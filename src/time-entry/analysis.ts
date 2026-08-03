@@ -34,6 +34,17 @@ export enum PrjType {
   "Non-Prj",
 }
 
+/**
+ * Enum member names ordered by their numeric value. This is the canonical chart series order:
+ * a category keeps the same index — and therefore the same color — in every time period.
+ */
+export function enumLabelsByValue(enumObj: Record<string, string | number>): string[] {
+  return Object.keys(enumObj)
+    .filter(key => Number.isInteger(+key))
+    .sort((a, b) => +a - +b)
+    .map(key => enumObj[key] as string);
+}
+
 /** Compute the full analysis payload for an entry, delegating to the per-field classifiers. */
 export function analyzeTimeEntry(entry: TimeEntry): TimeEntryAnalysis {
   return {

@@ -3,11 +3,12 @@ import { TimeScale } from "./model/types";
 import { WaBarChart, WaPieChart } from "./model/web-awesome";
 import { TimeEntry } from "./time-entry/time-entry";
 import { extractPRJNumber, extractTLPCode } from "./time-entry/time-entry-processing";
-import { PrjType, TlpType } from "./time-entry/analysis";
+import { enumLabelsByValue, PrjType, TlpType } from "./time-entry/analysis";
 
 // ### Chart Data Aggregation & Rendering ###
 // Produces summary pie charts of filtered time entries by PRJ and TLP,
-// plus a bar chart of total hours per time period.
+// plus a bar chart of total hours per time period and two stacked bar charts
+// splitting those same periods by PRJ/TLP type.
 // Called from renderTimecardReport() in script.ts.
 
 const NO_PRJ_LABEL = 'No Project';
@@ -28,6 +29,11 @@ type SecondsByKey = Map<string, number>;
 interface ChartData {
   labels: string[];
   data: number[];
+}
+
+/** Seconds → hours, rounded to one decimal. The unit every chart plots. */
+function toHours(seconds: number): number {
+  return Math.round((seconds / 3600) * 10) / 10;
 }
 
 function aggregateHoursByPRJ(filteredData: FilteredData): ChartData {
@@ -63,7 +69,7 @@ function toChartData(filteredData: FilteredData, getKey: (entry: TimeEntry) => s
   const sorted = [...secondsByKey.entries()].sort((a, b) => b[1] - a[1]);
   return {
     labels: sorted.map(([key]) => key),
-    data: sorted.map(([, seconds]) => Math.round((seconds / 3600) * 10) / 10),
+    data: sorted.map(([, seconds]) => toHours(seconds)),
   };
 }
 
@@ -220,15 +226,33 @@ function uniquePeriodValuesFor(scale: PeriodScale, input: BarChartInput): number
   }
 }
 
-export async function renderTimePeriodBarChart(input: BarChartInput): Promise<void> {
-  const chartEl = getElementById<WaBarChart>('periodBarChart');
-  if (!chartEl) return;
+/** The window of periods every period chart shares: same bucket size, same bars, same labels. */
+interface PeriodWindow {
+  scale: PeriodScale;
+  /** Period start timestamps, one per bar, left to right. */
+  windowValues: number[];
+  labels: string[];
+  activeIndexInWindow: number;
+}
 
+function resolvePeriodWindow(input: BarChartInput): PeriodWindow {
   const scale = resolvePeriodScale(input);
   const uniquePeriodValues = uniquePeriodValuesFor(scale, input);
   const isAllTime = input.timeScale === TimeScale.All;
   const { windowValues, activeIndexInWindow } = pickWindow(uniquePeriodValues, input.activePeriodValue, isAllTime);
+  return {
+    scale,
+    windowValues,
+    labels: windowValues.map(ms => formatPeriodLabel(ms, scale)),
+    activeIndexInWindow,
+  };
+}
 
+async function renderTimePeriodBarChart(input: BarChartInput, periodWindow: PeriodWindow): Promise<void> {
+  const chartEl = getElementById<WaBarChart>('periodBarChart');
+  if (!chartEl) return;
+
+  const { scale, windowValues, labels, activeIndexInWindow } = periodWindow;
   if (windowValues.length === 0) {
     chartEl.config = { data: { labels: [], datasets: [{ label: 'Hours', data: [] }] } };
     await chartEl.updateComplete;
@@ -236,10 +260,81 @@ export async function renderTimePeriodBarChart(input: BarChartInput): Promise<vo
   }
 
   const sumsByPeriod = aggregateHoursByPeriod(input.allFiltered, scale);
-  const labels = windowValues.map(ms => formatPeriodLabel(ms, scale));
-  const hoursPerBar = windowValues.map(ms => Math.round(((sumsByPeriod.get(ms) ?? 0) / 3600) * 10) / 10);
+  const hoursPerBar = windowValues.map(ms => toHours(sumsByPeriod.get(ms) ?? 0));
   const colors = resolveBarColors(chartEl);
 
   applyBarChartData(chartEl, { labels, hoursPerBar, activeIndexInWindow, colors }, 'Hours');
   await chartEl.updateComplete;
+}
+
+// ### Stacked Type Bar Charts ###
+// The same periods as the bar chart above, but each bar is split by PRJ/TLP type.
+// No active-period highlight here: the bar colors are spent on the categories.
+
+/** One stacked bar chart: a dataset per enum member, ordered by numeric enum value. */
+interface CategorySeries {
+  /** Element id of the <wa-bar-chart stacked> to render into. */
+  elementId: string;
+  /** Enum member names in numeric order. Index === dataset index === color slot. */
+  labels: string[];
+  /** The entry's category index, or null to exclude it. */
+  categoryIndexOf: (entry: TimeEntry) => number | null;
+}
+
+const STACKED_TYPE_SERIES: CategorySeries[] = [
+  {
+    elementId: 'prjTypeBarChart',
+    labels: enumLabelsByValue(PrjType),
+    categoryIndexOf: entry => entry._analysis?.prjType ?? null,
+  },
+  {
+    elementId: 'tlpTypeBarChart',
+    labels: enumLabelsByValue(TlpType),
+    categoryIndexOf: entry => entry._analysis?.tlpType ?? null,
+  },
+];
+
+/** Sum seconds per period, split into one slot per category. Slot order follows {@linkcode CategorySeries.labels}. */
+function aggregateHoursByPeriodAndCategory(
+  entries: FilteredData, scale: PeriodScale, series: CategorySeries,
+): Map<number, number[]> {
+  const sumsByPeriod = new Map<number, number[]>();
+  entries.forEach(entry => {
+    if (!entry._computedDates) return;
+    const categoryIndex = series.categoryIndexOf(entry);
+    if (categoryIndex === null) return;
+    const periodMs = +entry._computedDates[scale];
+    let byCategory = sumsByPeriod.get(periodMs);
+    if (!byCategory) sumsByPeriod.set(periodMs, byCategory = new Array(series.labels.length).fill(0));
+    byCategory[categoryIndex] += entry.durationSeconds || 0;
+  });
+  return sumsByPeriod;
+}
+
+async function renderStackedTypeBarChart(
+  series: CategorySeries, input: BarChartInput, periodWindow: PeriodWindow,
+): Promise<void> {
+  const chartEl = getElementById<WaBarChart>(series.elementId);
+  if (!chartEl) return;
+
+  const sumsByPeriod = aggregateHoursByPeriodAndCategory(input.allFiltered, periodWindow.scale, series);
+  chartEl.config = {
+    data: {
+      labels: periodWindow.labels,
+      datasets: series.labels.map((label, categoryIndex) => ({
+        label,
+        data: periodWindow.windowValues.map(ms => toHours(sumsByPeriod.get(ms)?.[categoryIndex] ?? 0)),
+      })),
+    },
+  };
+  await chartEl.updateComplete;
+}
+
+/** Render every period chart off one shared window, so their bars always line up. */
+export async function renderPeriodBarCharts(input: BarChartInput): Promise<void> {
+  const periodWindow = resolvePeriodWindow(input);
+  await Promise.all([
+    renderTimePeriodBarChart(input, periodWindow),
+    ...STACKED_TYPE_SERIES.map(series => renderStackedTypeBarChart(series, input, periodWindow)),
+  ]);
 }

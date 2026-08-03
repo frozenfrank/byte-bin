@@ -1,5 +1,5 @@
 import Papa, { ParseResult } from 'papaparse';
-import { renderSummaryCharts, renderTimePeriodBarChart } from './charts';
+import { renderPeriodBarCharts, renderSummaryCharts } from './charts';
 import { getElementById } from './helper';
 import { updateDataStatus, updateDataStatusMissingColumns } from './import-data';
 import { DateValue, TimeScale } from './model/types';
@@ -669,7 +669,7 @@ async function renderTimecardReport(): Promise<void> {
 
   await Promise.all([
     renderSummaryCharts(filteredData),
-    renderTimePeriodBarChart({
+    renderPeriodBarCharts({
       allFiltered: allFilteredForBars,
       timeScale,
       activePeriodValue,
