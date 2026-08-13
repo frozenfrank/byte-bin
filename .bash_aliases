@@ -110,14 +110,12 @@ function range-diff() {
   # The branches are considered as only the commits not reachable from the base branch.
   # This is equivalent to BASE..OLD, or BASE ^OLD, from from the `git log` realm
   # With only OLD_BRANCH given, compares its upstream (older) against itself (newer)
-  local OLD="$1"
-  local OLD_BASE="$2"
+  local OLD="${1:-@}"
+  local OLD_BASE="${2:-stage1}"
   local NEW="$3"
-  local NEW_BASE="$4"
+  local NEW_BASE="${4:-$OLD_BASE}"
 
-  [ -z "$OLD_BASE" ] && OLD_BASE="stage1"
   [ -z "$NEW" ] && NEW="$OLD" && OLD="$OLD@{upstream}"
-  [ -z "$NEW_BASE" ] && NEW_BASE="$OLD_BASE"
 
   git range-diff $(git merge-base "$OLD" "$OLD_BASE").."$OLD" $(git merge-base "$NEW" "$NEW_BASE").."$NEW"
 }
