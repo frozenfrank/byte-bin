@@ -104,6 +104,24 @@ alias rebaseu="git rebase --autosquash @{u}"
 alias diffu="git diff @{u}..@"
 alias mergeu="git merge --no-ff --no-edit @{u}"
 
+function range-diff() {
+  # Compares two versions of the same branch after rebasing onto a base branch
+  # Usage: range-diff OLD_BRANCH [BASE_BRANCH] [NEW_BRANCH] [NEW_BASE_BRANCH]
+  # The branches are considered as only the commits not reachable from the base branch.
+  # This is equivalent to BASE..OLD, or BASE ^OLD, from from the `git log` realm
+  # With only OLD_BRANCH given, compares its upstream (older) against itself (newer)
+  local OLD="$1"
+  local OLD_BASE="$2"
+  local NEW="$3"
+  local NEW_BASE="$4"
+
+  [ -z "$OLD_BASE" ] && OLD_BASE="stage1"
+  [ -z "$NEW" ] && NEW="$OLD" && OLD="$OLD@{upstream}"
+  [ -z "$NEW_BASE" ] && NEW_BASE="$OLD_BASE"
+
+  git range-diff $(git merge-base "$OLD" "$OLD_BASE").."$OLD" $(git merge-base "$NEW" "$NEW_BASE").."$NEW"
+}
+
 # Git refspec management
 # Refspec helpers for bare-ish clones that start out tracking nothing but `main`.
 #   git make-bare [REMOTE]            Reset REMOTE's fetch refspec so it only pulls `main`. Defaults to origin.
