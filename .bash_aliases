@@ -149,3 +149,4 @@ function mktouch() {
   mkdir -p "$(dirname "$1")" && touch "$1"
 }
 alias hello="Echo 'World (v5)'"
+alias publish="epc publish --changed --make-lib"
