@@ -37,6 +37,7 @@ alias amend="git commit --amend --no-edit"
 alias amendnow="git commit --amend --no-edit -a"
 alias commit="git commit"
 alias commitnow="git commit --no-edit"
+alias fixup="git history fixup"
 
 # GIT branch management
 alias merge="git merge --no-ff --no-edit"
