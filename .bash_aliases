@@ -98,7 +98,7 @@ git config --global alias.continue 'git-continue'
 alias fetch="git fetch"
 alias prune="git fetch --prune"
 alias push="git push"
-alias pull="git fetch && git rebase origin/master"
+alias pushf="git push --force-with-lease"
 alias graphu="git log --oneline --graph @ @{u}"
 alias resetu="git reset --hard @{u}"
 alias rebaseu="git rebase --autosquash @{u}"
