@@ -151,3 +151,4 @@ function mktouch() {
 }
 alias hello="Echo 'World (v5)'"
 alias publish="epc publish --changed --make-lib"
+alias publishc="epc publish --changed --make-lib && git commit -am 'Publish changes'"
