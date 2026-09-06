@@ -1,0 +1,308 @@
+HULIBPCLPWC ; ; ;2026-03-11 18:38:41;11.8;lg+fOa8q/fv58NqoewGY8+pV5Imx+auilAkRuv2kUuE=;Copyright 2026 Epic Systems Corporation
+	;;#lglob#HULIB
+	q
+	;*********************************************************************
+	; PURPOSE:  Credentialing-owned tags for formatting data for a provider's case log
+	; AUTHOR:   Daniel Leatherwood
+	; REVISIONS:
+	;  *DNL 11/25 2268290 - Created
+	;  *DNL 01/26 2259608 - added credutilPackItemForCDO, credpclGetPrimaryINI
+	;  *DNL 02/26 2268902 - credpclGetProviderRole: return stored role for unrecognized search types
+	;*********************************************************************
+	; @@inlineForZeEPIC@@ - see exportZeEPIC^hjPWCPCLPERFTEST - this is used to mark inline tags for %ZeEPIC scripts
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Constructs a packed line containing delimited data stored in a provider's case log, formatted like the
+	;               limited-line super-item (SI PCL 2) that will be used to store the data: you can use z*pcl tags on it.
+	; PARAMETERS:
+	;   searchType (I,REQ) - Identifier indicating the type of search this line comes from: OpTime, procedure ORD, etc.
+	;   serExtID (I,REQ) - Provider ID associated with the encounter, external (unpadded) ID.
+	;   role (I,OPT) - Role of the provider in the encounter (e.g., surgeon, assistant).
+	;   encounterDate (I,REQ) - Date of the encounter being evaluated.
+	;   patientCSNs (I,REQ) - Patient encounter CSN(s). Can be a single CSN or a pre-packed
+	;                         $c(2)-delimited string: credutilPackItem can be used to create this.
+	;   eapID (I,OPT) - procedure (EAP record) linked to the entry
+	;   orpExtID (I,OPT) - OpTime procedure (ORP record) linked to the entry, external (unpadded) ID
+	;   eafID (I,OPT) - location (EAF record).
+	;   extraInfo (I,OPT) - Additional information needed to uniquely identify the entry.
+	;   sourceORD (I,OPT) - the order than this entry is derived from
+	;   sourceORL (I,OPT) - the OpTime log that this entry is derived from
+	; RETURNS:      Packed string suitable for storing in SI PCL 2
+	;---------
+credpclPackLine(searchType,serExtID,role,encounterDate,patientCSNs,eapID,orpExtID,eafID,extraInfo,sourceORD,sourceORL) ;
+	q $c(2)_searchType_$c(1,2)_serExtID_$c(1,2)_role_$c(1,2)_encounterDate_$c(1)_$s(patientCSNs[$c(2):patientCSNs,1:1_$c(2)_patientCSNs)_$c(1,2)_eapID_$c(1,2)_orpExtID_$c(1,2)_eafID_$c(1,2)_extraInfo_$c(1,2)_sourceORD_$c(1,2)_sourceORL
+	;;#eof#
+	; @@endInlineForZeEPIC@@ - see exportZeEPIC^hjPWCPCLPERFTEST
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Extracts and returns the primary source record (ID and DAT) associated with an
+	;               entry in a case log. Optionally returns all source records via the sourceRecs
+	;               parameter. When adding a new source INI, update this function to populate the
+	;               new field in sourceRecs; all consumers will then pick up the new source
+	;               automatically.
+	; PARAMETERS:
+	;   packedLine (I,REQ) - Packed PCL line containing encoded source data.
+	;   searchType (O,REQ) - Search type derived from the unpacked line.
+	;   ini (O,REQ) - INI representing the type of source record
+	;   id (O,REQ) - Source record internal ID
+	;   dat (O,REQ) - Contact DAT if applicable
+	;   returnIDasCSN (I,OPT) - If true, for EPT entries return the encounter's CSN as the ID
+	;                           instead of looking up the record ID and DAT.
+	;   sourceRecs (O,OPT) - If passed by reference, populated with all source records:
+	;                        sourceRecs("ORL")=<ORL ID>
+	;                        sourceRecs("ORD")=<ORD ID>
+	;                        sourceRecs("EPT")=<patient CSN>
+	;                        Only non-empty source fields are included.
+	; RETURNS:      1 if the ID and DAT could be resolved successfully, 0 otherwise.
+	; REVISIONS:
+	;  *DNL 03/26 2268290 - Moved from PLIBWPCLREC, added sourceRecs output parameter
+	;---------
+credpclGetPrimaryRecord(packedLine,searchType,ini,id,dat,returnIDasCSN,sourceRecs) ;
+	n patientCSN,sourceORD,sourceORL
+	d %zcredpclUnpackLine(packedLine,.searchType,"","","",.patientCSN,"","","","",.sourceORD,.sourceORL)
+	k sourceRecs
+	i sourceORL'="" s sourceRecs("ORL")=sourceORL
+	i sourceORD'="" s sourceRecs("ORD")=sourceORD
+	i patientCSN'="" s sourceRecs("EPT")=patientCSN
+	s ini=$$credpclGetPrimaryINI(searchType)
+	s id=sourceRecs(ini)
+	i id="" s dat="" QUIT 0
+	i ini'="EPT" s dat=99999 QUIT 1
+	i returnIDasCSN s dat="" QUIT 1
+	;
+	d %zzRecCSNToIDandDAT("EPT",id,.id,.dat)
+	q 1
+	;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Packages an array of item data into a $(c2)-delimited string suitable for use in a LIMITED-LINES
+	;               superitem. The array `itemArr` should be passed by reference, with subscript 0 containing the count of
+	;               subsequent elements to pack. If `itemArr(0)` is null, an empty string is returned.
+	; PARAMETERS:
+	;   itemArr (I,REQ) - Array of items to pack. itemArr(0) must contain the total count of
+	;                     items, followed by each item in sequential numeric subscripts.
+	;                     itemArr(0)=number of items to pack
+	;                     itemArr(1)=first item
+	;                     itemArr(2)=second item
+	;                     ...
+	; RETURNS:      Returns a $c(2)-delimited string suitable for storage in a LIMITED-LINES superitem.
+	;---------
+credutilPackItem(itemArr) ;
+	n line,packedData
+	s packedData=itemArr(0)
+	i packedData="" QUIT ""
+	;
+	f line=1:1:itemArr(0) s packedData=packedData_$c(2)_itemArr(line)
+	q packedData ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Helper tag that converts a multi-response item from limited-lines packed form into the form needed for CDO.
+	; PARAMETERS:
+	;   packedLine (I,REQ) - Packed line containing limited-lines-formatted data.
+	;   pieceNum (I,REQ) - Piece number in the packed line to extract.
+	;   item (I,REQ) - PCL item number to assign values to.
+	;   vals (O,REQ) - Output array receiving unpacked and indexed values.
+	;                  vals(item,0)=count of values
+	;                  vals(item,n)=nth value from packed input
+	; REVISIONS:
+	; *DNL 01/26 2259608 - created
+	;---------
+%zcredutilPackItemForCDO(packedLine,pieceNum,item,vals) ;
+	n packedItemData,line
+	s packedItemData=$p(packedLine,$c(1),pieceNum)
+	s vals(item,0)=$p(packedItemData,$c(2),1)
+	f line=1:1:vals(item,0) s vals(item,line)=$p(packedItemData,$c(2),line+1)
+	q  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Unpacks a $c(2)-delimited string from a limited lines superitem into an array passed by reference.
+	; PARAMETERS:
+	;   packedData (I,REQ) - the $c(2)-delimited string to unpack
+	;   itemArr (O,REQ) - the 0-based array to populate with unpacked items
+	; RETURNS:      the number of items unpacked, or null if none
+	;---------
+credutilUnpackItem(packedData,itemArr) ;
+	n line,count
+	k itemArr
+	s count=$p(packedData,$c(2),1)
+	i count="" QUIT ""
+	;
+	f line=1:1:count s itemArr(line)=$p(packedData,$c(2),line+1)
+	s itemArr(0)=count
+	q count  ;;#eof#
+	;
+	; @@inlineForZeEPIC@@ - see exportZeEPIC^hjPWCPCLPERFTEST
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Unpacks a packed case log line (SI PCL 2) into its component values.
+	;               This routine extracts each field from the delimited string format used in
+	;               provider case log storage, assigning them to individual variables.
+  ;               To pack a line, see: ($$)credpclPackLine().
+	; PARAMETERS:
+	;   packedLine (I,REQ) - The packed string created by `credpclPackLine`
+	;   searchType (O,REQ) - Type of search the line came from (e.g., OpTime, procedure ORD).
+	;   serExtID (O,REQ) - Provider ID associated with the encounter.
+	;   role (O,OPT) - Role of the provider in the encounter (e.g., surgeon, assistant).
+	;   encounterDate (O,REQ) - Date of the encounter.
+	;   patientCSN (O,REQ) - Contact Serial Number (CSN) for the encounter. If multiple CSNs were packed, this will be the primary one
+	;   eapID (O,OPT) - Procedure (EAP record) linked to the entry.
+	;   orpExtID (O,OPT) - External (unpadded) ID of the OpTime procedure (ORP record).
+	;   eafID (O,OPT) - Location (EAF record).
+	;   extraInfo (O,OPT) - Additional information for disambiguation.
+	;   sourceORD (O,OPT) - Original order the entry was derived from.
+	;   sourceORL (O,OPT) - Original OpTime log associated with the entry.
+	;   code (O,OPT) - Procedure code associated with the entry.
+	;   hideThisLine (O,OPT) - 1 if this line should be hidden from display in the case log
+	;   packedCSNs (O,OPT) - a $c(2)-delimited string of all patient CSNs associated with this entry, where piece 1 is the number of entries
+	;---------
+%zcredpclUnpackLine(packedLine,searchType,serExtID,role,encounterDate,patientCSN,eapID,orpExtID,eafID,extraInfo,sourceORD,sourceORL,code,hideThisLine,packedCSNs) ;
+	s searchType=$$zgetpcl(packedLine,1,1)
+	s serExtID=$$zgetpcl(packedLine,2,1)
+	s role=$$zgetpcl(packedLine,3,1)
+	s encounterDate=$$zgetpcl(packedLine,4,1)
+	s patientCSN=$$zgetpcl(packedLine,5,1)
+	s packedCSNs=$p(packedLine,$c(1),5)
+	s eapID=$$zgetpcl(packedLine,6,1)
+	s orpExtID=$$zgetpcl(packedLine,7,1)
+	s eafID=$$zgetpcl(packedLine,8,1)
+	s extraInfo=$$zgetpcl(packedLine,9,1)
+	s sourceORD=$$zgetpcl(packedLine,10,1)
+	s sourceORL=$$zgetpcl(packedLine,11,1)
+	s code=$$zgetpcl(packedLine,12,1)
+	s hideThisLine=$$zgetpcl(packedLine,15,1)
+	q  ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Unpacks billing-related data from SI PCL 2 (packed case log data).
+	; PARAMETERS:
+	;   packedLine (I,REQ) - Delimited PCL string containing encoded billing information, as stored in SI PCL 2.
+	;   code (O,OPT) - Procedure code associated with the entry
+	;   codeType (O,OPT) - Type of the procedure code, see routine header in PWCPCLLOADCODES
+	;   isAmbiguous (O,OPT) - 1 if the code is ambiguous and we are not sure if it applies to this specific entry
+	;   supportingHARs (O,REQ) - Hospital Account Records (HARs) supporting the code for this line, as a 0-based array
+	;   supportingHTRs (O,REQ) - Hospital Transactions (HTRs) supporting the code for this line, as a 0-based array
+	;   supportingUCLs (O,REQ) - Universal Charge Lines (UCLs) supporting the code for this line, as a 0-based array
+	;   supportingETRs (O,REQ) - A/R Transactions (ETRs) supporting the code for this line, as a 0-based array
+	;---------
+%zcredpclUnpackBillingInfo(packedLine,code,codeType,isAmbiguous,supportingHARs,supportingHTRs,supportingUCLs,supportingETRs) ;
+	s code=$$zgetpcl(packedLine,12,1)
+	s codeType=$$zgetpcl(packedLine,13,1)
+	; this trick with isAmbiguous allows this tag to be inlined correctly. If I used % instead, that would cause QAN 8210449
+	s isAmbiguous=$$credutilUnpackItem($p(packedLine,$c(1),16),.supportingHARs)
+	s isAmbiguous=$$credutilUnpackItem($p(packedLine,$c(1),17),.supportingHTRs)
+	s isAmbiguous=$$credutilUnpackItem($p(packedLine,$c(1),18),.supportingUCLs)
+	s isAmbiguous=$$credutilUnpackItem($p(packedLine,$c(1),19),.supportingETRs)
+	s isAmbiguous=$$zgetpcl(packedLine,14,1)
+	q  ;;#eof#
+	; @@endInlineForZeEPIC@@ - see exportZeEPIC^hjPWCPCLPERFTEST
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Returns the next supported search type following the one provided. If the list of
+	;               available search types is not passed in, we use the full set of supported types.
+	; PARAMETERS:
+	;   searchType (I,REQ) - Current search type token.
+	;   searchTypes (IO,OPT) - Array of search types to use as the lookup list.
+	;                          <array structure>
+	;                          searchTypes(searchType)=label/description
+	; RETURNS:      Next search type in the sequence or null if at the end of the list.
+	;---------
+credpclNextSearchType(searchType,searchTypes) ;
+	i $d(searchTypes)<10 d %zcredpclGetSearchTypes(.searchTypes)
+	q $o(searchTypes(searchType))
+	;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^HULIBPCLPWC
+	; DESCRIPTION:  Retrieves the next contact where a given provider was a member of a patient's treatment team.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - the provider that we're matching on
+	;   eptIntID (I,REQ) - The EPT record ID (internal)
+	;   eptDAT (IO,REQ) - The EPT contact DAT. Must be passed by reference.	
+  ;   limitDAT (I,OPT) - Optional DAT filter. Contacts occurring before this DAT will not be returned.
+	; RETURNS:      The patient ID, or null if no further contacts are found.
+	;---------
+credpclTxTeamNextContact(serExtID,limitDAT,eptIntID,eptDAT) ;
+	f  d  q:eptDAT'=""  s eptIntID=$$zCIxNextID("EPT",18868,serExtID,eptIntID) q:eptIntID=""
+	. i eptIntID="" s eptDAT="" quit
+	. ;
+	. s eptDAT=$$zCIxNextContact("EPT",18868,serExtID,eptIntID,eptDAT)
+	. i limitDAT'="",eptDAT>limitDAT s eptDAT=""
+	q eptIntID
+	;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^HULIBPCLPWC
+	; DESCRIPTION:  Gathers treatment team information for a given EPT contact.
+	; PARAMETERS:
+	;   eptID (I,REQ) - EPT record ID (internal)
+	;   eptDAT (I,REQ) - DAT for the contact to load.
+	;   packedData (IO,REQ) - Array passed by reference where packed PCL lines will be appended.
+	;                         packedData(n)=PCL line representing a treatment team member.
+	;---------
+%zcredpclTxTeamGetInfo(eptID,eptDAT,packedData) ;
+	n line,serID,eptCSN,date,treatmentTeamMembers,role,specialty,siEPT18868,depID,eafID,roleAndSpecialty
+	s eptCSN=$$geti("EPT",eptID,8,1,eptDAT)
+	f line=1:1:$$geti("EPT",eptID,18868,0,eptDAT) d
+	. s siEPT18868=$$zgetblu("EPT",eptID,18868,line,eptDAT)  ; Treatment team
+	. s serID=$$zgetpcu(siEPT18868,1)  ; EPT 18868 TREATMENT TEAM
+	. i serID="" quit  ; No provider on this line
+	. ;
+	. s role=$$zgetpcu(siEPT18868,2)  ; EPT 18869 TREATMENT TEAM RELATIONSHIP TO PATIENT
+	. s specialty=$$zgetpcu(siEPT18868,17)  ; EPT 18832 TREATMENT TEAM SPECIALTY
+	. s roleAndSpecialty=role_","_specialty
+	. i $d(treatmentTeamMembers(serID,roleAndSpecialty)) quit  ; already added this provider in this role/specialty for this contact
+	. ;
+	. s treatmentTeamMembers(serID,roleAndSpecialty)=""  ; mark as added
+	. s date=$$zgetpcu(siEPT18868,3)  ; EPT 18872 TREATMENT TEAM BEGIN DATE
+	. i date="" s date=$$zDAT2DTE(eptDAT)
+	. i depID="" s depID=$$Dept(eptID,eptDAT),eafID=$$geti("DEP",depID,4001,1)
+	. d %zzArrAppend(.packedData,$$credpclPackLine($$credpclTypeTreatmentTeam(),serID,roleAndSpecialty,date,eptCSN,"","",eafID))  ; Pack line for PCL
+	q  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Formats a provider's role and specialty.
+	;               If both are recorded for a treatment team, return "specialty - role";
+	;               otherwise, return whichever one we have.
+	; PARAMETERS:
+	;   roleAndSpecialty (I,REQ) - Comma-delimited string containing the role and specialty values
+	;---------
+credpclTxTeamFormatRole(roleAndSpecialty) ;
+	n role,specialty
+	s role=$p(roleAndSpecialty,",",1)
+	s specialty=$p(roleAndSpecialty,",",2)
+	i role="",specialty="" QUIT ""
+	;
+	i specialty'="" s specialty=$$zgetCat(specialty,1,"EPT",18832)
+	i role'="" s role=$$zgetCat(role,1,"EPT",18869)
+	i role'="",specialty'="" q specialty_" - "_role
+	q role_specialty
+	;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  PCL 126 category value for CPT codes.
+	; RETURNS:      The category value representing CPT in PCL 126.
+	;---------
+credpclCodeTypeCpt() ;
+	q 1 ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  PCL 126 category value for OHIP codes.
+	; RETURNS:      The category value representing OHIP in PCL 126.
+	;---------
+credpclCodeTypeOhip() ;
+	q 2 ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Converts a PCL 126 code type category value to the corresponding
+	;               orcosCodeSet string used by shared billing APIs.
+	; PARAMETERS:
+	;   codeType (I,REQ) - PCL 126 category value (1=CPT, 2=OHIP).
+	; RETURNS:      The orcosCodeSet string ("CPT", "OHIP"), or "" if unknown.
+	;---------
+credpclCodeTypeToOrcos(codeType) ;
+	q:codeType=$$credpclCodeTypeCpt() "CPT"
+	q:codeType=$$credpclCodeTypeOhip() "OHIP"
+	q "" ;;#eof#
+	;
+	q  ;;#eor#

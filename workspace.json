@@ -1,0 +1,93 @@
+{
+  "location": "C:\\EpicSource\\Server\\DLG-2259608-CaseLogCoreIni\\",
+  "name": "DLG-2259608",
+  "environment": {
+    "name": "CURRENT DEVELOPMENT ENVIRONMENT (CDE)",
+    "alias": "CDE",
+    "id": "861"
+  },
+  "dlg": {
+    "id": "2259608",
+    "track": "TRACKAPPTCP"
+  },
+  "objects": [
+    {
+      "environment": "861",
+      "name": "PLIBWPCLREC",
+      "kind": "Routine",
+      "relativePath": "861\\PLIBWPCLREC.epc"
+    },
+    {
+      "environment": "861",
+      "name": "PWCPCLREC",
+      "kind": "Routine",
+      "relativePath": "861\\PWCPCLREC.epc"
+    },
+    {
+      "environment": "861",
+      "name": "hjPWCPCLREC",
+      "kind": "Routine",
+      "relativePath": "861\\hjPWCPCLREC.epc"
+    },
+    {
+      "environment": "861",
+      "name": "HULIBPCLPWC",
+      "kind": "Routine",
+      "relativePath": "861\\HULIBPCLPWC.epc"
+    },
+    {
+      "environment": "861",
+      "name": "hjPWCPCLRECEXPENSIVE1",
+      "kind": "Routine",
+      "relativePath": "861\\hjPWCPCLRECEXPENSIVE1.epc"
+    },
+    {
+      "environment": "861",
+      "name": "PWCPCLUTIL",
+      "kind": "Routine",
+      "relativePath": "861\\PWCPCLUTIL.epc"
+    },
+    {
+      "environment": "861",
+      "name": "HXDYWIPE2",
+      "kind": "Routine",
+      "relativePath": "861\\HXDYWIPE2.epc"
+    },
+    {
+      "environment": "861",
+      "name": "ORLPOST1",
+      "kind": "Routine",
+      "relativePath": "861\\ORLPOST1.epc"
+    },
+    {
+      "environment": "861",
+      "name": "OREDIT1",
+      "kind": "Routine",
+      "relativePath": "861\\OREDIT1.epc"
+    },
+    {
+      "environment": "861",
+      "name": "HULIBKP2",
+      "kind": "Routine",
+      "relativePath": "861\\HULIBKP2.epc"
+    },
+    {
+      "environment": "861",
+      "name": "hjPWCPCLPERFTEST",
+      "kind": "Routine",
+      "relativePath": "861\\hjPWCPCLPERFTEST.epc"
+    },
+    {
+      "environment": "861",
+      "name": "PWCPCLLOADCODES",
+      "kind": "Routine",
+      "relativePath": "861\\PWCPCLLOADCODES.epc"
+    },
+    {
+      "environment": "861",
+      "name": "hjPWCPCLLIBMAKER",
+      "kind": "Routine",
+      "relativePath": "861\\hjPWCPCLLIBMAKER.epc"
+    }
+  ]
+}
