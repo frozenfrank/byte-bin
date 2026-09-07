@@ -26,16 +26,30 @@ fi
 
 # 4. Enable nullglob so the loop doesn't run if the folder is empty
 shopt -s nullglob
+export GIT_INDEX_FILE=$(mktemp)
+git status
+git read-tree "$GIT_REF^{tree}"
+git status
 
 # 5. Loop through every item inside the directory
 for file in "$TARGET_DIR"/*; do
     # Ensure we are only processing files (skips subdirectories)
     if [ -f "$file" ]; then
-        echo "Processing: $file (Using Git Ref: $GIT_REF)"
         
         # --------------------------------------------------------
         # PLACE YOUR CODE HERE
         # --------------------------------------------------------
-        
+        FILE_HASH=$(git hash-object -w $file)        
+        echo -e "$file\t$FILE_HASH"
+        git update-index --add --cacheinfo 100644,$FILE_HASH,$(basename $file)
     fi
 done
+
+git status
+TREE_HASH=$(git write-tree)
+PREV_SHA=$(git rev-parse $GIT_REF)
+COMMIT_HASH=$(git commit-tree $TREE_HASH -p $PREV_SHA -m "Programmatically generated from $TARGET_DIR")
+git update-ref $GIT_REF $COMMIT_HASH $PREV_SHA || exit 1
+
+git cat-file -p $COMMIT_HASH
+git show --stat $COMMIT_HASH
