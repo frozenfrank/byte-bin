@@ -37,10 +37,6 @@ git ls-files -z -- "$PLACEMENT_DIR/" | xargs -0 git update-index --force-remove
 for file in "$TARGET_DIR"/*; do
     # Ensure we are only processing files (skips subdirectories)
     if [ -f "$file" ]; then
-        
-        # --------------------------------------------------------
-        # PLACE YOUR CODE HERE
-        # --------------------------------------------------------
         FILE_HASH=$(git hash-object -w $file)        
         git update-index --add --cacheinfo 100644,$FILE_HASH,"$PLACEMENT_DIR/$(basename $file)"
     fi
