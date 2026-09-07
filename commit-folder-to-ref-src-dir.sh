@@ -10,6 +10,7 @@ fi
 
 TARGET_DIR="$1"
 GIT_REF="$2"
+PLACEMENT_DIR="src"
 
 # 2. Verify that the first argument is a valid directory
 if [ ! -d "$TARGET_DIR" ]; then
@@ -27,9 +28,10 @@ fi
 # 4. Enable nullglob so the loop doesn't run if the folder is empty
 shopt -s nullglob
 export GIT_INDEX_FILE=$(mktemp)
-git status
+git diff-index --cached --summary $GIT_REF -- $PLACEMENT_DIR
 git read-tree "$GIT_REF^{tree}"
-git status
+git ls-files -z -- "$PLACEMENT_DIR/" | xargs -0 git update-index --force-remove
+git diff-index --cached --summary $GIT_REF -- $PLACEMENT_DIR
 
 # 5. Loop through every item inside the directory
 for file in "$TARGET_DIR"/*; do
@@ -41,14 +43,17 @@ for file in "$TARGET_DIR"/*; do
         # --------------------------------------------------------
         FILE_HASH=$(git hash-object -w $file)        
         echo -e "$file\t$FILE_HASH"
-        git update-index --add --cacheinfo 100644,$FILE_HASH,$(basename $file)
+        git update-index --add --cacheinfo 100644,$FILE_HASH,"$PLACEMENT_DIR/$(basename $file)"
     fi
 done
 
-git status
+git diff-index --cached --summary $GIT_REF -- $PLACEMENT_DIR
 TREE_HASH=$(git write-tree)
 PREV_SHA=$(git rev-parse $GIT_REF)
 COMMIT_HASH=$(git commit-tree $TREE_HASH -p $PREV_SHA -m "Programmatically generated from $TARGET_DIR")
+unset GIT_INDEX_FILE
+git diff-index --cached --summary $GIT_REF -- $PLACEMENT_DIR
+
 git update-ref $GIT_REF $COMMIT_HASH $PREV_SHA || exit 1
 
 git cat-file -p $COMMIT_HASH
