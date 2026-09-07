@@ -26,10 +26,11 @@ if ! git show-ref --verify --quiet "$GIT_REF"; then
 fi
 
 # 4. Enable nullglob so the loop doesn't run if the folder is empty
+PREV_SHA=$(git rev-parse $GIT_REF)
 shopt -s nullglob
 TEMP_INDEX_FILE=$(mktemp)
 export GIT_INDEX_FILE=$TEMP_INDEX_FILE
-git read-tree "$GIT_REF^{tree}"
+git read-tree "$PREV_SHA^{tree}"
 git ls-files -z -- "$PLACEMENT_DIR/" | xargs -0 git update-index --force-remove
 
 # 5. Loop through every item inside the directory
@@ -46,7 +47,6 @@ for file in "$TARGET_DIR"/*; do
 done
 
 TREE_HASH=$(git write-tree)
-PREV_SHA=$(git rev-parse $GIT_REF)
 COMMIT_HASH=$(git commit-tree $TREE_HASH -p $PREV_SHA -m "Programmatically generated from $TARGET_DIR")
 unset GIT_INDEX_FILE
 rm -f $TEMP_INDEX_FILE
