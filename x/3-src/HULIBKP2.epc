@@ -1,0 +1,1258 @@
+HULIBKP2 ; ; ;2026-02-06 16:55:05;11.8;/nWXPktlKa5tLf7ssS71yhz7CuPWqR2Zef2m5UhzBmo=;Copyright 2026 Epic Systems Corporation
+	;;#lglob#HULIB
+	;*********************************************************************
+	; TITLE:   HULIBKP2
+	; PURPOSE: Library functions for manipulating ^HADPHX - used for edit checks based on historical information
+	; AUTHOR:  Nolan Leung
+	; REVISION HISTORY:
+	;  *YX  03/24 2068435 - Use new API to get procedure ID
+	;  *JHC  4/24 2077876 - Add exam date to ^HADPHX value
+	;  *JHC  7/24 2108193 - Restore KPDF switch in HTTsetHADPHX
+	;  *nwm 12/24 2075532 - Add UCS Handling to getChgCSN
+	;  *jmh 06/25 2204288 - Switch NvE to realtime lookup. Don't store.
+	;  *jmh 06/25 2162035 - Move KPDF to real item.
+	;  *FGN 06/25 2211519 - Exclude pay & chase charges
+	;  *DNL 02/26 2259608 - When updating procedure codes, mark provider case logs for update
+	;*********************************************************************
+	q
+	;
+	;---------
+	; SCOPE:        PUBLIC
+	; DESCRIPTION:  This tag returns the index value to be used for identifying patients in ^HADPHX.
+	;               This currently will just return patient serial number for valid EPT ID
+	;               Changing this function will require deleting the entire global and rebuilding it
+	; PARAMETERS:
+	;  eptId (I,REQ) - patient ID (padded or non-padded)
+	;  allSns (IO,OPT) - If set to 1, will be populated with all the serial numbers
+	; RETURNS:      HADPHX patient index value
+	;---------
+getPatIndex(eptId,allSns) q $$stampLIC^KPULIC11("EPT",eptId,.allSns)  ;;#eof# ;;#inline#
+	;
+	;---------
+	; SCOPE:        PUBLIC
+	; DESCRIPTION:  This tag returns the index value to be used for tracking payer/plan for frequency edits
+	;               Changing this function will likely require deleting the entire global and rebuilding it
+	;               If no EPM specified
+	; PARAMETERS:
+	;  epmId (IO,OPT) - payer ID. Must be entered if cvgId is not
+	;  eppId (IO,OPT) - benefit plan ID. Must be entered if cvgId is not
+	;  cvgId (I,REQ) - coverage ID. Must be entered if epmId and eppId are not
+	;  svcDate (I,OPT) - service date for payer/plan lookup
+	; RETURNS:      HADPHX payer index value.
+	;---------
+getPayorIndex(epmId,eppId,cvgId,svcDate) n arr
+	i cvgId="" q "*"
+	i epmId="" d
+	. s eppId=$$fngtPln(cvgId,svcDate,.arr)
+	. s epmId=arr("epmId")
+	q cvgId_";"_epmId  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag sets ^HADPHX based on a UCL
+	; PARAMETERS:
+	;  uclId (I,REQ) - universal charge line ID
+	; RETURNS:      return values are for debugging purpose
+	; REVISIONS:
+	;  *JHC 4/24 2077876
+	;  *jmh 06/25 2204288 - Switch NvE to realtime lookup. Don't store.
+	;  *jmh 06/25 2162035 - Move KPDF to real item.
+	;  *FGN 06/25 2211519 - Exclude pay & chase UCLs
+	;  *DNL 02/26 2259608 - Pass svcDate to setRMREncounterIndex
+	;---------
+UCLsetHADPHX(uclId) ;
+	n eptSN,procedure,svcDate,quantity,modifiers,bll200,provider,cvgId,RVUBillProv
+	n epmId,eppId,line,oa,eptId,depId,sa,eptCSN,revCode,eptIdOut,perfProvId
+	n modId,chargeNode,oneModifier,bll100,ordId,examDate,billingProvId,serviceProvId
+	;
+	i uclId="" q 1
+	d %zSetHADPHXStartDate()
+	s %=$$UCLdelHADPHX(uclId)
+	s bll200=$$zgetbll("UCL",uclId,200)
+	i $$excludeUCLFromHADPHX(uclId) q 2
+	i '$$IsActUCL(uclId) q 2
+	s bll100=$$zgetbll("UCL",uclId,100)
+	i $$zgetpcl(bll100,7,1)="TAR" q 3   ;UCL 107, "100;7"
+	s eptIdOut=$$zgetpcl(bll200,3,1)   ;UCL 203, "200;3"
+	i eptIdOut="" q 4
+	s eptId=$$getidin(eptIdOut,"EPT")
+	s eptSN=$$getPatIndex(eptId)
+	i eptSN="" q 4
+	s svcDate=$$zgetpcl(bll200,5,1)   ;UCL 205, "200;5"
+	i svcDate="" q 5
+	s cvgId=$$zgetpcl(bll200,9,1)   ;UCL 209, "200;9"
+	s eppId=$$fngtPln(cvgId,svcDate,.oa)
+	s epmId=oa("epmId")
+	s procedure=$$getProcCodeUCL(epmId,svcDate,eppId,bll200)
+	i procedure="" q 6
+	i $$isRecordPNC^KPPAYCHASE00("UCL",uclId) q 7
+	s depId=$$zgetpcl(bll200,12,1)   ;UCL 212, "200;12"
+	s quantity=$$zgetpcl(bll200,22,1)   ;UCL 222, "200;22"
+	f line=1:1:$$zgetpcl(bll200,19,0) d   ;UCL 219, "200;19"
+	. s modId=$$zgetpcl(bll200,19,line)   ;UCL 219, "200,19"
+	. s oneModifier=$$geti("MOD",modId,40,1)
+	. s modifiers=$$acAppendPiece(modifiers,",",oneModifier)
+	s sa=$$zgetpcl(bll200,1,1)   ;UCL 201, "200;1"
+	d %zGetProviderSwitches("",.RVUBillProv,sa)
+	s billingProvId=$$zgetpcl(bll200,15,1)   ;UCL 215, "200;15"
+	s serviceProvId=$$zgetpcl(bll200,14,1)   ;UCL 214, "200;14"
+	s provider=$s(RVUBillProv:billingProvId,1:serviceProvId)
+	s revCode=$$getRCFromUBC($$getRevCode^KHCRCHG(uclId,bll200))
+	s perfProvId=$$getUCLPerfProv^HUCCIBB2(uclId,"Performed")
+	s eptCSN=$$getChgCSN("UCL",uclId)
+	s ordId=$$zgetpcl(bll100,21,1)   ;UCL 121, "100;21"
+	s examDate=$$getOrderExamDate(ordId)
+	i examDate=svcDate s examDate=""   ;do not store a separate exam date if it is the same as the service date
+	s chargeNode=$$buildHADPHXChargeNodeUnivChgLn(uclId)
+	d %zSetHADPHXCharge(eptSN,svcDate,procedure,chargeNode,quantity,modifiers,provider,revCode,perfProvId,examDate)
+	d %zSetHADPHXDeleteCharge("UCL",uclId,"",eptSN,svcDate,procedure)
+	d %zSetHADPHXEncounter(eptCSN,svcDate,procedure,chargeNode,quantity,modifiers,provider,revCode,perfProvId,examDate)
+	d %zSetHADPHXDeleteEncounter("UCL",uclId,"",eptCSN,svcDate,procedure)
+	s %=$$setRMREncounterIndex(eptCSN,svcDate)
+	q 9  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Get UCL Proc Code for HADPHX, preferring ASA Code
+	; PARAMETERS:
+	;  epmId (I,REQ) - Payer ID
+	;  svcDate (I,REQ) - Service Date
+	;  eppId (I,REQ) - Benefit Plan ID
+	;  si200 (I,REQ) - superitem block for SI UCL 200
+	; RETURNS:      Procedure Code
+	;---------
+getProcCodeUCL(epmId,svcDate,eppId,si200) n eapId,anesEapId,procCode,locId,depId,serId,costCenter
+	s procCode=$$zgetpcl(si200,31,1)  ;UCL 231
+	; look up the ASA code
+	i procCode="" d
+	. s anesEapId=$$zgetpcl(si200,38,1)   ;*JHC+3 4/24 2077876
+	. i anesEapId'="" s procCode=$$procCd(anesEapId,epmId,svcDate)
+	; look up the procedure code
+	i procCode="" d
+	. s eapId=$$zgetpcl(si200,10,1) ;UCL 210
+	. s locId=$$zgetpcl(si200,2,1)   ;UCL 202
+	. s depId=$$zgetpcl(si200,12,1)   ;UCL 212
+	. s serId=$$zgetpcl(si200,15,1)   ;UCL 215
+	. s costCenter=$$zgetpcl(si200,28,1)   ;UCL 228
+	. s procCode=$$procCd(eapId,epmId,svcDate,"","","",eppId,"",depId,costCenter,locId,serId)
+	q procCode ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag sets ^HADPHX based on a charge TAR
+	; PARAMETERS:
+	;  tarId (I,REQ) - PB temporary transaction (charge session) ID
+	; RETURNS:      return values are for debugging purpose
+	; REVISIONS:
+	;  *JHC 4/24 2077876
+	;  *jmh 06/25 2204288 - Switch NvE to realtime lookup. Don't store.
+	;  *jmh 06/25 2162035 - Move KPDF to real item.
+	;  *FGN 06/25 2211519 - Exclude pay & chase TARs
+	;  *DNL 02/26 2259608 - Pass svcDate to setRMREncounterIndex
+	;---------
+TARsetHADPHX(tarId) ;
+	n eptSN,procedure,svcDate,quantity,modifiers,defDate,RVUBillProv
+	n epmId,eptId,depId,locId,eptCSN,eptIdOut
+	n defProvider,provider,ln,eapId,sa,anesBillStatus,serId,cvgId,oa,eppId
+	n chargeNode,ordId,examDate,billingProvId,serviceProvId
+	;
+	i tarId="" q 1
+	d %zSetHADPHXStartDate()
+	s %=$$TARdelHADPHX(tarId)
+	i $$geti("TAR",tarId,6,1)=1 q 2
+	i $$geti("TAR",tarId,30,1)'=1 q 3
+	i $$geti("TAR",tarId,5,1)'="" q 7   ;Filed
+	s eptIdOut=$$geti("TAR",tarId,60,1)
+	i eptIdOut="" q 4
+	s eptId=$$getidin(eptIdOut,"EPT")
+	s eptSN=$$getPatIndex(eptId)
+	i eptSN="" q 4
+	i $$isPredeterminationTAR^KNODUTL1(tarId) q 6
+	i $$isRecordPNC^KPPAYCHASE00("TAR",tarId) q 8
+	s eptCSN=$$getChgCSN("TAR",tarId)
+	s defDate=$$geti("TAR",tarId,120,1)
+	s sa=$$geti("TAR",tarId,40,1)
+	s depId=$$geti("TAR",tarId,50010,1)
+	d %zGetProviderSwitches("",.RVUBillProv,sa)
+	s billingProvId=$$geti("TAR",tarId,101,1)
+	s serviceProvId=$$geti("TAR",tarId,100,1)
+	s defProvider=$s(RVUBillProv:billingProvId,1:serviceProvId)
+	f ln=1:1:$$geti("TAR",tarId,150,0) d
+	. s svcDate=$$geti("TAR",tarId,165,ln)
+	. i svcDate="" s svcDate=defDate
+	. i svcDate="" q
+	. s anesBillStatus=$$geti("TAR",tarId,401,ln)
+	. i (anesBillStatus=2)!(anesBillStatus=4) q
+	. i $$isTARLnShadowCharge^KPSVCSHADOW(tarId,ln) q
+	. s eapId=$$getTARLnProc(tarId,ln)   ;*YX 03/24 2068435
+	. i $$geti("TAR",tarId,640,ln) s cvgId="",eppId="",epmId=""
+	. e  d
+	. . s cvgId=$$geti("TAR",tarId,140,1)
+	. . s eppId=$$fngtPln(cvgId,svcDate,.oa)
+	. . s epmId=oa("epmId")
+	. s depId=$$lineDept(tarId,ln)
+	. s locId=$$geti("DEP",depId,4001,1)
+	. s serId=$$lineBillProv(tarId,ln)
+	. s procedure=$$getProcCodeTAR(tarId,ln,eapId,epmId,svcDate,eppId,depId,locId,serId)
+	. i procedure="" q
+	. s quantity=$$geti("TAR",tarId,170,ln)
+	. s modifiers=$$geti("TAR",tarId,160,ln)
+	. i RVUBillProv s provider=$$lineBillProv(tarId,ln,"",$$true())
+	. e  s provider=$$geti("TAR",tarId,350,ln)
+	. i provider="" s provider=defProvider
+	. s ordId=$$geti("TAR",tarId,810,ln)
+	. s examDate=$$getOrderExamDate(ordId)
+	. i examDate=svcDate s examDate=""   ;do not store a separate exam date if it is the same as the service date
+	. s chargeNode=$$buildHADPHXChargeNodePBTempTran(tarId,ln)
+	. d %zSetHADPHXCharge(eptSN,svcDate,procedure,chargeNode,quantity,modifiers,provider,"","",examDate)
+	. d %zSetHADPHXDeleteCharge("TAR",tarId,ln,eptSN,svcDate,procedure)
+	. d %zSetHADPHXEncounter(eptCSN,svcDate,procedure,chargeNode,quantity,modifiers,provider,"","",examDate)
+	. d %zSetHADPHXDeleteEncounter("TAR",tarId,ln,eptCSN,svcDate,procedure)
+	. s %=$$setRMREncounterIndex(eptCSN,svcDate)
+	q 5  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Get ETR Procedure Code for HADPHX, preferring ASA Code
+	; PARAMETERS:
+	;  tarId (I,REQ) - temporary transaction (charge session) ID
+	;  ln (I,REQ) - Line number in the TAR 150 related group
+	;  eapId (I,REQ) - Procedure ID
+	;  epmId (I,REQ) - Payer ID
+	;  svcDate (I,REQ) - Service Date
+	;  eppId (I,REQ) - Benefit plan ID
+	;  depId (I,REQ) - Department ID
+	;  locId (I,REQ) - Location (EAF) ID
+	;  serId (I,REQ) - Billing Provider ID (padded or non-padded)
+	; RETURNS:      Procedure Code
+	;---------
+getProcCodeTAR(tarId,ln,eapId,epmId,svcDate,eppId,depId,locId,serId) n anesEapId,procCode
+	; look up the ASA code
+	i tarId'="",ln'="" d
+	. s anesEapId=$$zgetnp("TAR",tarId,281,ln)   ;*JHC+1 4/24 2077876
+	. i anesEapId'="" s procCode=$$procCd(anesEapId,epmId,svcDate)
+	; look up the procedure code
+	i procCode="" s procCode=$$procCd(eapId,epmId,svcDate,"","","",eppId,"",depId,"",locId,serId)
+	q procCode ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag sets ^HADPHX based on a charge ETR
+	; PARAMETERS:
+	;  etrId (I,REQ) - PB transaction ID
+	; RETURNS:      return values are for debugging purpose
+	; REVISIONS:
+	;  *JHC 04/24 2077876
+	;  *jmh 06/25 2204288 - Switch NvE to realtime lookup. Don't store.
+	;  *jmh 06/25 2162035 - Move KPDF to real item.
+	;  *FGN 06/25 2211519 - Exclude pay & chase ETRs
+	;  *DNL 02/26 2259608 - Pass svcDate to setRMREncounterIndex
+	;---------
+ETRsetHADPHX(etrId) ;
+	n eptSN,procedure,svcDate,quantity,modifiers,bll10,bll20,eapId,sa,provider,RVUBillProv
+	n epmId,eptId,depId,eptCSN,eptIdOut,eppId,locId,bll50
+	n chargeNode,ordId,examDate,billingProvId,serviceProvId
+	;
+	i etrId="" q 1
+	d %zSetHADPHXStartDate()
+	s bll10=$$zgetbll("ETR",etrId,10)
+	i $$zgetpcl(bll10,6,1)'=$$catETR50Charge() q 2   ;ETR 50, "10;6"
+	i $$zgetpcl(bll10,32,1)'="" q 1   ;ETR 290, "10;32"
+	s bll20=$$zgetbll("ETR",etrId,20)
+	s eptIdOut=$$zgetpcl(bll20,2,1)   ;ETR 100, "20;2"
+	i eptIdOut="" q 3
+	s eptId=$$getidin(eptIdOut,"EPT")
+	s eptSN=$$getPatIndex(eptId)
+	i eptSN="" q 3
+	s eptCSN=$$getChgCSN("ETR",etrId)
+	s bll50=$$zgetbll("ETR",etrId,50)
+	s sa=$$zgetpcl(bll50,8,1)   ;ETR 149, "50;8"
+	s svcDate=$$zgetpcl(bll10,5,1)   ;ETR 45, "10;5"
+	i svcDate="" q 5
+	s eapId=$$zgetpcl(bll10,10,1)   ;ETR 251, "10;10"
+	s epmId=$$zgetpcl(bll50,20,1)   ;ETR 122, "50;20"
+	s eppId=$$zgetpcl(bll50,16,1)   ;ETR 166, "50;16"
+	s depId=$$zgetpcl(bll20,21,1)   ;ETR 144, "20;21"
+	s locId=$$zgetpcl(bll20,7,1)   ;ETR 146, "20;7"
+	s billingProvId=$$zgetpcl(bll20,11,1)   ;ETR 5001, "20;11"
+	s procedure=$$getProcCodeETR(etrId,eapId,epmId,svcDate,eppId,depId,locId,billingProvId)
+	i procedure="" q 6
+	i $$isPredeterminationTx^KNODUTL1(etrId) q 10
+	i $$EtrIsShadowCharge(etrId) q 11
+	i $$isRecordPNC^KPPAYCHASE00("ETR",etrId) q 12
+	s quantity=$$zgetpcl(bll10,11,1)   ;ETR 255, "10;11"
+	s modifiers=$$zgetpcl(bll20,5,1)   ;ETR 147, "20;5"
+	d %zGetProviderSwitches("",.RVUBillProv,sa)
+	s serviceProvId=$$zgetpcl(bll20,4,1)  ;ETR 110, "20;4"
+	s provider=$s(RVUBillProv:billingProvId,1:serviceProvId)
+	s ordId=$$zgetpcl(bll50,15,1)   ;ETR 80, "50;15"
+	s examDate=$$getOrderExamDate(ordId)
+	i examDate=svcDate s examDate=""   ;do not store a separate exam date if it is the same as the service date
+	s chargeNode=$$buildHADPHXChargeNodePBTransact(etrId)
+	d %zSetHADPHXCharge(eptSN,svcDate,procedure,chargeNode,quantity,modifiers,provider,"","",examDate)
+	d %zSetHADPHXEncounter(eptCSN,svcDate,procedure,chargeNode,quantity,modifiers,provider,"","",examDate)
+	s %=$$setRMREncounterIndex(eptCSN,svcDate)
+	q 9  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Get ETR Procedure name for HADPHX, preferring ASA Code
+	; PARAMETERS:
+	;  etrId (I,REQ) - PB transaction ID
+	;  eapId (I,REQ) - Procedure ID
+	;  epmId (I,REQ) - Payer ID
+	;  svcDate (I,REQ) - Service Date
+	;  eppId (I,REQ) - Benefit plan ID
+	;  depId (I,REQ) - Department ID
+	;  locId (I,REQ) - Location (EAF) ID
+	;  serId (I,REQ) - Billing Provider ID (padded or non-padded)
+	; RETURNS:      Procedure Code
+	;---------
+getProcCodeETR(etrId,eapId,epmId,svcDate,eppId,depId,locId,serId) n procCode,anesEapId
+	; look up the ASA code
+	i etrId'="" d
+	. s anesEapId=$$geti("ETR",etrId,5156,1)
+	. i anesEapId'="" s procCode=$$procCd(anesEapId,epmId,svcDate)
+	; look up the procedure code
+	i procCode="" s procCode=$$procCd(eapId,epmId,svcDate,"","","",eppId,"",depId,"",locId,serId)
+	q procCode ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag sets ^HADPHX based on a charge HTT
+	; PARAMETERS:
+	;  httId (I,REQ) - HB temporary transaction (charge session) ID
+	; RETURNS:      return values are for debugging purpose
+	; REVISIONS:
+	;  *JHC 04/24 2077876
+	;  *jmh 06/25 2204288 - Switch NvE to realtime lookup. Don't store.
+	;  *jmh 06/25 2162035 - Move KPDF to real item.
+	;---------
+HTTsetHADPHX(httId) ;
+	n eptSN,procedure,svcDate,quantity,modifiers,defDate,RVUBillProv
+	n sa,eptCSN,perfProvId,docProvList,serviceProvId,billingProvId,chgCC,ccId,depId,chgDep,chgLoc,hbLoc,locId
+	n provider,ln,eapId,harId,epmId,eppId,revCode,harRptVals
+	n chargeNode,ordId,examDate,defExamDate
+	;
+	i httId="" q 1
+	d %zSetHADPHXStartDate()
+	s %=$$HTTdelHADPHX(httId)
+	i $$geti("HTT",httId,6,1)=1 q 2
+	i $$geti("HTT",httId,30,1)'=1 q 3
+	i $$geti("HTT",httId,4,1)'="" q 4
+	s eptSN=$$getChgPSN("HTT",httId,.eptCSN)
+	i eptSN="" q 5
+	i $$isLinkedChildHTT(httId) q 6  ;skip for linked child charge ;*JT 04/23 950340
+	s sa=$$geti("HTT",httId,40,1)
+	s defDate=$$geti("HTT",httId,120,1)
+	s chgCC=$$geti("HTT",httId,115,1)
+	s chgDep=$$geti("HTT",httId,50010,1)
+	s chgLoc=$$geti("HTT",httId,113,1)
+	s serviceProvId=$$geti("HTT",httId,100,1)
+	s billingProvId=$$geti("HTT",httId,101,1)
+	d %zGetProviderSwitches("",.RVUBillProv,sa)
+	s provider=$s(RVUBillProv:billingProvId,1:serviceProvId)
+	d getHTTDocProvList^HUCCIBB2(httId,.docProvList)
+	s eppId=$$geti("HTT",httId,199,1)  ;HTT-199 primary plan
+	i eppId'="" s epmId=$$geti("HTT",httId,198,1)  ;HTT-198 PRIMARY PAYOR
+	e  d
+	. ; Not all HTTs will have 198 or 199 set (Actually, should not normally happen for Charges but check it just in case).
+	. ; Otherwise, pull it from the HAR's current financial classification.
+	. s harId=$$geti("HTT",httId,50,1)
+	. s %=$$getHARRptVals(harId,.harRptVals)
+	. s epmId=harRptVals("primPayor")
+	. s eppId=harRptVals("primPlan")
+	;
+	s ordId=$$geti("HTT",httId,450,1)
+	s defExamDate=$$getOrderExamDate(ordId)
+	;
+	f ln=1:1:$$geti("HTT",httId,150,0) d
+	. i $$geti("HTT",httId,151,ln)=$$catECT100Yes() q  ;don't include daily charges
+	. s svcDate=$$geti("HTT",httId,165,ln)
+	. i svcDate="" s svcDate=defDate
+	. i svcDate="" q
+	. s procedure=$$geti("HTT",httId,156,ln)
+	. i procedure="" d
+	. . s eapId=$$geti("HTT",httId,150,ln)
+	. . s depId=$$zCoalesce($$geti("HTT",httId,351,ln),chgDep)
+	. . s ccId=$$zCoalesce($$geti("HTT",httId,352,ln),chgCC)
+	. . s locId=$$zCoalesce($$geti("HTT",httId,353,ln),chgLoc)
+	. . s hbLoc=$$LocToHBLoc(locId)
+	. . s procedure=$$procCd(eapId,epmId,svcDate,"","","",eppId,"",depId,ccId,hbLoc,billingProvId)
+	. i procedure="" q
+	. s quantity=$$geti("HTT",httId,170,ln)
+	. s modifiers=$$geti("HTT",httId,160,ln)
+	. s revCode=$$getRCFromUBC($$geti("HTT",httId,163,ln))
+	. s perfProvId=docProvList(ln,"Performed")
+	. s examDate=$s(defExamDate=svcDate:"",1:defExamDate)   ;do not store a separate exam date if it is the same as the service date
+	. s chargeNode=$$buildHADPHXChargeNodeHBTempTran(httId,ln)
+	. d %zSetHADPHXCharge(eptSN,svcDate,procedure,chargeNode,quantity,modifiers,provider,revCode,perfProvId,examDate)
+	. d %zSetHADPHXDeleteCharge("HTT",httId,ln,eptSN,svcDate,procedure)
+	. d %zSetHADPHXEncounter(eptCSN,svcDate,procedure,chargeNode,quantity,modifiers,provider,revCode,perfProvId,examDate)
+	. d %zSetHADPHXDeleteEncounter("HTT",httId,ln,eptCSN,svcDate,procedure)
+	q 0  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag sets ^HADPHX based on a charge HTR
+	; PARAMETERS:
+	;  htrId (I,REQ) - HB transaction ID
+	; RETURNS:      return values are for debugging purpose
+	; REVISIONS:
+	;  *JHC 04/24 2077876
+	;  *jmh 06/25 2204288 - Switch NvE to realtime lookup. Don't store.
+	;  *jmh 06/25 2162035 - Move KPDF to item.
+	;---------
+HTRsetHADPHX(htrId) ;
+	n eptSN,svcDate,quantity,modifiers,bll10,bll20,bll30,provider,RVUBillProv
+	n sa,eptCSN,revCode,perfProvId,billingProvId,siAry,code
+	n chargeNode,ordId,examDate,serviceProvId
+	;
+	i htrId="" q 1
+	d %zSetHADPHXStartDate()
+	s bll10=$$zgetbll("HTR",htrId,10)
+	i $$zgetpcl(bll10,6,1)'=$$catHTR50Charge() q 2   ;HTR 50, "10;6"
+	i '$$ActTx(htrId) q 4
+	s eptSN=$$getChgPSN("HTR",htrId,.eptCSN)
+	i eptSN="" q 3
+	s bll20=$$zgetbll("HTR",htrId,20)
+	s bll30=$$zgetbll("HTR",htrId,30)
+	s billingProvId=$$geti("HTR",htrId,5001,1)   ;HTR 5001, "70;1"
+	s siAry(10)=bll10,siAry(20)=bll20,siAry(30)=bll30
+	s code=$$getProcCodeHTR(.siAry,billingProvId,.svcDate)
+	i svcDate="" q 5
+	i code="" q 6
+	i $$isLinkedChildHTR(htrId) q 7  ;skip for linked child charge ;*JT 04/23 950340
+	s quantity=$$zgetpcl(bll30,4,1)   ;HTR 255, "30;4"
+	s modifiers=$$zgetpcl(bll20,5,1)   ;HTR 147, "20;5"
+	s sa=$$zgetpcl(bll20,6,1)   ;HTR 149, "20;6"
+	d %zGetProviderSwitches("",.RVUBillProv,sa)
+	s serviceProvId=$$zgetpcl(bll20,1,1)   ;HTR 110, "20;1"
+	s provider=$s(RVUBillProv:billingProvId,1:serviceProvId)
+	s revCode=$$getRCFromUBC($$zgetpcl(bll20,11,1))   ;HTR 150, "20;11"
+	s perfProvId=$$getHTRPerfProv^HUCCIBB2(htrId,"Performed")
+	s ordId=$$geti("HTR",htrId,450,1)   ;HTR 450, "40;9"
+	s examDate=$$getOrderExamDate(ordId)
+	i examDate=svcDate s examDate=""   ;do not store a separate exam date if it is the same as the service date
+	s chargeNode=$$buildHADPHXChargeNodeHBTransact(htrId)
+	d %zSetHADPHXCharge(eptSN,svcDate,code,chargeNode,quantity,modifiers,provider,revCode,perfProvId,examDate)
+	d %zSetHADPHXEncounter(eptCSN,svcDate,code,chargeNode,quantity,modifiers,provider,revCode,perfProvId,examDate)
+	q 0  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  gets the CPT/HCPCS code for an HTR, respecting alternate codes
+	; PARAMETERS:
+	;  siAry (I,REQ) - array of HTR superitems. siAry(10 or 20 or 30) = HTR superitem 10, 20, 30
+	;  billProvId (I,REQ) - billing provider ID (padded or non-padded)
+	;  svcDate (IO,OPT) - service date
+	;  getOldCode (I,OPT) - pass 1 to retrieve the code that would have been used before we fully supported
+	;                       alternate codes (needed to make sure old codes are removed correctly)
+	;  oldCode (O,OPT) - the HCPCS code that would have been used previously
+	; RETURNS:      HCPCS code to use for the charge
+	;---------
+getProcCodeHTR(siAry,billProvId,svcDate,getOldCode,oldCode) ;
+	n eapId,locId,depId,ccId,isAlt,epmId,eppId,code
+	k oldCode
+	i svcDate="" s svcDate=$$zgetpcl(siAry(10),5,1)  ;HTR 45 service date
+	s epmId=$$zgetpcl(siAry(20),28,1)   ;HTR-198 primary payer
+	s eppId=$$zgetpcl(siAry(20),18,1)   ;HTR-199 primary plan
+	s code=$$zgetpcl(siAry(30),14,1)    ;HTR 254 override HCPCS code
+	i code'="" s:getOldCode oldCode=code q code
+	s eapId=$$zgetpcl(siAry(30),3,1)   ;HTR 251
+	s ccId=$$zgetpcl(siAry(20),10,1)   ;HTR 145 cost center
+	s locId=$$LocToHBLoc($$zgetpcl(siAry(20),4,1)) ;HTR 146 rev loc
+	s depId=$$zgetpcl(siAry(20),3,1)   ;HTR 144 department
+	s code=$$procCd(eapId,epmId,svcDate,"",.isAlt,"",eppId,"",depId,ccId,locId,billProvId)
+	i isAlt,getOldCode s oldCode=$$procCd(eapId,epmId,svcDate)
+	q code  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Set the encounter index for the PB RMR
+	; PARAMETERS:
+	;  eptCSN (I,REQ) - patient contact serial number
+	;  svcDate (I,REQ) - date of service
+	; RETURNS:      1 if the index global is updated, 0 otherwise
+	; REVISIONS:
+	;  *DNL 02/26 2259608 - add svcDte as a required parameter, flag the provider's case log for update
+	;---------
+setRMREncounterIndex(eptCSN,svcDate) n today
+	i $$zStrIsNull(eptCSN) q $$false()
+	d %zcredpclPendMarkForExtract(svcDate,eptCSN)
+	s today=+$H
+	i $d(^KNREPORT("ENCIDX",today,"CHGD",eptCSN)) q $$false()   ;the global is already set. do not need to set it again.
+	s ^KNREPORT("ENCIDX",today,"CHGD",eptCSN)=""
+	q $$true()  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Read the ^KPDF switches to use billing provider for RVU or new vs established checks.
+	; PARAMETERS:
+	;  NvEBillProv (O,OPT) - flag to use the billing provider for new vs established checks
+	;  RVUBillProv (O,OPT) - flag to use the billing provider for RVU checks
+	; REVISIONS:
+	;  *JHC 04/24 2077876
+	;  *jmh 06/25 2162035 - Move KPDF to real item.
+	;---------
+%zGetProviderSwitches(NvEBillProv,RVUBillProv,eafId) ;
+	s NvEBillProv=$$useNvEBillProv^KEUNVE(eafId)
+	s RVUBillProv=^KPDF("Switch","RVU-MPI","UseBillProv")
+	q   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Return the external code associated with the given specialty (SER 1050 category value)
+	; PARAMETERS:
+	;  specialty (I,REQ) - SER 1050 category value for the specialty
+	; RETURNS:      external specialty code
+	;---------
+	;*JHC 4/24 2077876
+getSpecialtyExternalCode(specialty) ;
+	q:specialty="" ""
+	q $$zgetCat(specialty,1,"SER",1050,"","",$$specialtyExternalCodeNNode())   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Constant for the N node name where the external specialty code is stored.
+	;---------
+specialtyExternalCodeNNode() q "HCFA Code"  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Return the exam end date for the given order.
+	; PARAMETERS:
+	;  ordId (I,REQ) - order ID
+	; RETURNS:      exam end date
+	;---------
+	;*JHC 4/24 2077876
+getOrderExamDate(ordId) ;
+	q:$$zStrIsNull(ordId) ""
+	q $$geti("ORD",ordId,52131,1)   ;ORD 52131, "52120,4"   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Add the charge to the charge part of the ^HADPHX global.
+	; PARAMETERS:
+	;  eptSN (I,REQ) - patient serial number
+	;  svcDate (I,REQ) - service date
+	;  procedure (I,REQ) - procedure code (CPT/HCPCS that will appear on the claim)
+	;  chargeNode (I,REQ) - semicolon (";") delimited string with the charge INI, ID, and line number
+	;  quantity (I,REQ) - charge quantity
+	;  modifiers (I,OPT) - comma delimited list of modifiers (external IDs, not internal MOD record IDs)
+	;  provider (I,OPT) - provider (SER) ID (non-padded)
+	;  revCode (I,OPT) - revenue code (external ID, not internal UBC ID), padded with leading zeroes to four digits
+	;  perfProvId (I,OPT) - performing provider (SER) ID (non-padded)
+	;  examDate (I,OPT) - date the procedure was performed if different from charge service date
+	;---------
+	;*JHC 4/24 2077876
+%zSetHADPHXCharge(eptSN,svcDate,procedure,chargeNode,quantity,modifiers,provider,revCode,perfProvId,examDate) ;
+	n value
+	i $$zStrChkAnyNull(4,eptSN,svcDate,procedure,chargeNode) q
+	d %zSetHADPHXStartDate(svcDate)  ; Set the earliest date we've seen
+	s value=$$buildHADPHXValueCharge(quantity,modifiers,provider,revCode,perfProvId,examDate)
+	s ^HADPHX(2,eptSN,svcDate,procedure,chargeNode)=value
+	q   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Set the delete node in the charge part of the ^HADPHX global.
+	; PARAMETERS:
+	;  ini (I,REQ) - charge master file initials
+	;  id (I,REQ) - charge ID
+	;  ln (I,OPT) - line number
+	;  eptSN (I,REQ) - patient serial number
+	;  svcDate (I,REQ) - service date
+	;  procedure (I,REQ) - procedure code (CPT/HCPCS that will appear on the claim)
+	;---------
+	;*JHC 4/24 2077876
+%zSetHADPHXDeleteCharge(ini,id,ln,eptSN,svcDate,procedure) ;
+	n value
+	i $$zStrChkAnyNull(2,ini,id) q
+	s value=$$zStrBuildDelimList(",",eptSN,svcDate,procedure)
+	i ln="" s ^HADPHX("DELETE",2,ini,id)=value
+	e  s ^HADPHX("DELETE",2,ini,id,ln)=value
+	q   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Add the charge to the encounter part of the ^HADPHX global.
+	; PARAMETERS:
+	;  eptCSN (I,REQ) - patient contact serial number
+	;  svcDate (I,REQ) - service date
+	;  procedure (I,REQ) - procedure code (CPT/HCPCS that will appear on the claim)
+	;  chargeNode (I,REQ) - semicolon (";") delimited string with the charge INI, ID, and line number
+	;  quantity (I,REQ) - charge quantity
+	;  modifiers (I,OPT) - comma delimited list of modifiers (external IDs, not internal MOD record IDs)
+	;  provider (I,OPT) - provider (SER) ID (non-padded)
+	;  revCode (I,OPT) - revenue code (external ID, not internal UBC ID), padded with leading zeroes to four digits
+	;  perfProvId (I,OPT) - performing provider (SER) ID (non-padded)
+	;  examDate (I,OPT) - date the procedure was performed if different from charge service date
+	;---------
+	;*JHC 4/24 2077876
+%zSetHADPHXEncounter(eptCSN,svcDate,procedure,chargeNode,quantity,modifiers,provider,revCode,perfProvId,examDate) ;
+	n value
+	i $$zStrChkAnyNull(4,eptCSN,svcDate,procedure,chargeNode) q
+	s value=$$buildHADPHXValueCharge(quantity,modifiers,provider,revCode,perfProvId,examDate)
+	s ^HADPHX(4,eptCSN,svcDate,procedure,chargeNode)=value
+	q   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Set the delete node in the encounter part of the ^HADPHX global.
+	; PARAMETERS:
+	;  ini (I,REQ) - charge master file initials
+	;  id (I,REQ) - charge ID
+	;  ln (I,OPT) - line number
+	;  eptCSN (I,REQ) - patient contact serial number
+	;  svcDate (I,REQ) - service date
+	;  procedure (I,REQ) - procedure code (CPT/HCPCS that will appear on the claim)
+	;---------
+	;*JHC 4/24 2077876
+%zSetHADPHXDeleteEncounter(ini,id,ln,eptCSN,svcDate,procedure) ;
+	n value
+	i $$zStrChkAnyNull(3,ini,id,eptCSN) q
+	s value=$$zStrBuildDelimList(",",eptCSN,svcDate,procedure)
+	i ln="" s ^HADPHX("DELETE",4,ini,id)=value
+	e  s ^HADPHX("DELETE",4,ini,id,ln)=value
+	q   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Constant for the default provider index group
+	;---------
+	;*JHC 4/24 2077876
+defaultHADPHXProvGroup() q "MISSING PROVIDER GROUP"   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Constant for the node value to use for non-physician practitioner (NPP) in new vs established tracking
+	;---------
+nppSpecialtyForNvE() q "NvENPP"  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Return the charge node for a UCL
+	; PARAMETERS:
+	;  uclId (I,REQ) - universal charge line ID
+	; RETURNS:      semicolon (";") delimited string with the charge INI, ID, and line number
+	;---------
+	;*JHC 4/24 2077876
+buildHADPHXChargeNodeUnivChgLn(uclId) ;
+	q $$zStrBuildDelimList(";","UCL",uclId,1)   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Return the charge node for a PB TAR.
+	; PARAMETERS:
+	;  tarId (I,REQ) - PB temporary transaction (charge session) ID
+	;  ln (I,REQ) - line number in the 150 related group
+	; RETURNS:      semicolon (";") delimited string with the charge INI, ID, and line number
+	;---------
+	;*JHC 4/24 2077876
+buildHADPHXChargeNodePBTempTran(tarId,ln) ;
+	q $$zStrBuildDelimList(";","TAR",tarId,ln)   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Return the charge node for a PB ETR.
+	; PARAMETERS:
+	;  etrId (I,REQ) - PB transaction ID
+	; RETURNS:      semicolon (";") delimited string with the charge INI, ID, and line number
+	;---------
+	;*JHC 4/24 2077876
+buildHADPHXChargeNodePBTransact(etrId) ;
+	q $$zStrBuildDelimList(";","ETR",etrId,1)   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Return the charge node for an HB HTT.
+	; PARAMETERS:
+	;  httId (I,REQ) - HB temporary transaction (charge session) ID
+	;  ln (I,REQ) - line number in the HTT 150 related group
+	; RETURNS:      semicolon (";") delimited string with the charge INI, ID, and line number
+	;---------
+	;*JHC 4/24 2077876
+buildHADPHXChargeNodeHBTempTran(httId,ln) ;
+	q $$zStrBuildDelimList(";","HTT",httId,ln)   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Return the charge node for an HB HTR.
+	; PARAMETERS:
+	;  htrId (I,REQ) - HB transaction ID
+	; RETURNS:      semicolon (";") delimited string with the charge INI, ID, and line number
+	;---------
+	;*JHC 4/24 2077876
+buildHADPHXChargeNodeHBTransact(htrId) ;
+	q $$zStrBuildDelimList(";","HTR",htrId,1)   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Return the value string to use in the ^HADPHX global.
+	; PARAMETERS:
+	;  quantity (I,REQ) - charge quantity
+	;  modifiers (I,OPT) - comma delimited list of modifiers (external IDs, not internal MOD record IDs)
+	;  provider (I,OPT) - provider (SER) ID (non-padded)
+	;  revCode (I,OPT) - revenue code (external ID, not internal UBC ID), padded with leading zeroes to four digits
+	;  perfProvId (I,OPT) - performing provider (SER) ID (non-padded)
+	;  examDate (I,OPT) - date the procedure was performed if different from charge service date
+	; RETURNS:      semicolon (";") delimited string with the given values
+	;---------
+	;*JHC 4/24 2077876
+buildHADPHXValueCharge(quantity,modifiers,provider,revCode,perfProvId,examDate) ;
+	q $$zStrBuildDelimList(";",quantity,modifiers,provider,revCode,perfProvId,examDate)   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Set start date to indicate when ^HADPHX is turned on
+	;               Assumption is you cannot post future service dates, so we can assume if HADPHX is on today,
+	;               all of tomorrow's service dates will get captured as some point.
+	; REVISIONS:
+	;  *JHC 04/24 2077876
+	;  *jmh 06/25 2204288 - Add dte param for setting earliest start date.
+	;---------
+%zSetHADPHXStartDate(dte) ;
+	s:((dte'="")&(^HADPHX("START DATE")'="")&(dte<^HADPHX("START DATE"))) ^HADPHX("START DATE")=dte
+	s:^HADPHX("START DATE")="" ^HADPHX("START DATE")=$$zCoalesce(dte,$H+1)
+	q   ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag deletes ^HADPHX for a UCL
+	; PARAMETERS:
+	;  uclId (I,REQ) - universal charge line ID
+	; RETURNS:      return values are for debugging purpose
+	;---------
+	;*JHC 4/24 2077876
+UCLdelHADPHX(uclId) n chargeNode,nodes
+	i uclId="" q 1
+	;
+	s chargeNode=$$buildHADPHXChargeNodeUnivChgLn(uclId)
+	; delete specialty node
+	s nodes=^HADPHX("DELETE",1,"UCL",uclId)
+	d %zKillHADPHXSpecialty(chargeNode,nodes)
+	k ^HADPHX("DELETE",1,"UCL",uclId)
+	;
+	; delete charge node
+	s nodes=^HADPHX("DELETE",2,"UCL",uclId)
+	d %zKillHADPHXCharge(chargeNode,nodes)
+	k ^HADPHX("DELETE",2,"UCL",uclId)
+	;
+	; delete encounter node
+	s nodes=^HADPHX("DELETE",4,"UCL",uclId)
+	d %zKillHADPHXEncounter(chargeNode,nodes)
+	k ^HADPHX("DELETE",4,"UCL",uclId)
+	q 2  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag deletes ^HADPHX for a charge TAR
+	; PARAMETERS:
+	;  tarId (I,REQ) - PB temporary transaction (charge session) ID
+	; RETURNS:      return values are for debugging purpose
+	;---------
+	;*JHC 4/24 2077876
+TARdelHADPHX(tarId) n line,chargeNode,nodes
+	i tarId="" q 1
+	;
+	; delete specialty node
+	f  s line=$o(^HADPHX("DELETE",1,"TAR",tarId,line)) q:line=""  d
+	. s chargeNode=$$buildHADPHXChargeNodePBTempTran(tarId,line)
+	. s nodes=^HADPHX("DELETE",1,"TAR",tarId,line)
+	. d %zKillHADPHXSpecialty(chargeNode,nodes)
+	. k ^HADPHX("DELETE",1,"TAR",tarId,line)
+	;
+	; delete charge node
+	f  s line=$o(^HADPHX("DELETE",2,"TAR",tarId,line)) q:line=""  d
+	. s chargeNode=$$buildHADPHXChargeNodePBTempTran(tarId,line)
+	. s nodes=^HADPHX("DELETE",2,"TAR",tarId,line)
+	. d %zKillHADPHXCharge(chargeNode,nodes)
+	. k ^HADPHX("DELETE",2,"TAR",tarId,line)
+	;
+	; delete encounter node
+	f  s line=$o(^HADPHX("DELETE",4,"TAR",tarId,line)) q:line=""  d
+	. s chargeNode=$$buildHADPHXChargeNodePBTempTran(tarId,line)
+	. s nodes=^HADPHX("DELETE",4,"TAR",tarId,line)
+	. d %zKillHADPHXEncounter(chargeNode,nodes)
+	. k ^HADPHX("DELETE",4,"TAR",tarId,line)
+	;
+	q 2  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag deletes ^HADPHX for a charge ETR
+	; PARAMETERS:
+	;  etrId (I,REQ) - PB transaction ID
+	; RETURNS:      return values are for debugging purpose
+	; REVISIONS:
+	;  *JHC 04/24 2077876
+	;  *jmh 06/25 2162035 - Move KPDF to real item.
+	;  *DNL 02/26 2259608 - pass svcDate to setRMREncounterIndex
+	;---------
+ETRdelHADPHX(etrId) ;
+	n eptSN,procedure,svcDate,si10,si20,eapId,specialty,provGroup,eptId,ln,epmId,eptDat,eptCSN
+	n eppId,depId,locId,serId,si50,chargeNode,NvEBillProv,hasNPP,sa
+	;
+	i etrId="" q 1
+	s si10=$$zgetbll("ETR",etrId,10)
+	i $$zgetpcl(si10,6,1)'=$$catETR50Charge() q 2  ;ETR 50
+	s si20=$$zgetbll("ETR",etrId,20)
+	s eptId=$$zgetpcl(si20,2,1)  ;ETR 100
+	i eptId="" q 3
+	s eptId=$$getidin(eptId,"EPT")
+	s si50=$$zgetbll("ETR",etrId,50)
+	s svcDate=$$zgetpcl(si10,5,1)   ;ETR 45
+	i svcDate="" q 5
+	s eptCSN=$$getChgCSN("ETR",etrId)
+	s eapId=$$zgetpcl(si10,10,1)    ;ETR 251
+	s epmId=$$zgetpcl(si50,20,1)    ;ETR 122
+	s eppId=$$zgetpcl(si50,16,1)    ;ETR 166
+	s depId=$$zgetpcl(si20,21,1)    ;ETR 144
+	s locId=$$zgetpcl(si20,7,1)     ;ETR 146
+	s serId=$$zgetpcl(si20,11,1)    ;ETR 5001
+	s procedure=$$getProcCodeETR(etrId,eapId,epmId,svcDate,eppId,depId,locId,serId)
+	i procedure="" q 6
+	s sa=$$zgetpcl(si50,8,1)   ;ETR 149, "50;8"
+	d %zGetProviderSwitches(.NvEBillProv,"",sa)
+	i NvEBillProv d
+	. s eptDat=$$gtEPTdt1(etrId,si20)
+	. s specialty=$$EncSpec(eptId,eptDat,$$getidin(serId,"SER"),depId)
+	e  s specialty=$$getn("ETR",etrId,1,"135;5")  ;ETR 113
+	s specialty=$$getSpecialtyExternalCode(specialty)
+	i specialty="" s specialty="*"
+	s provGroup=$$getProvGroup("ETR",etrId)
+	s chargeNode=$$buildHADPHXChargeNodePBTransact(etrId)
+	f ln=1:1:$$zgetnp("EPT",eptId,2090,0) d
+	. s eptSN=$$zgetnp("EPT",eptId,2090,ln)
+	. i $$zStrIsNull(eptSN) q
+	. ; delete specialty node
+	. s hasNPP=$$hasNvENPPNode(specialty,provGroup,eptSN,svcDate,chargeNode)
+	. d %zKillHADPHXSpecialty(chargeNode,"",specialty,provGroup,eptSN,svcDate,hasNPP)
+	. ; delete charge node
+	. d %zKillHADPHXCharge(chargeNode,"",eptSN,svcDate,procedure)
+	; delete encounter node
+	i $$zStrIsNotNull(eptCSN) d %zKillHADPHXEncounter(chargeNode,"",eptCSN,svcDate,procedure)
+	s %=$$setRMREncounterIndex(eptCSN,svcDate)
+	q 9  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag sets ^HADPHX for a charge HTT
+	; PARAMETERS:
+	;  httId (I,REQ) - HB temporary transaction (charge session) ID
+	; RETURNS:      return values are for debugging purpose
+	;---------
+	;*JHC 4/24 2077876
+HTTdelHADPHX(httId) n nodes,line,chargeNode
+	i httId="" q 1
+	;
+	; delete specialty node
+	f  s line=$o(^HADPHX("DELETE",1,"HTT",httId,line)) q:line=""  d
+	. s chargeNode=$$buildHADPHXChargeNodeHBTempTran(httId,line)
+	. s nodes=^HADPHX("DELETE",1,"HTT",httId,line)
+	. d %zKillHADPHXSpecialty(chargeNode,nodes)
+	. k ^HADPHX("DELETE",1,"HTT",httId,line)
+	;
+	; delete charge node
+	f  s line=$o(^HADPHX("DELETE",2,"HTT",httId,line)) q:line=""  d
+	. s chargeNode=$$buildHADPHXChargeNodeHBTempTran(httId,line)
+	. s nodes=^HADPHX("DELETE",2,"HTT",httId,line)
+	. d %zKillHADPHXCharge(chargeNode,nodes)
+	. k ^HADPHX("DELETE",2,"HTT",httId,line)
+	;
+	; delete encounter node
+	f  s line=$o(^HADPHX("DELETE",4,"HTT",httId,line)) q:line=""  d
+	. s chargeNode=$$buildHADPHXChargeNodeHBTempTran(httId,line)
+	. s nodes=^HADPHX("DELETE",4,"HTT",httId,line)
+	. d %zKillHADPHXEncounter(chargeNode,nodes)
+	. k ^HADPHX("DELETE",4,"HTT",httId,line)
+	q 2  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag sets ^HADPHX for a charge HTR
+	; PARAMETERS:
+	;  htrId (I,REQ) - HB transaction ID
+	; RETURNS:      return values are for debugging purpose
+	;---------
+	;*JHC 4/24 2077876
+HTRdelHADPHX(htrId) ;
+	n eptSN,code,svcDate,bll10,provGroup,specialty,ln,eptCSN,allSns,httId,oldCode,siAry,billProvId
+	n chargeNode,hasNPP,bll70
+	i htrId="" q 1
+	;
+	s bll10=$$zgetbll("HTR",htrId,10)
+	i $$zgetpcl(bll10,6,1)'=$$catHTR50Charge() q 2  ;HTR 50
+	s allSns=$$true()
+	s %=$$getChgPSN("HTR",htrId,.eptCSN,.allSns)
+	i allSns(0)<=0 q 3
+	s siAry(10)=bll10
+	s siAry(20)=$$zgetbll("HTR",htrId,20)
+	s siAry(30)=$$zgetbll("HTR",htrId,30)
+	s bll70=$$zgetbll("HTR",htrId,70)
+	s billProvId=$$zgetpcl(bll70,1,1)   ;HTR 5001, "70;1"
+	; QAN 6732113 - we previously didn't respect all alternate criteria when looking up the code. so we may have charges
+	; posted before the fix that were logged under the wrong code. we'll kill both nodes for now to be safe.
+	; "oldCode" handling can be removed in a few years
+	s code=$$getProcCodeHTR(.siAry,billProvId,.svcDate,$$true(),.oldCode)
+	i svcDate="" q 5
+	i code="" q 6
+	s specialty="*"
+	s provGroup=$$getProvGroup("HTR",htrId)
+	s chargeNode=$$buildHADPHXChargeNodeHBTransact(htrId)
+	f ln=1:1:allSns(0) d
+	. s eptSN=allSns(ln)
+	. i eptSN="" q
+	. ; delete specialty node
+	. s hasNPP=$$hasNvENPPNode(specialty,provGroup,eptSN,svcDate,chargeNode)
+	. d %zKillHADPHXSpecialty(chargeNode,"",specialty,provGroup,eptSN,svcDate,hasNPP)
+	. ; delete charge node
+	. d %zKillHADPHXCharge(chargeNode,"",eptSN,svcDate,code)
+	. d %zKillHADPHXCharge(chargeNode,"",eptSN,svcDate,oldCode)
+	; delete encounter node
+	i eptCSN'="" d
+	. d %zKillHADPHXEncounter(chargeNode,"",eptCSN,svcDate,code)
+	. d %zKillHADPHXEncounter(chargeNode,"",eptCSN,svcDate,oldCode)
+	s httId=$$zgetpcl(bll70,3,1)   ;HTR 9010, "70;3"
+	s %=$$HTTdelHADPHX(httId)
+	q 9  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Determine if the specified values are listed in the NPP part of the specialty global.
+	; PARAMETERS:
+	;  specialty (I,REQ) - SER 1050 category value for the specialty
+	;  provGroup (I,REQ) - provider group index value
+	;  eptSN (I,REQ) - patient serial number
+	;  svcDate (I,REQ) - service date
+	;  chargeNode (I,REQ) - semicolon (";") delimited string with the charge INI, ID, and line number
+	; RETURNS:      1 if the charge is in the NPP part of the global, 0 otherwise
+	;---------
+	;*JHC 4/24 2077876
+hasNvENPPNode(specialty,provGroup,eptSN,svcDate,chargeNode) n proc,nppProc
+	i $$zStrChkAnyNull(5,specialty,provGroup,eptSN,svcDate,chargeNode) q $$false()
+	s proc=^HADPHX(1,specialty,provGroup,eptSN,svcDate,chargeNode)
+	s nppProc=^HADPHX(1,$$nppSpecialtyForNvE(),provGroup,eptSN,svcDate,chargeNode)
+	i proc=nppProc q $$true()
+	q $$false()  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Remove the charge from the specialty part of the ^HADPHX global.
+	; PARAMETERS:
+	;  chargeNode (I,REQ) - semicolon (";") delimited string with the charge INI, ID, and line number
+	;  nodeList (I,OPT) - comma (",") delimited string with the specialty, provider group, patient serial number, and service date
+	;  specialty (I,OPT) - SER 1050 category value for the specialty
+	;  provGroup (I,OPT) - provider group index value
+	;  eptSN (I,OPT) - patient serial number
+	;  svcDate (I,OPT) - service date
+	;  hasNPP (I,OPT) - flag indicating there is an NPP node with the input values
+	;---------
+	;*JHC 4/24 2077876
+%zKillHADPHXSpecialty(chargeNode,nodeList,specialty,provGroup,eptSN,svcDate,hasNPP) n nppSpecialty
+	i $$zStrIsNull(chargeNode) q
+	;
+	; kill specialty node
+	i $$zStrIsNotNull(nodeList) d
+	. d %zzStrSplitDelimList(nodeList,",",.specialty,.provGroup,.eptSN,.svcDate)
+	. s hasNPP=(nodeList["^")
+	i '$$zStrChkAnyNull(4,specialty,provGroup,eptSN,svcDate) k ^HADPHX(1,specialty,provGroup,eptSN,svcDate,chargeNode)
+	; kill NvENPP node
+	i hasNPP d
+	. i $$zStrIsNull(nodeList) s nppSpecialty=$$nppSpecialtyForNvE()   ;use the passed in values for provGroup, eptSN, and svcDate
+	. e  d %zzStrSplitDelimList(nodeList,",","","","","","",.nppSpecialty,.provGroup,.eptSN,.svcDate)
+	. i '$$zStrChkAnyNull(4,nppSpecialty,provGroup,eptSN,svcDate) k ^HADPHX(1,nppSpecialty,provGroup,eptSN,svcDate,chargeNode)
+	q  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Remove the charge from the charge part of the ^HADPHX global.
+	; PARAMETERS:
+	;  chargeNode (I,REQ) - semicolon (";") delimited string with the charge INI, ID, and line number
+	;  nodeList (I,OPT) - comma (",") delimited string with the patient serial number, service date, and procedure code
+	;  eptSN (I,OPT) - patient serial number
+	;  svcDate (I,OPT) - service date
+	;  procedure (I,OPT) - procedure code (CPT/HCPCS that will appear on the claim)
+	;---------
+	;*JHC 4/24 2077876
+%zKillHADPHXCharge(chargeNode,nodeList,eptSN,svcDate,procedure) ;
+	i $$zStrIsNull(chargeNode) q
+	i $$zStrIsNotNull(nodeList) d %zzStrSplitDelimList(nodeList,",",.eptSN,.svcDate,.procedure)
+	i '$$zStrChkAnyNull(3,eptSN,svcDate,procedure) k ^HADPHX(2,eptSN,svcDate,procedure,chargeNode)
+	q  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Remove the charge from the encounter part of the ^HADPHX global.
+	; PARAMETERS:
+	;  chargeNode (I,REQ) - semicolon (";") delimited string with the charge INI, ID, and line number
+	;  nodeList (I,OPT) - comma (",") delimited string with the patient serial number, service date, and procedure code
+	;  eptCSN (I,OPT) - patient contact serial number
+	;  svcDate (I,OPT) - service date
+	;  procedure (I,OPT) - procedure code (CPT/HCPCS that will appear on the claim)
+	; REVISIONS:
+	;  *DNL 02/26 2259608 - pass svcDate to setRMREncounterIndex
+	;---------
+%zKillHADPHXEncounter(chargeNode,nodeList,eptCSN,svcDate,procedure) ;
+	i $$zStrIsNull(chargeNode) q
+	i $$zStrIsNotNull(nodeList) d %zzStrSplitDelimList(nodeList,",",.eptCSN,.svcDate,.procedure)
+	i '$$zStrChkAnyNull(3,eptCSN,svcDate,procedure) k ^HADPHX(4,eptCSN,svcDate,procedure,chargeNode)
+	i $$zStrIsNotNull(eptCSN) s %=$$setRMREncounterIndex(eptCSN,svcDate)
+	q  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag caches an ^HADPHX entry for a charge ETR
+	; PARAMETERS:
+	;  etrId (I,REQ) - PB transaction ID
+	;  array (IO,REQ) - Array caching the ^HADPHX entry
+	; RETURNS:      return values are for debugging purpose
+	; REVISIONS:
+	;  *JHC 04/24 2077876
+	;  *jmh 06/25 2162035 - Move KPDF to real item.
+	;---------
+ETRcacheHADPHX(etrId,array) ;
+	n eptSN,procedure,svcDate,bll10,bll20,bll50,eapId,specialty,provGroup,locId,eppId
+	n NvEBillProv,epmId,eptId,eptDat,depId,eptCSN,eptIdOut,chargeNode,billingProvId,sa
+	i etrId="" q 1
+	s bll10=$$zgetbll("ETR",etrId,10)
+	i $$zgetpcl(bll10,6,1)'=$$catETR50Charge() q 2  ;ETR 50
+	s bll20=$$zgetbll("ETR",etrId,20)
+	s eptIdOut=$$zgetpcl(bll20,2,1)  ;ETR 100
+	i eptIdOut="" q 3
+	s eptId=$$getidin(eptIdOut,"EPT")
+	s eptSN=$$getPatIndex(eptId)
+	i eptSN="" q 3
+	s eptCSN=$$getChgCSN("ETR",etrId)
+	s svcDate=$$zgetpcl(bll10,5,1)   ;ETR 45, "10;5"
+	i svcDate="" q 5
+	s bll50=$$zgetbll("ETR",etrId,50)
+	s eapId=$$zgetpcl(bll10,10,1)   ;ETR 251, "10;10"
+	s epmId=$$zgetpcl(bll50,20,1)   ;ETR 122, "50;20"
+	s eppId=$$zgetpcl(bll50,16,1)   ;ETR 166, "50;16"
+	s depId=$$zgetpcl(bll20,21,1)   ;ETR 144, "20;21"
+	s locId=$$zgetpcl(bll20,7,1)   ;ETR 146, "20;7"
+	s billingProvId=$$zgetpcl(bll20,11,1)   ;ETR 5001, "20;11"
+	s procedure=$$getProcCodeETR(etrId,eapId,epmId,svcDate,eppId,depId,locId,billingProvId)
+	i procedure="" q 6
+	s sa=$$zgetpcl(bll50,8,1)   ;ETR 149, "50;8"
+	d %zGetProviderSwitches(.NvEBillProv,"",sa)
+	i NvEBillProv d
+	. s eptDat=$$gtEPTdt1(etrId,bll20)
+	. s specialty=$$EncSpec(eptId,eptDat,$$getidin(billingProvId,"SER"),depId)
+	e  s specialty=$$geti("ETR",etrId,113,1)   ;ETR 113, "135;5"
+	s specialty=$$getSpecialtyExternalCode(specialty)
+	i specialty="" s specialty="*"
+	s provGroup=$$getProvGroup("ETR",etrId)
+	s chargeNode=$$buildHADPHXChargeNodePBTransact(etrId)
+	; set cache for charge node
+	s array(2,0)=1
+	s array(2,1)=$$zStrBuildDelimList(",",eptSN,svcDate,procedure,chargeNode)
+	; set cache for encounter node
+	i eptCSN'="" d
+	. s array(3,0)=1
+	. s array(3,1)=$$zStrBuildDelimList(",",eptCSN,svcDate,procedure,chargeNode)
+	i provGroup="" q 7
+	i specialty="" q 8
+	; set cache for specialty node
+	s array(1,0)=1
+	s array(1,1)=$$zStrBuildDelimList(",",specialty,provGroup,eptSN,svcDate,chargeNode)
+	q 9  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag deletes relevant nodes of ^HADPHX. This is a overkill function and should not be used in general, as it is very inefficient.
+	;               Might be useful if there are a relatively small number of records which were corrupted and easily identified.
+	; PARAMETERS:
+	;  ini (I,REQ) - charge master file initials
+	;  chargeID (I,REQ) - Charge ID
+	; RETURNS:      1
+	;---------
+delHADPHX(ini,chargeID) ;
+	n eptSN,provGroup,specialty,svcDate,procedure,charge,eptCSN
+	; delete specialty node
+	f  s specialty=$o(^HADPHX(1,specialty)) q:specialty=""  d
+	. f  s provGroup=$o(^HADPHX(1,specialty,provGroup)) q:provGroup=""  d
+	. . f  s eptSN=$o(^HADPHX(1,specialty,provGroup,eptSN)) q:eptSN=""  d
+	. . . f  s svcDate=$o(^HADPHX(1,specialty,provGroup,eptSN,svcDate)) q:svcDate=""  d
+	. . . . f  s charge=$o(^HADPHX(1,specialty,provGroup,eptSN,svcDate,charge)) q:charge=""  d
+	. . . . . i $p(charge,";",1)'=ini q
+	. . . . . i $p(charge,";",2)'=chargeID q
+	. . . . . d %zKillHADPHXSpecialty(charge,"",specialty,provGroup,eptSN,svcDate)   ;*JHC 4/24 2077876
+	;
+	; delete charge node
+	f  s eptSN=$o(^HADPHX(2,eptSN)) q:eptSN=""  d
+	. f  s svcDate=$o(^HADPHX(2,eptSN,svcDate)) q:svcDate=""  d
+	. . f  s procedure=$o(^HADPHX(2,eptSN,svcDate,procedure)) q:procedure=""  d
+	. . . f  s charge=$o(^HADPHX(2,eptSN,svcDate,procedure,charge)) q:charge=""  d
+	. . . . i $p(charge,";",1)'=ini q
+	. . . . i $p(charge,";",2)'=chargeID q
+	. . . . d %zKillHADPHXCharge(charge,"",eptSN,svcDate,procedure)   ;*JHC 4/24 2077876
+	;
+	; delete encounter node
+	f  s eptCSN=$o(^HADPHX(4,eptCSN)) q:eptCSN=""  d
+	. f  s svcDate=$o(^HADPHX(4,eptCSN,svcDate)) q:svcDate=""  d
+	. . f  s procedure=$o(^HADPHX(4,eptCSN,svcDate,procedure)) q:procedure=""  d
+	. . . f  s charge=$o(^HADPHX(4,eptCSN,svcDate,procedure,charge)) q:charge=""  d
+	. . . . i $p(charge,";",1)'=ini q
+	. . . . i $p(charge,";",2)'=chargeID q
+	. . . . d %zKillHADPHXEncounter(charge,"",eptCSN,svcDate,procedure)   ;*JHC 4/24 2077876
+	q 1  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag deletes relevant nodes of ^HADPHX. This is to be used in editing contexts, since the record will be
+	;               changed at the desired time of deletion.
+	; PARAMETERS:
+	;  array (I,REQ) - cached array as constructed by caching functions
+	; RETURNS:      1
+	;---------
+	;*JHC 4/24 2077876
+delHADPHXcache(array) ;
+	n line,data,specialty,provGroup,eptSN,svcDate,chargeNode,procedure,eptCSN
+	; delete specialty node
+	f line=1:1:array(1,0) d
+	. s data=array(1,line)
+	. d %zzStrSplitDelimList(data,",",.specialty,.provGroup,.eptSN,.svcDate,.chargeNode)
+	. d %zKillHADPHXSpecialty(chargeNode,"",specialty,provGroup,eptSN,svcDate)
+	; delete charge node
+	f line=1:1:array(2,0) d
+	. s data=array(2,line)
+	. d %zzStrSplitDelimList(data,",",.eptSN,.svcDate,.procedure,.chargeNode)
+	. d %zKillHADPHXCharge(chargeNode,"",eptSN,svcDate,procedure)
+	; delete encounter node
+	f line=1:1:array(3,0) d
+	. s data=array(3,line)
+	. d %zzStrSplitDelimList(data,",",.eptCSN,.svcDate,.procedure,.chargeNode)
+	. d %zKillHADPHXEncounter(chargeNode,"",eptCSN,svcDate,procedure)
+	q 1  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  This tag deletes relevant nodes of ^HADPHX.
+	;               This is designed to handle cases where the record is already modified,
+	;               so we cannot reliably look up information from it, so that information is
+	;               passed in the array
+	; PARAMETERS:
+	;  ini (I,REQ) - Charge master file initials
+	;  chargeID (I,REQ) - Charge ID
+	;  array (I,REQ) - array containing lookup information
+	; RETURNS:      1
+	;---------
+	;
+	; Array structure:
+	;  array("eptId") = eptID
+	;  array("eptCSN") = eptCSN
+	;  array("svc date") = default service area
+	;  array("cvgId") = coverage ID
+	;  array("sa") = Service area
+	;  array("depId") = Department
+	;  array("locId") = Revenue location
+	;  array("pos") = Place of service
+	;  array("billArea") = Bill area
+	;  array("svcProv") = Service provider
+	;  array("billProv") = Billing provider
+	;  array("specialty") = specialty
+	;  array("line",0)=# of lines
+	;  array("line",#,"svc date") = line specific service date
+	;  array("line",#,"procedure") = line specific procedure
+	;  array("line",#,"svcProv") = line specific service provider
+	;  array("line",#,"cvgId") = line specific coverage ID
+	;  array("line",#,"specialty") = line specific specialty
+	;  array("line",#,"depId") = line specific Department
+	;  array("line",#,"pos") = line specific Place of service
+	;  array("line",#,"billArea") = line specific Bill area
+	;
+delHADPHX2(ini,chargeID,array) ;
+	n provGroup,defSpecialty,specialty,provPP,eptSN,patLn,line,grpAry,svcDate,chargeNode
+	i array("specialty")="" s defSpecialty="*"
+	e  s defSpecialty=$$getSpecialtyExternalCode(array("specialty"))   ;*JHC 4/24 2077876
+	f line=1:1:array("line",0) d
+	. s grpAry("svcProv")=array("line",line,"svcProv")
+	. i grpAry("svcProv")="" s grpAry("svcProv")=array("svcProv")
+	. s grpAry("depId")=array("line",line,"depId")
+	. i grpAry("depId")="" s grpAry("depId")=array("depId")
+	. s grpAry("pos")=array("line",line,"pos")
+	. i grpAry("pos")="" s grpAry("pos")=array("pos")
+	. s grpAry("billArea")=array("line",line,"billArea")
+	. i grpAry("billArea")="" s grpAry("billArea")=array("billArea")
+	. s provGroup=$$getProvGroup("","","",.provPP,.grpAry)
+	. i array("line",line,"specialty")'="" s specialty=$$getSpecialtyExternalCode(array("line",line,"specialty"))   ;*JHC 4/24 2077876
+	. i specialty="" s specialty=defSpecialty
+	. s svcDate=array("line",line,"svc date")
+	. i svcDate="" s svcDate=array("svc date")
+	. s chargeNode=$$zStrBuildDelimList(";",ini,chargeID,line)   ;*JHC+5 4/24 2077876
+	. f patLn=1:1:$$zgetnp("EPT",array("eptId"),2090,0) d
+	. . s eptSN=$$zgetnp("EPT",array("eptId"),2090,patLn)
+	. . d %zKillHADPHXSpecialty(chargeNode,"",specialty,provGroup,eptSN,svcDate)
+	. . d %zKillHADPHXCharge(chargeNode,"",eptSN,svcDate,array("line",line,"procedure"))
+	. i array("eptCSN")'="" d %zKillHADPHXEncounter(chargeNode,"",array("eptCSN"),svcDate,array("line",line,"procedure"))
+	q 1  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Look up the patient contact serial number associated with the charge
+	; PARAMETERS:
+	;  ini (I,REQ) - charge master file initials
+	;  id (I,REQ)  - charge ID
+	; RETURNS:      patient csn for the charge if one is found, "" otherwise
+	;---------
+getChgCSN(ini,id) ;
+	n csn,firstCharge
+	i ini="UCL" s csn=$$geti("UCL",id,206,1)
+	e  i ini="TAR" s csn=$$geti("TAR",id,72,1)
+	e  i ini="ETR" s csn=$$geti("ETR",id,86,1)
+	e  i ini="HTT" s csn=$$geti("HTT",id,52,1)
+	e  i ini="HTR" s csn=$$geti("HTR",id,62,1)
+	e  i ini="UCS" d
+	. s firstCharge=$$getSessUCL^KECRUTL1(id,"","",1)
+	. i firstCharge s csn=$$geti("UCL",firstCharge,206,1)
+	. e  s csn=$$geti("UCS",id,206,1)
+	q csn  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Find the patient serial number that this charge is linked to
+	; PARAMETERS:
+	;  ini (I,REQ) - charge master file initials (HTT and HTR currently supported)
+	;  id (I,REQ) - Charge ID
+	;  eptCSN (O,OPT) - Patient contact serial number that was found along the way
+	;  allSns (IO,OPT) - If set to 1, will be populated with all the serial numbers
+	; RETURNS:      Patient serial number if found, "" otherwise
+	;---------
+getChgPSN(ini,id,eptCSN,allSns) n harId,eptID,eptSN
+	; Grab patient SN from the encounter that the charge dropped on, this should almost always be the case except maybe for mobile charges or interfaced charges
+	s eptCSN=$$getChgCSN(ini,id)
+	i eptCSN'="" d
+	. s %=$$CSN2IDDT(eptCSN,.eptID)
+	. s eptSN=$$getPatIndex(eptID,.allSns)
+	; If charge does not have a linked encounter then next look to the institutional linked patient
+	i eptSN="" d
+	. s eptSN=$s(ini="HTT":$$geti("HTT",id,4331,1),ini="HTR":$$geti("HTR",id,4331,1),1:"") ;Using a select statement here just so that geti inlines
+	. i eptSN'="",allSns s allSns(0)=1,allSns(1)=eptSN
+	; Finally if charge doesn't have a linked encounter and is not institutional then look to the patient on the HAR
+	i eptSN="" d
+	. s harId=$s(ini="HTT":$$zgetnp("HTT",id,50,1),ini="HTR":$$geti("HTR",id,60,1),1:"")
+	. s eptID=$$zgetnp("HAR",harId,100,1)
+	. s eptSN=$$getPatIndex(eptID,.allSns)
+	q eptSN  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Determine whether an UCL is excluded from HADPHX global index. It is excluded if:
+	;               - UCL is filed to PB, Lab or HB
+	;               - Destination the UCL is filed to is in KPDF SuppressHADPHX switch
+	; PARAMETERS:
+	;  uclId (I,REQ) - universal charge line ID
+	; RETURNS:      1 - if UCl is filed to Resolute (either PB/HB); 0 - otherwise
+	;---------
+excludeUCLFromHADPHX(uclId) n dest
+	i uclId="" q $$false()   ; Include if no UCL
+	i $$zgetnp("UCL",uclId,5,1)="" q $$false()   ; Include if not filed to a destination
+	s dest=$$geti("UCL",uclId,111,1)
+	i $$ShouldDstSuppressHADPHX^KEUHADPHX2(dest) q $$true()   ; Exclude if destination in KPDF switch
+	i $$acContainsPiece("8,12,35",",",dest) q $$true()   ; Exclude if in PB, Lab, HB
+	q $$false()  ;;#eof#
+	;
+	q  ;;#eor#

@@ -1,0 +1,82 @@
+hjPWCPCLRECEXPENSIVE1 ; ; ;2026-03-06 08:55:49;11.8;/zal3d1oET5eYoZeBxtAuD9twodlmPuZTbGCHrnuj3A=;Copyright 2026 Epic Systems Corporation
+	q
+	;*********************************************************************
+	; PURPOSE:  Expensive unit tests for updating case logs that take a long time to run. Separating out so that the fast ones can be run quickly.
+	; AUTHOR:   Daniel Leatherwood
+	; UNDER TEST: PWCPCLREC
+	; REVISIONS:
+	;  *DNL 01/26 2259608 Created
+	;*********************************************************************
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Sets up mocking for the routine.
+	; PARAMETERS:
+	;  mockObject (IO,REQ) - Object containing data on which tags to allow,
+	;                        mock, stub, and spy.
+	; RETURNS:      1 if successful. 0 on failure.
+	; REVISIONS:
+	;  *DNL 01/26 2259608 Created
+	;---------
+installMocks(mockObject) ;
+	n rou
+	s %=$$zevUTAllowRou(.mockObject,"hjPWCPCLREC")
+	f rou="HULIBPCLPWC","ORLIBPCL","HULIBPCLDEFS","PLIBWPCLREC","HULIBPCLPWCAUTO" s %=$$zevUTAllowLibRou(.mockObject,rou)
+	q $$installMocks^hjPWCPCLREC(.mockObject)
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Setup code that runs once before the test.
+	; RETURNS:      1 if successful. 0 on failure.
+	; REVISIONS:
+	;  *DNL 01/26 2259608 Created
+	;---------
+testRoutineSetup(message) ;
+	q $$testRoutineSetup^hjPWCPCLREC(.message)
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	;---------
+testMassPclCreation(message,mockObject,caseLog1,providerA,providerB,providerC,date1,date2,caseLog2,patientX,contact1,orp1,contact2) ;;#testTag# create > 100 entries for a given date
+	; You cannot create more than 100 contacts for a given date in Chronicles. If this happens, we are supposed to spill over onto the next date. We will test that here.
+	n line,arrCaseLogs,orlID,serExtID,foundPCLs
+	s serExtID=$$getidout(providerA,"SER")
+	d %zzArrAppend(.arrCaseLogs,caseLog1)
+	f line=2:1:205 d
+	. s orlID=$$zRecCreateAndLock("ORL","Case log PCL #"_orlID,date1)
+	. d buildLog^hjPWCPCLREC(orlID,providerA,providerC,patientX,contact1,orp1,"","",$$geti("EPT",patientX,8,1,contact2))
+	. s %=$$zunlock("ORL",orlID)
+	. d %zzArrAppend(.arrCaseLogs,orlID)
+	;
+	; in this case, map all of the ORLs we created to the same EPT contacts so that we don't have to create lots and lots of EPT contacts too, which are not the point of this test
+	s %=$$zevUTStubCall(.mockObject,"getCaseLogPatDAT","",contact1)
+	;
+	; Now, update all of these logs to generate PCL entries.
+	f line=1:1:arrCaseLogs(0) d updateLog^PWCPCLREC($$credpclTypeOpTime(),arrCaseLogs(line))
+	;
+	d getPclForProvider^hjPWCPCLREC(serExtID,.foundPCLs)
+	;
+	s %=$$zevUTAssertAreEqual(foundPCLs(0),205,.message,"total PCL contacts for provider A")
+	s %=$$zevUTAssertAreEqual($p(foundPCLs(1),"|",2),date1,.message,"first PCL date for provider A")  ;
+	s %=$$zevUTAssertAreEqual($$zDAT2DTE($p(foundPCLs(2),"|",4)),date1,.message,"Contact date matches for #2")  ;
+	s %=$$zevUTAssertAreEqual($$zDAT2DTE($p(foundPCLs(99),"|",4)),date1,.message,"Contact date matches for #99")  ;
+	s %=$$zevUTAssertAreEqual($$zDAT2DTE($p(foundPCLs(102),"|",4)),date1+1,.message,"Contact date one day later for #102")  ;
+	s %=$$zevUTAssertAreEqual($p(foundPCLs(102),"|",2),date1,.message,"but the date is the same")  ;
+	;
+	; now include case log 2, which affects provider B and C. We should be able to create the desired contact for B, because he doesn't have any yet, but C has 205 already, and cannot fit another one on date2: date1 "stole" them all.
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog2,"")
+	;
+	s serExtID=$$getidout(providerB,"SER")
+	k foundPCLs
+	d getPclForProvider^hjPWCPCLREC(serExtID,.foundPCLs)
+	s %=$$zevUTAssertAreEqual(foundPCLs(0),1,.message,"1 PCL entry for provider B")
+	s %=$$zevUTAssertAreEqual($p(foundPCLs(1),"|",2),date2,.message,"PCL date for provider B")
+	s %=$$zevUTAssertAreEqual($$zDAT2DTE($p(foundPCLs(1),"|",4)),date2,.message,"Contact date matches for provider B")
+	;
+	s serExtID=$$getidout(providerC,"SER")
+	k foundPCLs
+	d getPclForProvider^hjPWCPCLREC(serExtID,.foundPCLs)
+	s %=$$zevUTAssertAreEqual(foundPCLs(0),205+1,.message,"206 PCL entries for provider C: one more from case log 2")
+	s %=$$zevUTAssertAreEqual($p(foundPCLs(206),"|",2),date2,.message,"last entry date for provider C on date2")
+	s %=$$zevUTAssertAreEqual($$zDAT2DTE($p(foundPCLs(206),"|",4)),date2+1,.message,"forced to place contact on next day for provider C")
+	; if a message exists, something failed
+	q message=""
+	q  ;;#eor#

@@ -1,0 +1,1164 @@
+PWCPCLREC ; ; ;2026-03-13 10:19:24;11.8;++I06K6jyH1wb3ZiiCFzMRFqC1w9LU/VemYXyS0d4fk=;Copyright 2026 Epic Systems Corporation
+	q
+	;*********************************************************************
+	; PURPOSE:  Logic for updating PCL that doesn't belong in a library
+	; AUTHOR:   Daniel Leatherwood
+	; REVISIONS:
+	;  *DNL 01/26 2259608 Created
+	;  *DNL 02/26 2268902 - add logic for communicating from shadow to prod to ask for updated case logs, handlePatientDeletion
+	;  *DNL 02/26 2282303 - add framework for deferred conversions
+	;*********************************************************************
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Updates or creates PCL records for a given source record (ORL, ORD, or EPT). Retrieves all
+	;               entries associated with the source record, finds or creates corresponding PCL records, updates
+	;               them with current data, and removes any outdated entries that no longer reflect Chronicles data.
+	; PARAMETERS:
+	;   searchType (I,REQ) - PCL search type constant identifying the type of source record.
+	;   id (I,REQ) - Internal ID of the source record (ORL ID, ORD ID, or EPT ID depending on searchType).
+	;   dat (I,REQ) - DAT for the contact (used when searchType requires contact-level processing).
+	;   error (O,REQ) - Error message if the update fails, null otherwise.
+	;   skipInclusionCheck (I,OPT) - If true, skips checking whether the source record should be included: use this if you've already checked this.
+	;   startDate (I,OPT) - If provided, only add new entries with dates on or after this date.
+	;   updateOnlyExisting (I,OPT) - If true, only add an entry if the provider already has a case log.
+	;   skipEnvCheck (I,OPT) - If true, skip the credpclCanUpdateLogs check. Use when the caller has already verified.
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - add skipEnvCheck parameter
+	;---------
+updateLog(searchType,id,dat,error,skipInclusionCheck,startDate,updateOnlyExisting,skipEnvCheck) ;
+	n batchId,csn,isValidCSN,validCSNs,eptIntID,encounterDate,existingRecords,flushCount,line,lockedPclByProvider,lockedRecords,nonFatalError
+	n packedData,packedLine,pclDAT,pclID,primaryINI,serExtID,matchedLines,eapID,orpExtID,providerHasCaseLog,sourceIDorCSN
+	;
+	i 'skipEnvCheck,'$$credpclCanUpdateLogs() s error=$$credutilErrorPack($$credpclErrorPclNotEnabled(),"","Cannot update logs in this environment.") QUIT 0  ; nothing to do
+	;
+	s error=""
+	i dat="" s dat=99999  ; just so that we can assume it's always set
+	;
+	s primaryINI=$$credpclGetPrimaryINI(searchType)
+	i primaryINI="" s error=$$credutilErrorPack($$credpclErrorInvalidParameter(),"",searchType_" is not a valid type for an entry in PCL") QUIT 0 ; nothing to do
+	;
+	s batchId=$$zAuditOpenBatch()
+	;
+	d %zcredpclGetInfo(searchType,id,dat,.packedData,skipInclusionCheck)
+	s sourceIDorCSN=$s(primaryINI="EPT":$$geti("EPT",id,8,1,dat),1:id)  ; for EPT, we want to use the CSN as the source identifier since that's what links to PCL records, for ORD and ORL we can just use the ID
+	f  s pclID=$$credpclNextPclForSourceRec(primaryINI,sourceIDorCSN,pclID,.pclDAT) q:pclID=""  d  q:error'=""
+	. d addExistingPclRecord(searchType,pclID,pclDAT,.existingRecords,.lockedRecords,.packedData,.matchedLines,.error)
+	. i error'="" d handleNonFatalError(.error,searchType,id,dat,pclID,pclDAT,"",.nonFatalError)  ; record the non-fatal error and continue
+	;
+	i error'="" goto eotUpdateLog
+	;
+	i updateOnlyExisting,$d(existingRecords)<10,$d(matchedLines)<10 d  goto:'providerHasCaseLog eotUpdateLog  ; nothing to do
+	. f line=1:1:packedData(0) d  q:providerHasCaseLog
+	. . s packedLine=packedData(line)
+	. . d %zcredpclUnpackLine(packedLine,"",.serExtID)
+	. . i serExtID="" quit
+	. . i $$credpclNextDate(serExtID,"")'="" s providerHasCaseLog=1 quit
+	. . ;
+	. . ; if there's a pending build for this provider, assume they have a case log so we don't skip updates that are in progress of being built
+	. . i @($$credpclPendGetGlo($$credpclPendTypeBuilding()))@(serExtID)'="" s providerHasCaseLog=1
+	;
+	f line=1:1:packedData(0) d  q:error'=""
+	. i matchedLines(line) quit  ; this line is already up to date
+	. ;
+	. s packedLine=packedData(line)
+	. d %zcredpclUnpackLine(packedLine,"",.serExtID,"",.encounterDate,.csn,.eapID,.orpExtID)
+	. i $$zStrChkAnyNull(3,serExtID,encounterDate,csn) quit  ; none should be empty
+	. i startDate'="",encounterDate<startDate quit  ; skip entries before the given start date
+	. ;
+	. s isValidCSN=validCSNs(csn)
+	. i isValidCSN="" d  s validCSNs(csn)=isValidCSN  ; cache the result so we don't have to do this again for the same CSN
+	. . s isValidCSN=0  ; default to invalid
+	. . s eptIntID=$$zRecCSNToID("EPT",csn)
+	. . i eptIntID'="",'$$IsTestPat($$getidout(eptIntID,"EPT")) s isValidCSN=1
+	. ;
+	. i 'isValidCSN quit  ; skip entries with invalid CSNs
+	. ;
+	. s pclID=$$updateOrCreatePclRecord(serExtID,encounterDate,packedLine,.existingRecords,.lockedPclByProvider,.lockedRecords,.error)
+	. d %zcredutilFlushBatchIfNeeded(.flushCount,batchId)
+	. ;
+	. ; If nothing went wrong, mark this entry as needing its procedure codes added later
+	. i error="" d
+	. . i eapID="",orpExtID="" quit  ; entry not associated with a procedure: no need to flag for later
+	. . ;
+	. . d %zcredpclPendMarkCodesDirty(serExtID,encounterDate,csn,"updateLog^PWCPCLREC")
+	. e  d handleNonFatalError(.error,searchType,id,dat,"","",serExtID,.nonFatalError)  ; record the non-fatal error and continue
+	;
+	i $d(existingRecords)>0,error="" s %=$$zDictNewContext("PCL","deleteOutdatedPclEntries^PWCPCLREC(.existingRecords)")
+	;
+eotUpdateLog ;
+	s pclID=""
+	f  s pclID=$o(lockedRecords(pclID)) q:pclID=""  s %=$$zunlock("PCL",pclID)
+	s %=$$zAuditCloseBatch(batchId)
+	i error="" s error=nonFatalError
+	q error=""
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Updates procedure coding data in PCL records for a given patient contact and service
+	;               date.
+	; PARAMETERS:
+	;   eptCSN (I,REQ) - Patient CSN used to locate associated PCL records.
+	;   serviceDate (I,REQ) - Date of service for which procedures are being updated.
+	;   error (O,REQ) - Returns an error string if the process fails, or null on success.
+	;   skipConsistencyCheck (I,OPT) - If true, bypasses validation of current entries against Chronicles
+	;                                  data before performing updates.
+	; RETURNS:      True (1) if update is successful, false (0) if an error occurred.
+	;---------
+updateProcedureCodes(eptCSN,serviceDate,error,skipConsistencyCheck) ;
+	n arrPackedData,pclID,pclDAT,packedLine,indexLineToPcl,indexSerToPcl,hadObsoleteData,lockedPcls,skip,searchType,id,dat,batchId,serExtID,encounterDate,line,pendingGloByDate,flushCount,piece,code,addedLines
+	s error=""
+	i eptCSN="" s error=$$credutilErrorPack($$credpclErrorInvalidParameter(),"","EPT CSN is required") QUIT 0
+	i serviceDate="" s error=$$credutilErrorPack($$credpclErrorInvalidParameter(),"","Service Date is required") QUIT 0
+	;
+	s pendingGloByDate=$$credpclPendGetGlo($$credpclPendTypeContactByDate())
+	i '$$zlockG($name(@pendingGloByDate@(serviceDate,eptCSN)),0) d  QUIT 0
+	. ; another process is actively updating procedure codes for this patient: skip them
+	. s error=$$credutilErrorPack($$credpclErrorCouldNotLock(),$$credutilErrorTypeNonFatal(),"Could not lock node for processing procedure codes for EPT CSN "_eptCSN_" on service date "_$$zFmtDate(serviceDate))
+	;
+	k @pendingGloByDate@(serviceDate,eptCSN)  ; clear pending entry now that we're processing it. Important to clear this now: if new data was added while we're processing entries, we want a new node to be created indicating that we should process it again later
+	;
+	s batchId=$$zAuditOpenBatch()
+	f  s pclID=$$credpclNextPclForPatCsn(eptCSN,pclID) q:pclID=""  d  q:error'=""
+	. i '$$lockPclAndTrack(pclID,.lockedPcls,.error) quit
+	. ;
+	. s addedLines=0
+	. f  s pclDAT=$$credpclNextPclDatForPatCsn(eptCSN,pclID,pclDAT) q:pclDAT=""  d
+	. . s packedLine=$$zgetbll("PCL",pclID,2,pclDAT)
+	. . s skip=0
+	. . i 'skipConsistencyCheck,$$getMatchingLine(pclID,pclDAT,packedLine,.searchType,.id,.dat,.skip)<1 d  quit  ; check if the data is up to date
+	. . . i skip quit  ; this entry is invalid: skip it.
+	. . . i '$$updateLog(searchType,id,dat,.error) quit  ; couldn't update this entry: skip it.
+	. . . ;
+	. . . s hadObsoleteData=1
+	. . ;
+	. . d %zcredpclUnpackLine(packedLine,"",.serExtID,"",.encounterDate,"","","","","","","",.code)
+	. . i encounterDate'=serviceDate quit  ; only update entries for the given service date
+	. . i serExtID="" quit
+	. . ;
+	. . i code'="" d  quit:skip
+	. . . i $$zgetpcl(packedLine,16,0)>0  ; PCL 130 SUPPORTING HAR
+	. . . e  i $$zgetpcl(packedLine,17,0)>0  ; PCL 131 SUPPORTING HTR
+	. . . e  i $$zgetpcl(packedLine,18,0)>0  ; PCL 133 SUPPORTING UCL
+	. . . e  i $$zgetpcl(packedLine,19,0)>0  ; PCL 132 SUPPORTING ETR
+	. . . e  s skip=1 quit  ; manually-entered code, not from billing: leave this line alone
+	. . . ;
+	. . . f piece=12:1:19 s $p(packedLine,$c(1),piece)=""  ; clear out all the codes and supporting data: getProcedureCodes^PWCPCLLOADCODES will add back the correct ones based on current billing data
+	. . ;
+	. . d %zzArrAppend(.arrPackedData,packedLine)
+	. . s indexLineToPcl(arrPackedData(0))=pclID_"^"_pclDAT
+	. . s indexSerToPcl(serExtID)=pclID
+	. . s addedLines=1
+	. ;
+	. ; Long-running admissions may have many many PCL records linked to them. But any one service date should be much more
+	. ; limited. Dropping the lock here when we didn't wind up adding any lines to review means that we limit the total
+	. ; number of unnecessary locks our process might be holding.
+	. i 'addedLines s %=$$zunlock("PCL",pclID) k lockedPcls(pclID)
+	;
+	i arrPackedData(0)<1 goto eotUpdateProcedureCodes  ; no entries to update
+	i error'="" goto eotUpdateProcedureCodes
+	i hadObsoleteData d  goto eotUpdateProcedureCodes
+	. s %=$$updateProcedureCodes(eptCSN,serviceDate,.error,1)
+	;
+	d getProcedureCodes^PWCPCLLOADCODES(.arrPackedData,serviceDate)
+	;
+	f line=1:1:arrPackedData(0) d
+	. s packedLine=arrPackedData(line)
+	. d %zcredpclUnpackLine(packedLine,"",.serExtID)
+	. i serExtID="" quit  ; should be impossible
+	. ;
+	. s pclID=indexLineToPcl(line),pclDAT=$p(pclID,"^",2),pclID=$p(pclID,"^",1)
+	. i pclID="" d
+	. . ; in some cases, we find more procedure codes than we had PCL entries for. Create new ones as needed: they wind up being near-duplicates of existing rows with unique codes.
+	. . s pclID=indexSerToPcl(serExtID)
+	. . i pclID="" quit  ; should be impossible
+	. . ;
+	. . s %=$$credpclLockAndCreateContact(serExtID,pclID,serviceDate,packedLine,.pclDAT,.error,1)
+	. ;
+	. i $$zStrChkAnyNull(2,pclID,pclDAT) quit
+	. ;
+	. d updatePclCodingInfo(pclID,pclDAT,packedLine)
+	. d %zcredutilFlushBatchIfNeeded(.flushCount,batchId)
+	;
+eotUpdateProcedureCodes ;
+	s %=$$zunlockG($name(@pendingGloByDate@(serviceDate,eptCSN)))
+	s pclID=""
+	f  s pclID=$o(lockedPcls(pclID)) q:pclID=""  s %=$$zunlock("PCL",pclID)
+	s %=$$zAuditCloseBatch(batchId)
+	i error="" QUIT 1
+	;
+	n errorType
+	d %zcredutilErrorUnpack(error,"",.errorType)
+	i errorType'=$$credutilErrorTypeNonFatal() QUIT 0
+	;
+	d %zcredpclPendMarkForExtract(serviceDate,eptCSN)
+	q 0
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Entry point for scheduled background task that processes pending PCL updates.
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Fixed to iterate "B" entries instead of root global
+	;---------
+scheduledTaskEntry ;
+	n serExtID,glo,stop,serviceDate,patientCSN,dte,completionGlo,yesterday
+	;
+	; Clean up old completion markers (keep today and yesterday to avoid midnight edge cases)
+	s completionGlo=$$credpclCompletionGlo(),yesterday=$$today()-1,dte=""
+	f  s dte=$o(@completionGlo@(dte)) q:dte=""  q:dte>=yesterday  k @completionGlo@(dte)
+	;
+	s glo=$$credpclPendGetGlo($$credpclPendTypeBuilding())
+	s serExtID=""
+	f  s serExtID=$o(@glo@(serExtID)) q:serExtID=""  d  q:stop
+	. s %=$$buildAllLogsForProvider(serExtID,"","",.stop)
+	;
+	i stop QUIT
+	;
+	s glo=$$credpclPendGetGlo($$credpclPendTypeSourceRec())
+	s serExtID=""
+	f  s serExtID=$o(@glo@(serExtID)) q:serExtID=""  d  q:stop
+	. s stop=$$updatePendingRecordData(serExtID)
+	;
+	i stop QUIT
+	;
+	s glo=$$credpclPendGetGlo($$credpclPendTypeContactByDate())
+	s serviceDate="",patientCSN=""
+	f  s serviceDate=$o(@glo@(serviceDate)) q:serviceDate=""  d  q:stop
+	. f  s patientCSN=$o(@glo@(serviceDate,patientCSN)) q:patientCSN=""  d  q:stop
+	. . i $$zJobThrottle() s stop=1 quit
+	. . ;
+	. . s %=$$updateProcedureCodes(patientCSN,serviceDate)
+	;
+	; This loop goes through all pending contacts by provider. Almost all of these were dealt with in the previous loop,
+	; this should mostly handle clearing out provider-specific pointers that were left behind.
+	s glo=$$credpclPendGetGlo($$credpclPendTypeContactBySer())
+	s serExtID=""
+	f  s serExtID=$o(@glo@(serExtID)) q:serExtID=""  d  q:stop
+	. s stop=$$updatePendingProcedureCodes(serExtID)
+	;
+	i stop QUIT
+	;
+	; Process deferred source-purged conversions (patient deletions that couldn't lock PCL at the time)
+	d processDeferredUpdates(.stop)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  S2S entry point for building a provider's case log on the production server.
+	;               Called via E4C command when a shadow server delegates case log updates to production.
+	;               Reads SerExtID from ECF request. Runs buildAllLogsForProvider with a
+	;               deadline so that the "B" node is guaranteed to exist (or be cleaned up) by the time
+	;               this tag returns and the S2S response is sent. If work is not completed within the
+	;               deadline, submits a background job to finish it.
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+s2sBuildCaseLog() ;
+	n serExtID,deadline,stop,data,dte,guid,completionGlo
+	s serExtID=$$zECFGet("SerExtID")
+	i $l(serExtID)>100 QUIT  ; not a valid SER: avoid a subscript error that could happen if a very long value was passed in.
+	i '$$zisID("SER",$$getidin(serExtID,"SER")) QUIT  ; invalid SER ID: just quit without doing anything
+	;
+	s dte=$$zECFGet("DTE"),guid=$$zECFGet("GUID")
+	i dte'?5N QUIT  ; DTE must be exactly 5 digits (internal date format)
+	i (guid="")!($l(guid)>50) QUIT
+	;
+	s completionGlo=$$credpclCompletionGlo()
+	i $d(@completionGlo@(dte,serExtID,guid)) QUIT  ; GUID must be fresh
+	;
+	; Mark this request as in-progress; buildAllLogsForProvider will set the value on completion
+	s @completionGlo@(dte,serExtID,guid)=""
+	;
+	; Use a deadline of 8 seconds from now: server-to-server calls are not supposed to take more than a few seconds, and this
+	; specific one was configured with a maximum of 10 seconds (though in practice, going a little over is not too bad). We are
+	; occupying the resources of a relatively small set of ECF listeners, so we don't want to do it for long, but in the common
+	; case, we'll be able to finish within a few seconds and so we don't want to job off all the time unnecessarily.
+	s deadline=$$zTimeUTC()+8
+	s stop=$$buildAllLogsForProvider(serExtID,1,"","","","","",deadline,1)
+	;
+	; If stopped early, queue remaining work on RPCQ_LONG. The "B" node already has a checkpoint.
+	i stop d
+	. s data("serExtID")=serExtID
+	. s %=$$zeqBkgLong("d s2sBuildCaseLogBkg^PWCPCLREC()",.data)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Background entry point for completing case log work that was started by an S2S
+	;               request but could not finish within its deadline. Resumes from the "B" checkpoint.
+	; ASSUMES:      data - from the queue infrastructure
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+s2sBuildCaseLogBkg() ;
+	s %=$$buildAllLogsForProvider(data("serExtID"))
+	q
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Ensures a provider's case log is up to date, delegating to production via S2S
+	;               if the current server is a shadow that cannot update Chronicles directly.
+	;               On production, calls buildAllLogsForProvider directly.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External SER ID of the provider.
+	;   completionGlo (O,OPT) - Global node the caller can poll. When @completionGlo is set to a
+	;                           non-empty value, work is done. Empty string when completion cannot
+	;                           be tracked (e.g. local lock failure); in that case do not wait.
+	; RETURNS:      1 if the case log is now up to date, 0 if still in progress or an error occurred.
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+buildOrDeferCaseLog(serExtID,completionGlo) ;
+	n pendGloR,pendGloC,s2sErr,dataToProd,buildingGlo,dte,guid
+	;
+	s completionGlo=""
+	;
+	i '$$credpclIsEnabled() QUIT 0  ; PCL not enabled: nothing to do
+	;
+	s serExtID=$$getidout(serExtID,"SER")  ; just to be safe, convert to external ID if internal ID was passed in
+	i '$$zisID("SER",$$getidin(serExtID,"SER")) QUIT 0  ; invalid SER ID: nothing to do
+	;
+	; Check if there's actually work to do before acquiring locks or sending S2S
+	s buildingGlo=$$credpclPendGetGlo($$credpclPendTypeBuilding())
+	s buildingGlo=$name(@buildingGlo@(serExtID))
+	s pendGloR=$$credpclPendGetGlo($$credpclPendTypeSourceRec())
+	s pendGloC=$$credpclPendGetGlo($$credpclPendTypeContactBySer())
+	i $$credpclHasCompleteCaseLog(serExtID),'$d(@buildingGlo),'$d(@pendGloR@(serExtID)),'$d(@pendGloC@(serExtID)) QUIT 1
+	;
+	; If we can update locally, do so directly
+	i '$$zEnvCurrNodeIsShadow() QUIT '$$buildAllLogsForProvider(serExtID)
+	;
+	; Shadow server: set up ECF request and delegate to production via S2S
+	s dte=$$today(),%=$$zuuidrnd(.guid)
+	s dataToProd("SerExtID")=serExtID
+	s dataToProd("DTE")=dte
+	s dataToProd("GUID")=guid
+	i '$$ExecCmd^EGECFS2SC("Epic.Credentialing.BuildProviderCaseLog","FileServer","dataToProd","",.s2sErr) QUIT 0
+	;
+	; Production sets this node when the requested build finishes.
+	; HADFLAG is not in a consistency group, so it replicates in journal order rather than
+	; being subject to the consistency-group lag that affects credpclPendGetGlo globals.
+	s completionGlo=$name(@($$credpclCompletionGlo())@(dte,serExtID,guid))
+	q @completionGlo'=""
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Builds all PCL logs for a given provider by iterating through source records and
+	;               creating or updating PCL entries. This process can take several minutes: do not
+	;               call it if you cannot afford to wait that long. Put an entry on a background job
+	;               instead, or wait for the scheduled task to process it.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External SER ID of the provider.
+	;   skipThrottling (I,OPT) - If true, bypasses job throttling. If 2, enables interactive abort check: only useful when run interactively.
+	;   startDate (I,OPT) - Optional override to set search start date.
+	;   stop (O,OPT) - Set to 1 if processing was stopped early, 0 otherwise.
+	;   easelGlo (I,OPT) - EASEL global reference for progress display. If blank, no progress is shown.
+	;   totalEntries (I,OPT) - Total number of entries for percentage calculation in progress display.
+	;   force (I,OPT) - If true, force a full rebuild even if the case log is already complete.
+	;                    If not passed, the full search phase is skipped when the log is already complete.
+	;   deadline (I,OPT) - UTC instant (from ($$)zTimeUTC()) after which processing should stop early
+	;                      and save a checkpoint to the "B" node for later resumption.
+	;   lockTimeout (I,OPT,DEFAULT:0) - Seconds to wait for the building lock before giving up.
+	; RETURNS:      1 if processing was stopped early, 0 otherwise.
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Added force, deadline, lockTimeout params; added pending record stage; reordered stages
+	;  *DNL 02/26 2282303 - run any pending deferred conversions
+	;---------
+buildAllLogsForProvider(serExtID,skipThrottling,startDate,stop,easelGlo,totalEntries,force,deadline,lockTimeout) ;
+	n resumeData,buildingGlo,searchTypes,startInstant,searchStage,backupDelay,convGlo,convID,currentConvIDs,savedConvIDs
+	s stop=0
+	i '$$credpclCanUpdateLogs() QUIT 1  ; environment doesn't allow updates
+	;
+	s buildingGlo=$$credpclPendGetGlo($$credpclPendTypeBuilding())
+	i '$$zlockG($name(@buildingGlo@(serExtID)),+lockTimeout) QUIT 1  ; another process is actively building this provider's logs
+	;
+	; This could potentially change many records: mark for delayed extract to Clarity to avoid overwhelming the ETL process
+	d %zCrBackupDelay(.backupDelay)
+	d %zCrStTrigDlyEQ(1,"M","PWCPCLREC")
+	;
+	s resumeData=@buildingGlo@(serExtID)
+	;
+	; Build a snapshot of currently pending conversion IDs  ;*DNL+9 02/26 2282303
+	s convGlo=$$credpclConvGetGlo(),convID="",currentConvIDs=""
+	f  s convID=$o(@convGlo@(convID)) q:convID=""  s currentConvIDs=$$zStrAddPiece(currentConvIDs,",",convID)
+	;
+	; If resuming from a checkpoint and new conversions have appeared, reset to stage 1
+	; so the full search covers the newly affected search types
+	i currentConvIDs'="",resumeData'="" d
+	. s savedConvIDs=$p(resumeData,"^",4)
+	. i currentConvIDs'=savedConvIDs s resumeData=""
+	. e  s %=$$credpclHasCompleteCaseLog(serExtID,.searchTypes)  ; bring the list of search types up to date since we can resume
+	;
+	i resumeData'="" d
+	. s startInstant=$p(resumeData,"^",1)
+	. s searchStage=$p(resumeData,"^",2)
+	. s startDate=$p(resumeData,"^",3)
+	;
+	i startInstant="" s startInstant=$$zTimeUTC()
+	i searchStage="",'force,$$credpclHasCompleteCaseLog(serExtID,.searchTypes) s searchStage=2  ;*DNL 02/26 2282303 +searchTypes
+	i searchStage="" s searchStage=1
+	;
+	; Ensure "B" node exists before starting work. This allows other processes (including
+	; callers on shadow servers waiting for an S2S response) to see that work is in progress.
+	i resumeData="" s @buildingGlo@(serExtID)=startInstant_"^"_searchStage
+	;
+	i searchStage=1 s stop=$$buildInitialPCLRecords(serExtID,skipThrottling,startDate,.searchTypes,easelGlo,totalEntries,deadline)
+	;
+	i 'stop,searchStage<=2 d
+	. s searchStage=2
+	. s stop=$$updatePendingRecordData(serExtID,skipThrottling,1,deadline)
+	;
+	i 'stop d
+	. s searchStage=3
+	. s stop=$$updatePendingProcedureCodes(serExtID,skipThrottling,easelGlo,1,deadline)
+	;
+	i stop d
+	. s @buildingGlo@(serExtID)=startInstant_"^"_searchStage_"^"_startDate_"^"_currentConvIDs  ;*DNL+1 02/26 2282303 +currentConvIDs
+	e  d markBuildComplete(serExtID,buildingGlo,currentConvIDs)
+	;
+	d %zCrRestoreDelay(.backupDelay)
+	s %=$$zunlockG($name(@buildingGlo@(serExtID)))
+	q stop
+	;
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  First phase of building a provider's case log. Iterates through all source records
+	;               via credpclLookupNextID, retrieves their encounter dates, and stores pointers in a
+	;               date-sorted PPG. Then iterates the PPG in date order and calls updateLog for each
+	;               entry. Processing in date order avoids inserting contacts into previous dates,
+	;               which is expensive. See QAN 8272202.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External SER ID of the provider.
+	;   skipThrottling (I,OPT) - If true, bypass job throttling. If 2, enable interactive abort.
+	;   startDate (I,OPT) - Only include entries with dates on or after this date.
+	;   searchTypes (IO,REQ) - Array of search types to process, passed by reference.
+	;   easelGlo (I,OPT) - EASEL global reference for progress display.
+	;   totalEntries (I,OPT) - Total entries for progress percentage calculation.
+	;   deadline (I,OPT) - UTC instant after which processing should stop early.
+	; RETURNS:      1 if processing was stopped early, 0 otherwise.
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+buildInitialPCLRecords(serExtID,skipThrottling,startDate,searchTypes,easelGlo,totalEntries,deadline) ;
+	n searchType,id,dat,iterator,stop,dateGlo,packedData,packedLine,encounterDate,processedEntries
+	s dateGlo=$$zGtTmpGlo(1)  ; dataSizeDuration=1 since this global may be around for a few minutes: it can take 8-10 minutes to run this search in some cases.
+	f  s id=$$credpclLookupNextID(serExtID,.searchType,.id,.dat,startDate,.iterator,.searchTypes) q:id=""  d  q:stop
+	. d %zcredpclGetInfo(searchType,id,dat,.packedData,1)
+	. i $$shouldStop(.processedEntries,totalEntries,easelGlo,deadline,skipThrottling) s stop=1 quit
+	. ;
+	. s packedLine=packedData(1)
+	. d %zcredpclUnpackLine(packedLine,"","","",.encounterDate)
+	. i encounterDate="" quit  ; should never happen
+	. ;
+	. ; Do not cache the packed data. It may be a few minutes before we get around to processing this entry, and in the
+	. ; meantime, the data may have changed. Instead, store the info we need to retrieve it again when we're ready to
+	. ; process it.
+	. s @dateGlo@(encounterDate,searchType,id,dat)=""
+	;
+	; Now that we've gone through the search and stored pointers to all relevant entries, iterate through them in date order
+	; and build PCL records. This allows us to create entries in date order, which helps avoid needing to insert new
+	; contacts into previous dates as often. See QAN 8272202.
+	s encounterDate="",id="",dat="",searchType=""
+	s processedEntries=0  ; reset this so the progress display is accurate for this phase of the process
+	f  q:stop  s encounterDate=$o(@dateGlo@(encounterDate)) q:encounterDate=""  d
+	. f  s searchType=$o(@dateGlo@(encounterDate,searchType)) q:searchType=""  d  q:stop
+	. . f  s id=$o(@dateGlo@(encounterDate,searchType,id)) q:id=""  d  q:stop
+	. . . f  s dat=$o(@dateGlo@(encounterDate,searchType,id,dat)) q:dat=""  d  q:stop
+	. . . . s %=$$updateLog(searchType,id,dat,"","",startDate,"",1)
+	. . . . i $$shouldStop(.processedEntries,totalEntries,easelGlo,deadline,skipThrottling) s stop=1
+	;
+	d %zRelTmpGlo(dateGlo)
+	q stop
+	;
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Checks whether processing should stop due to progress limits, deadlines, or
+	;               throttling. Increments the processed count and updates the EASEL progress display.
+	; PARAMETERS:
+	;   processedEntries (I/O,REQ) - Running count of entries processed; incremented by 1 each call.
+	;   totalEntries (I,OPT) - Total entries for progress percentage calculation.
+	;   easelGlo (I,OPT) - EASEL global reference for progress display.
+	;   deadline (I,OPT) - UTC instant after which to stop (checked every 10 entries).
+	;   skipThrottling (I,OPT) - If true, bypass job throttling. If 2, enable interactive abort.
+	; RETURNS:      1 if processing should stop, 0/"" otherwise.
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+shouldStop(processedEntries,totalEntries,easelGlo,deadline,skipThrottling) ;
+	n stop
+	s processedEntries=processedEntries+1
+	i easelGlo'="" d dispLoadStats^EASEL7(easelGlo,processedEntries,totalEntries,.stop)
+	i deadline'="",processedEntries#10=0,$$zTimeUTC()>deadline s stop=1
+	i 'skipThrottling,$$zJobThrottle() s stop=1
+	i skipThrottling=2,$$yStop(0) s stop=1  ; only used if this is being run interactively, but allows the user to stop if so
+	q stop
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Marks a provider's case log build as complete. Kills the "B" checkpoint node,
+	;               marks the provider done in the pending global, and sets HADFLAG completion
+	;               markers for any shadow servers polling for this provider.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External SER ID of the provider.
+	;   buildingGlo (I,REQ) - Base global reference for the building checkpoint.
+	;   currentConvIDs (I,OPT) - Comma-delimited list of conversion IDs that were
+	;                            pending when the build started. Each will be marked
+	;                            done for this SER upon completion.
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;  *DNL 02/26 2282303 - Add currentConvIDs parameter for deferred conversions
+	;---------
+markBuildComplete(serExtID,buildingGlo,currentConvIDs) ;
+	n dte,guid,endInst,completionGlo,convID,piece
+	k @buildingGlo@(serExtID)
+	d %zcredpclPendMarkDone(serExtID)
+	;
+	; Mark this SER as done for all pending conversions
+	i currentConvIDs'="" f piece=1:1:$l(currentConvIDs,",") d
+	. s convID=$p(currentConvIDs,",",piece)
+	. i convID="" quit  ; shouldn't happen, but just in case
+	. i $$credpclConvSerIsDone(convID,serExtID) quit
+	. ;
+	. d %zcredpclConvMarkSerDone(convID,serExtID)
+	;
+	; Set all pending completion markers for this provider so shadow servers see the result
+	s completionGlo=$$credpclCompletionGlo()
+	s endInst=$$zTimeUTC(),dte=""
+	f  s dte=$o(@completionGlo@(dte)) q:dte=""  d
+	. s guid=""
+	. f  s guid=$o(@completionGlo@(dte,serExtID,guid)) q:guid=""  d
+	. . i @completionGlo@(dte,serExtID,guid)'="" quit  ; already marked
+	. . ;
+	. . s @completionGlo@(dte,serExtID,guid)=endInst
+	q
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Retrieve the procedure codes associated with a given provider's case logs by interating over
+	;               previously-flagged contacts. This process can take several minutes: do not call it if you cannot afford
+	;               to wait that long. Put an entry on a background job instead, or wait for the scheduled task to process
+	;               it.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External SER ID of the provider.
+	;   skipThrottling (I,OPT) - If true, bypasses job throttling. If 2, enables interactive abort check.
+	;   easelGlo (I,OPT) - EASEL global reference for progress display. If blank, no progress is shown.
+	;   skipEnvCheck (I,OPT) - If true, skip the credpclCanUpdateLogs check. Use when the caller has already verified.
+	;   deadline (I,OPT) - UTC instant (from ($$)zTimeUTC()) after which processing should stop early.
+	; RETURNS:      1 if processing was stopped early, 0 otherwise.
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Added deadline param
+	;---------
+updatePendingProcedureCodes(serExtID,skipThrottling,easelGlo,skipEnvCheck,deadline) ;
+	n serviceDate,patientCSN,stop,pendingGloByProvider,pendingGloByDate,error,totalEntries,processedEntries
+	s stop=0
+	i 'skipEnvCheck,'$$credpclCanUpdateLogs() QUIT 1  ; environment doesn't allow updates
+	;
+	s pendingGloByProvider=$$credpclPendGetGlo($$credpclPendTypeContactBySer())
+	s pendingGloByDate=$$credpclPendGetGlo($$credpclPendTypeContactByDate())
+	;
+	i easelGlo'="" d
+	. f  s serviceDate=$o(@pendingGloByProvider@(serExtID,serviceDate)) q:serviceDate=""  d
+	. . f  s patientCSN=$o(@pendingGloByProvider@(serExtID,serviceDate,patientCSN)) q:patientCSN=""  d
+	. . . s totalEntries=totalEntries+1
+	;
+	f  s serviceDate=$o(@pendingGloByProvider@(serExtID,serviceDate)) q:serviceDate=""  d  q:stop
+	. f  s patientCSN=$o(@pendingGloByProvider@(serExtID,serviceDate,patientCSN)) q:patientCSN=""  d  q:stop
+	. . i $d(@pendingGloByDate@(serviceDate,patientCSN))=0 k @pendingGloByProvider@(serExtID,serviceDate,patientCSN) quit  ; already processed
+	. . ;
+	. . s %=$$updateProcedureCodes(patientCSN,serviceDate,.error)
+	. . i error="" k @pendingGloByProvider@(serExtID,serviceDate,patientCSN)
+	. . s processedEntries=processedEntries+1
+	. . i easelGlo'="" d dispLoadStats^EASEL7(easelGlo,processedEntries,totalEntries,.stop)
+	. . ;
+	. . i deadline'="",$$zTimeUTC()>deadline s stop=1
+	. . i 'skipThrottling,$$zJobThrottle() s stop=1
+	. . i skipThrottling=2,$$yStop(0) s stop=1  ; only used if this is being run interactively, but allows the user to stop if so
+	q stop
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Updates pending record data for a given provider by looping through all entries
+	;               queued for update. Entries generally get here if we couldn't get a lock on the PCL
+	;               record the first time we tried to update it.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External SER ID of the provider.
+	;   skipThrottling (I,OPT) - If true, bypasses job throttling. If 2, enables interactive abort check.
+	;   skipEnvCheck (I,OPT) - If true, skip the credpclCanUpdateLogs check. Use when the caller has already verified.
+	;   deadline (I,OPT) - UTC instant (from ($$)zTimeUTC()) after which processing should stop early.
+	; RETURNS:      1 if processing was stopped early, 0 otherwise.
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Added deadline param
+	;---------
+updatePendingRecordData(serExtID,skipThrottling,skipEnvCheck,deadline) ;
+	n pendingRecordsGlo,sourceType,sourceID,sourceDAT,stop,processedEntries
+	s stop=0,processedEntries=0
+	i 'skipEnvCheck,'$$credpclCanUpdateLogs() QUIT 1  ; environment doesn't allow updates
+	;
+	s pendingRecordsGlo=$$credpclPendGetGlo($$credpclPendTypeSourceRec())
+	i '$$zlockG($name(@pendingRecordsGlo@(serExtID)),0) QUIT 0  ; another process is actively updating this provider's records
+	;
+	f  s sourceType=$o(@pendingRecordsGlo@(serExtID,sourceType)) q:sourceType=""  d  q:stop
+	. f  s sourceID=$o(@pendingRecordsGlo@(serExtID,sourceType,sourceID)) q:sourceID=""  d  q:stop
+	. . f  s sourceDAT=$o(@pendingRecordsGlo@(serExtID,sourceType,sourceID,sourceDAT)) q:sourceDAT=""  d  q:stop
+	. . . s processedEntries=processedEntries+1
+	. . . i deadline'="",processedEntries#10=0,$$zTimeUTC()>deadline s stop=1
+	. . . i 'skipThrottling,$$zJobThrottle() s stop=1
+	. . . i skipThrottling=2,$$yStop(0) s stop=1  ; only used if this is being run interactively, but allows the user to stop if so
+	. . . i stop quit
+	. . . i '$$updateLog(sourceType,sourceID,sourceDAT,"","","","",1) quit  ; couldn't update this entry: move on to the next one
+	. . . ;
+	. . . k @pendingRecordsGlo@(serExtID,sourceType,sourceID,sourceDAT)
+	;
+	s %=$$zunlockG($name(@pendingRecordsGlo@(serExtID)))
+	q stop
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Used in a loop, allows the user to press any key to interrupt the loop
+	; RETURNS:      True if the user wants to stop, false otherwise
+	; PARAMETERS:
+	;   timeout (I,OPT,DEFAULT:1) - how long we should wait before returning
+	;---------
+yStop(timeout) ;
+	n input
+	i timeout="" s timeout=1
+	r *input:timeout
+	i input'=-1 QUIT:$$yn("Stop") 1 w !,"Resuming"
+	;
+	q 0
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Validates that a given packed PCL line accurately reflects current Chronicles data
+	;               for its corresponding source record.
+	; PARAMETERS:
+	;   pclID (I,REQ) - Internal ID of the PCL record.
+	;   pclDAT (I,REQ) - DAT for the PCL contact.
+	;   packedLine (IO,OPT) - Packed line from PCL. If not passed, retrieved from disk.
+	;   searchType (O,REQ) - Returns the determined PCL search type from unpacked data.
+	;   id (O,REQ) - Returns the source record ID associated with the PCL.
+	;   dat (O,REQ) - Returns the source record DAT associated with the PCL.
+	;   invalid (O,REQ) - Set to 1 if the PCL entry is invalid, 0 otherwise.
+	;   arrPackedData (I,OPT) - If provided, the array of currently stored packed lines for this source record: used to check if the line matches any existing data.
+	; RETURNS:      the line number within the source record's packed data that matches this PCL line, or 0 if no match is found.
+	;---------
+getMatchingLine(pclID,pclDAT,packedLine,searchType,id,dat,invalid,arrPackedData) ;
+	n serExtID,role,encounterDate,eapID,orpIDext,eafID,extraInfo,sourceORD,sourceORL,packedCSNs,line,matched
+	s invalid=0,id="",dat=""
+	i packedLine="" s packedLine=$$zgetbll("PCL",pclID,2,pclDAT)
+	d %zcredpclUnpackLine(packedLine,.searchType,.serExtID,.role,.encounterDate,"",.eapID,.orpIDext,.eafID,.extraInfo,.sourceORD,.sourceORL,"","",.packedCSNs)
+	; Repack to ensure consistency: there are subtle differences* (see SubtleDifferences below if you're curious) with now the data is stored on disk versus how credpclPackLine packs it
+	s packedLine=$$credpclPackLine(searchType,serExtID,role,encounterDate,packedCSNs,eapID,orpIDext,eafID,extraInfo,sourceORD,sourceORL)
+	i $d(arrPackedData)<10 d  QUIT:invalid 0
+	. i '$$credpclGetPrimaryRecord(packedLine,.searchType,"",.id,.dat) s invalid=1 quit
+	. ;
+	. d %zcredpclGetInfo(searchType,id,dat,.arrPackedData)
+	;
+	s matched=0
+	f line=1:1:arrPackedData(0) i arrPackedData(line)=packedLine s matched=1 quit
+	i matched QUIT line
+	q 0
+	;
+	; SubtleDifferences:
+	;  Two possible sources: we store more pieces of data in SI PCL 2 in Chronicles than applications return. Also
+	;  credpclPackLine formats almost all the pieces as if they have data. So if a given piece is empty, credpclPackLine
+	;  will still add the delimiter for it, whereas when stored on disk, if the piece is empty, there won't be a delimiter
+	;  for it.
+	;
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Handles non-fatal errors during PCL update processing. If the error is
+	;               classified as non-fatal, mark the entry to be retried later and clear from
+	;               the error variable, allowing processing to continue.
+	; PARAMETERS:
+	;   error (IO,REQ) - Packed error string to inspect and potentially clear.
+	;   searchType (I,REQ) - Search type constant for the current record context.
+	;   id (I,REQ) - ID of the source record associated with the error.
+	;   dat (I,REQ,DEFAULT:99999) - DAT of the contact involved in the error.
+	;   pclID (I,OPT) - ID of the PCL record being processed. Required if serIdExt is not provided.
+	;   pclDAT (I,OPT) - DAT of the PCL contact being processed. Required if serIdExt is not provided.
+	;   serExtID (I,OPT) - External SER ID, if known. If blank, will be looked up from the PCL record.
+	;   nonFatalError (O,REQ) - Captures the last non-fatal error encountered for summary reporting.
+	;---------
+handleNonFatalError(error,searchType,id,dat,pclID,pclDAT,serExtID,nonFatalError) ;
+	n errorType
+	d %zcredutilErrorUnpack(error,"",.errorType)
+	i errorType'=$$credutilErrorTypeNonFatal() QUIT  ; this was a fatal error: nothing to do
+	;
+	s nonFatalError=error
+	s error=""  ; clear this out so that we'll proceed in case we can update other records
+	i dat="" s dat=99999  ; just so that we can assume it's always set
+	i serExtID="" s serExtID=$$geti("PCL",pclID,40,1,pclDAT)
+	i serExtID="" QUIT  ; can't do anything without a provider
+	;
+	d %zcredpclPendMarkRecordDirty(serExtID,searchType,id,dat)
+	q
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PLIBWPCL*
+	; DESCRIPTION:  Stored packed data into a given PCL contact. Does not update information
+	;               related to coding
+	; PARAMETERS:
+	;   pclID (I,REQ) - PCL record identifier.
+	;   pclDAT (I,REQ) - Contact (DAT) identifier within the PCL record.
+	;   siPCL2 (I,REQ) - limited-lines packed data for SI PCL 2
+	;---------
+updatePclContactInfo(pclID,pclDAT,siPCL2) ;
+	n searchType,serIDext,role,encounterDate,eapID,orpIDext,eafID,extraInfo,sourceORD,sourceORL,vals
+	d %zcredpclUnpackLine(siPCL2,.searchType,.serIDext,.role,.encounterDate,"",.eapID,.orpIDext,.eafID,.extraInfo,.sourceORD,.sourceORL)
+	;
+	; 30: SEARCH TYPE (Cat, Sing)
+	; 40: PROVIDER (NET-SER, Sing)
+	; 60: PATIENT ENCOUNTER DATE (Date, Sing)
+	; 61: PATIENT ENCOUNTER CSN (Num, Rel)
+	; 62: EXTRA INFO (Str, Sing)
+	; 65: PROVIDER ROLE (Str, Sing)
+	; 70: PROCEDURE (EAP) (NET-EAP, Sing)
+	; 71: PROCEDURE (ORP) (NET-ORP, Sing)
+	; 80: SOURCE (ORD) (NET-ORD, Sing)
+	; 81: SOURCE (ORL) (NET-ORL, Sing)
+	; 100: LOCATION (NET-EAF, Sing)
+	;#GENERATE#
+	; Type: SAVE
+	; Tag: cdoUpdatePclContactInfo
+	; INI: PCL
+	; Items:
+	; 30,40,60,61,62,65,70,71,80,81,100
+	;#ENDGEN#
+	s vals(30)=searchType
+	s vals(40)=serIDext
+	s vals(60)=encounterDate
+	s vals(62)=$$itemTrunc("PCL",62,extraInfo)
+	s vals(65)=$$itemTrunc("PCL",65,role)
+	s vals(70)=eapID
+	s vals(71)=orpIDext
+	s vals(80)=sourceORD
+	s vals(81)=sourceORL
+	s vals(100)=eafID
+	d %zcredutilPackItemForCDO(siPCL2,5,61,.vals)  ; PCL 61 PATIENT ENCOUNTER CSN
+	d cdoUpdatePclContactInfo(pclID,pclDAT,.vals)
+	q
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION: Stores coding-related data from limited-lines-format.
+	; PARAMETERS:
+	;   pclID (I,REQ) - PCL record identifier.
+	;   pclDAT (I,REQ) - Contact (DAT) identifier within the PCL record.
+	;   siPCL2 (I,REQ) - SI PCL 2
+	;---------
+updatePclCodingInfo(pclID,pclDAT,siPCL2) ;
+	n vals
+	;
+	; 125: PROCEDURE CODE (Str, Sing)
+	; 126: CODE TYPE (Cat, Sing)
+	; 127: CODE IS AMBIGUOUS? (Cat, Sing)
+	; 128: HIDE THIS LINE? (Cat, Sing)
+	; 130: SUPPORTING HAR (NET-HAR, Rel)
+	; 131: SUPPORTING HTR (NET-HTR, Rel)
+	; 132: SUPPORTING ETR (NET-ETR, Rel)
+	; 133: SUPPORTING UCL (NET-UCL, Rel)
+	;#GENERATE#
+	; Type: SAVE
+	; Tag: cdoUpdatePclCodingInfo
+	; INI: PCL
+	; Items:
+	; 125,126,127,128,130,131,132,133
+	;#ENDGEN#
+	;
+	s vals(125)=$$zgetpcl(siPCL2,12,1)  ; PCL 125 PROCEDURE CODE
+	s vals(126)=$$zgetpcl(siPCL2,13,1)  ; PCL 126 CODE TYPE
+	s vals(127)=$$zgetpcl(siPCL2,14,1)  ; PCL 127 CODE IS AMBIGUOUS?
+	s vals(128)=$$zgetpcl(siPCL2,15,1)  ; PCL 128 HIDE THIS LINE?
+	d %zcredutilPackItemForCDO(siPCL2,16,130,.vals)  ; PCL 130 SUPPORTING HAR
+	d %zcredutilPackItemForCDO(siPCL2,17,131,.vals)  ; PCL 131 SUPPORTING HTR
+	d %zcredutilPackItemForCDO(siPCL2,18,133,.vals)  ; PCL 133 SUPPORTING UCL
+	d %zcredutilPackItemForCDO(siPCL2,19,132,.vals)  ; PCL 132 SUPPORTING ETR
+	d cdoUpdatePclCodingInfo(pclID,pclDAT,.vals)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION: Updates an existing PCL record for the given provider and encounter, or creates/locks a new one.
+	;              Attempts to reuse a PCL record from the same month if one exists.
+	; PARAMETERS:
+	;   serIdExt (I,REQ) - Provider ID (unpadded).
+	;   encounterDate (I,REQ) - Date of the encounter.
+	;   packedLine (I,REQ) - Packed PCL line data (used when creating a new contact).
+	;   existingRecords (I,REQ) - Array of existing PCL records.
+	;                             existingRecords(serIdExt,encounterDate,pclID,pclDAT)=""
+	;   lockedPclByProvider (IO,REQ) - Cache of locked PCL records by provider.
+	;                                   lockedPclByProvider(serIdExt)=pclID
+	;   lockedRecords (IO,REQ) - Array tracking which PCL records are locked.
+	;                            lockedRecords(pclID)=1
+	;   error (IO,REQ) - Error message (set if an error occurs).
+	; RETURNS:      PCL record ID, or null if none could be found/created.
+	;---------
+updateOrCreatePclRecord(serIdExt,encounterDate,packedLine,existingRecords,lockedPclByProvider,lockedRecords,error) ;
+	n pclID,pclDAT,lastEncounterDate,thisYear,thisMonth,otherYear,otherMonth
+	;
+	; First check if we already need to update an existing record for this provider/date
+	s pclID=$o(existingRecords(serIdExt,encounterDate,""))
+	i pclID'="" d  QUIT pclID
+	. ; existing records are already locked: no need to lock again
+	. s pclDAT=$o(existingRecords(serIdExt,encounterDate,pclID,""))
+	. ; it should never been the case that we had an ID but not a DAT here. I'd prefer it crash than silently continue.
+	. d updatePclContactInfo(pclID,pclDAT,packedLine)
+	. ; By removing this entry here, when we're done with the loop, if there are still entries left, we know they need to be removed because they no longer reflect Chronicles data
+	. k existingRecords(serIdExt,encounterDate,pclID,pclDAT)
+	;
+	d
+	. ; Check if we already locked a PCL for this provider (for a different date)
+	. s pclID=lockedPclByProvider(serIdExt)
+	. i pclID'="" quit  ; we'll use the one we already have for this provider
+	. ; Try to find an existing PCL for this exact encounter date
+	. s pclID=$$credpclNextPCL(serIdExt,encounterDate,"",-1)
+	. i pclID'="" quit  ; we'll use one we have for this provider, on this date
+	. ;
+	. ; Try to find a PCL from the same month to reuse
+	. s lastEncounterDate=$$credpclNextDate(serIdExt,encounterDate,-1)
+	. i lastEncounterDate="" s lastEncounterDate=$$credpclNextDate(serIdExt,encounterDate,1)
+	. i lastEncounterDate="" d  quit
+	. . ; no PCL records exist for this provider, make a new one, but also flag them as incomplete so that we know their logs can't be considered complete unless a full search is done
+	. . d %zcredpclPendMarkIncomplete(serIdExt)
+	. ;
+	. i '$$zPcDate(encounterDate,.thisYear,.thisMonth) s error=$$credutilErrorPack($$credpclErrorInvalidDate(),"","Encounter date "_encounterDate_" is not valid") quit
+	. i '$$zPcDate(lastEncounterDate,.otherYear,.otherMonth) quit  ; should not happen, but don't match to an invalid encounter
+	. i (thisYear'=otherYear)!(thisMonth'=otherMonth) quit  ; different month: create a new record
+	. ;
+	. s pclID=$$credpclNextPCL(serIdExt,lastEncounterDate,"",-1)
+	;
+	i error'="" QUIT ""
+	;
+	; Create a new PCL record
+	i pclID="" s pclID=$$credpclCreateAndLockNewRec(serIdExt,encounterDate,packedLine,"",.error)
+	; Create a new contact in an existing record
+	e  s %=$$credpclLockAndCreateContact(serIdExt,pclID,encounterDate,packedLine,"",.error,lockedRecords(pclID)'="")
+	;
+	i error'="" QUIT ""
+	s lockedRecords(pclID)=1,lockedPclByProvider(serIdExt)=pclID
+	q pclID
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Locks a PCL record if not already locked, and records
+	;               it in a tracking array so the caller can unlock later.
+	; PARAMETERS:
+	;   pclID (I,REQ) - PCL record identifier.
+	;   lockedRecords (IO,REQ) - Array tracking which PCL records are currently locked.
+	;                            lockedRecords(pclID)=1
+	;   error (O,REQ) - Error information if record locking fails.
+	; RETURNS:      1 if the record is now locked, 0 if locking failed.
+	; REVISIONS:
+	;  *DNL 03/26 2268902 - Created
+	;---------
+lockPclAndTrack(pclID,lockedRecords,error) ;
+	i lockedRecords(pclID) quit 1
+	i '$$zlock("PCL",pclID,1) s error=$$credutilErrorPack($$credpclErrorCouldNotLock(),$$credutilErrorTypeNonFatal(),"Could not lock PCL record "_$$DisplayName("PCL",pclID,1)) quit 0
+	;
+	s lockedRecords(pclID)=1
+	q 1
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Check if the PCL record we found matches what we were looking for
+	;               and adds it to the existingRecords array if so. Locks the record if
+	;               not already locked, and returns an error if locking failed.
+	; PARAMETERS:
+	;   searchType (I,REQ) - Search type to match against.
+	;   pclID (I,REQ) - PCL record identifier.
+	;   pclDAT (I,REQ) - Contact (DAT) identifier within the PCL record.
+	;   existingRecords (IO,REQ) - Array to populate with matching records.
+	;                              existingRecords(serIdExt,encounterDate,pclID,pclDAT)=""
+	;   lockedRecords (IO,REQ) - Array tracking which PCL records are currently locked.
+	;                            lockedRecords(pclID)=1
+	;   packedData (I,REQ) - Array of packed data lines to check for matches.
+	;                        packedData(0)=count
+	;                        packedData(lineNumber)=packed line data
+	;   matchedLines (O,REQ) - Array tracking which lines in packedData have been matched.
+	;                          matchedLines(lineNumber)=1
+	;   error (O,REQ) - Error information if record locking fails. Contains packed
+	;                   error details including error code, type, and message.
+	;---------
+addExistingPclRecord(searchType,pclID,pclDAT,existingRecords,lockedRecords,packedData,matchedLines,error) ;
+	n packedLine,thisSearchType,serIdExt,encounterDate,matchLine
+	s packedLine=$$zgetbll("PCL",pclID,2,pclDAT)
+	d %zcredpclUnpackLine(packedLine,.thisSearchType,.serIdExt,"",.encounterDate)
+	i thisSearchType'=searchType QUIT
+	i $$zStrChkAnyNull(2,serIdExt,encounterDate) QUIT  ; these should never be empty
+	;
+	i packedData(0)>0 s matchLine=$$getMatchingLine(pclID,pclDAT,packedLine,"","","","",.packedData)
+	i matchLine>0 s matchedLines(matchLine)=1 QUIT  ; this record is up to date
+	;
+	; In all known cases, every entry for a given record will apply to the same encounter date,
+	; but just in case I'm wrong, account for the possibility they're different
+	i '$$lockPclAndTrack(pclID,.lockedRecords,.error) QUIT
+	;
+	s existingRecords(serIdExt,encounterDate,pclID,pclDAT)=""
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Delete outdated PCL entries. This codes is run in the master file context of PCL to set up the context for EAKILLCT.
+	; PARAMETERS:
+	;   contactsToDelete (I,REQ) - a list of contacts to delete
+	;                              contactsToDelete(serIdExt,encounterDate,pclID,pclDAT)=""
+	; ASSUMES:      CTNM
+	;---------
+deleteOutdatedPclEntries(contactsToDelete) ;
+	n serIdExt,encounterDate,pclID,pclDAT
+	f  s serIdExt=$o(contactsToDelete(serIdExt)) q:serIdExt=""  d
+	. f  s encounterDate=$o(contactsToDelete(serIdExt,encounterDate)) q:encounterDate=""  d
+	. . f  s pclID=$o(contactsToDelete(serIdExt,encounterDate,pclID)) q:pclID=""  d
+	. . . f  s pclDAT=$o(contactsToDelete(serIdExt,encounterDate,pclID,pclDAT)) q:pclDAT=""  d
+	. . . . d main^EAKILLCT("PCL",pclID,pclDAT,CTNM,"",1,1,1,1,1)
+	q
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Counts the total number of PCL entries for a given provider within a date range.
+	;               Iterates through all PCL records and contacts, optionally updating an EASEL
+	;               display with progress information.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External provider ID (SER).
+	;   startDate (I,REQ) - Start date for the range (inclusive).
+	;   endDate (I,REQ) - End date for the range (inclusive).
+	;   easelGlo (I,OPT) - EASEL global reference for progress display. If blank, no progress is shown.
+	;   stop (O,OPT) - Set to 1 if user interrupted the search, 0 otherwise.
+	; RETURNS:      The total number of entries counted.
+	;---------
+countEntriesFromPCL(serExtID,startDate,endDate,easelGlo,stop) ;
+	n encounterDate,pclID,pclDAT,entryCount
+	s encounterDate=startDate
+	s stop=0
+	f  d:encounterDate'=""  q:stop  s encounterDate=$$credpclNextDate(serExtID,encounterDate) q:encounterDate=""  q:(encounterDate>endDate)
+	. f  s pclID=$$credpclNextPCL(serExtID,encounterDate,pclID) q:pclID=""  d  q:stop
+	. . f  s pclDAT=$$credpclNextContact(serExtID,encounterDate,pclID,pclDAT) q:pclDAT=""  d  q:stop
+	. . . s entryCount=entryCount+1
+	. . . i easelGlo'="" d dispLoadStats^EASEL7(easelGlo,entryCount,"",.stop)
+	q entryCount
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PLIBWPCLUTIL
+	; DESCRIPTION:  Retrieves provider case log entries from PCL records for an EASEL display. Applies filters based on
+	;               procedure type and displays progress.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External provider ID (SER).
+	;   startDate (I,REQ) - Start date for retrieval.
+	;   endDate (I,OPT) - End date for retrieval.
+	;   orderGlo (I,REQ) - Name of the global to populate with results. Structure:
+	;                      @orderGlo@(encounterDate,patientCSN,0)=<count>
+	;                      @orderGlo@(encounterDate,patientCSN,<n>)=<packed line>
+	;                      @orderGlo@(encounterDate,patientCSN,<n>,"extraData")=<pclID>_del_<pclDAT>, where del is getColumnDelim^EASEL7()
+	;   easelGlo (I,OPT) - EASEL global reference for progress display. If blank, no progress is shown.
+	;   filterProcedure (I,OPT) - Filter to apply. If blank, no filtering by procedure.
+	;   processedEntries (IO,OPT) - Running count of entries processed. Modified in place.
+	;   stop (O,OPT) - Set to 1 if user interrupted via EASEL, 0 otherwise.
+	;   maxEntries (I,OPT) - Maximum number of entries for percentage calculation in progress display.
+	; REVISIONS:
+	; *DNL 02/26 2268902 - handle the possibility that patientCSN is empty
+	;---------
+loadFromPCL(serExtID,startDate,endDate,orderGlo,easelGlo,filterProcedure,processedEntries,stop,maxEntries) ;
+	n del,encounterDate,pclID,pclDAT,packedLine,patientCSN,count,eapID,orpIDext,mustHaveProcedure,mustNotHaveProcedure
+	s del=$$getColumnDelim^EASEL7()
+	i filterProcedure=""  ; no filtering
+	e  i filterProcedure=$$lcProcFiltAnyProc^PWCPCLUTIL() s mustHaveProcedure=1
+	e  i filterProcedure=$$lcProcFiltNoProc^PWCPCLUTIL() s mustNotHaveProcedure=1
+	e  i filterProcedure=$$lcProcFiltAnyProcCode^PWCPCLUTIL() s mustHaveProcedure=1
+	;
+	s encounterDate=endDate
+	s stop=0
+	f  d:encounterDate'=""  q:stop  s encounterDate=$$credpclNextDate(serExtID,encounterDate,-1) q:encounterDate=""  q:(encounterDate<startDate)
+	. f  s pclID=$$credpclNextPCL(serExtID,encounterDate,pclID,1) q:pclID=""  d  q:stop
+	. . f  s pclDAT=$$credpclNextContact(serExtID,encounterDate,pclID,pclDAT,1) q:pclDAT=""  d  q:stop
+	. . . s packedLine=$$zgetbll("PCL",pclID,2,pclDAT)
+	. . . d %zcredpclUnpackLine(packedLine,"","","","",.patientCSN,.eapID,.orpIDext)
+	. . . i encounterDate="" s encounterDate="(none)"
+	. . . e  i encounterDate<startDate q
+	. . . i endDate'="",encounterDate>endDate q
+	. . . i mustHaveProcedure,eapID="",orpIDext="" q
+	. . . i mustNotHaveProcedure q:(eapID'="")!(orpIDext'="")
+	. . . i patientCSN="" s patientCSN="(none)"
+	. . . s count=@orderGlo@(encounterDate,patientCSN,0)+1
+	. . . s @orderGlo@(encounterDate,patientCSN,count)=packedLine
+	. . . s @orderGlo@(encounterDate,patientCSN,count,"extraData")=pclID_del_pclDAT
+	. . . s @orderGlo@(encounterDate,patientCSN,0)=count
+	. . . s processedEntries=processedEntries+1
+	. . . i easelGlo'="" d dispLoadStats^EASEL7(easelGlo,processedEntries,maxEntries,.stop)
+	q
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Converts a case log contact to a source-purged entry, preserving the
+	;               provider's case log data while removing all references to
+	;               patient chart data. Before clearing patient references, captures
+	;               the patient's date of birth and primary diagnosis into PCL
+	;               override items (PCL 105, PCL 110) so they remain available.
+	;
+	;               Call this when a patient is being deleted but the provider's
+	;               case log entry should be preserved.
+	;
+	;               If the record cannot be locked, stores a pending node with the
+	;               captured patient data so the conversion can be retried later
+	;               (see credpclPendTypeDefer).
+	; PARAMETERS:
+	;   pclID  (I,REQ) - the PCL record ID
+	;   pclDAT (I,REQ) - the contact DAT for the PCL record
+	;   batchId (I,OPT) - if given, we'll call flush if needed on this. If not given, we'll handle the audit batch ourselves.
+	;   counter (IO,OPT) - use together with batchId to increment the count
+	; RETURNS:     1 if successful, 0 if deferred (stored as pending)
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+handleSourcePurged(pclID,pclDAT,batchId,counter) ;
+	n dob,edgID,formattedRole,packedLine,vals,batchNeedsClose,success
+	i batchId="" s batchId=$$zAuditOpenBatch(),batchNeedsClose=1
+	;
+	; Capture patient data and display values before they may become unresolvable
+	s packedLine=$$zgetbll("PCL",pclID,2,pclDAT)
+	s dob=$$getDateOfBirth^PWCPCLRW(pclID,pclDAT,"","",packedLine)
+	s edgID=$$getDiagnosis^PWCPCLRW(pclID,pclDAT,"","","",packedLine)
+	s formattedRole=$$credpclGetProviderRole(packedLine)
+	;
+	; Build the CDO vals array
+	d buildConvertVals(dob,edgID,formattedRole,.vals)
+	;
+	s success=0
+	; Lock the record; if we can't, defer the conversion
+	d
+	. i '$$zlock("PCL",pclID,1) d deferSourcePurged(pclID,pclDAT,.vals) quit
+	. ;
+	. ; 30: SEARCH TYPE
+	. ; 61: PATIENT ENCOUNTER CSN
+	. ; 65: PROVIDER ROLE
+	. ; 80: SOURCE (ORD)
+	. ; 81: SOURCE (ORL)
+	. ; 105: CASE LOG DATE OF BIRTH
+	. ; 110: CASE LOG DIAGNOSIS
+	. ; 130: SUPPORTING HAR
+	. ; 131: SUPPORTING HTR
+	. ; 132: SUPPORTING ETR
+	. ; 133: SUPPORTING UCL
+	. ;#GENERATE#
+	. ; Type: SAVE
+	. ; Tag: cdoConvertToSourcePurged
+	. ; INI: PCL
+	. ; Items:
+	. ; 30,61,65,80,81,105,110,130,131,132,133
+	. ;#ENDGEN#
+	. d cdoConvertToSourcePurged(pclID,pclDAT,.vals)
+	. s %=$$zunlock("PCL",pclID)
+	. s success=1
+	;
+	i batchNeedsClose s %=$$zAuditCloseBatch(batchId),batchId=""
+	e  d %zcredutilFlushBatchIfNeeded(.counter,batchId)
+	q success
+	;
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Builds the CDO vals array for converting a contact to a source-purged entry.
+	;               Sets the search type to source-purged, populates DOB and diagnosis overrides,
+	;               saves the formatted role text, and clears all patient-specific references.
+	; PARAMETERS:
+	;   dob           (I,REQ) - the date of birth to store (may be empty)
+	;   edgID         (I,REQ) - the diagnosis EDG ID to store (may be empty)
+	;   formattedRole (I,REQ) - the pre-formatted provider role string to preserve
+	;   vals          (O,REQ) - the CDO vals array
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Added formattedRole parameter and PCL 65
+	;---------
+buildConvertVals(dob,edgID,formattedRole,vals) ;
+	s vals(30)=$$credpclTypeSourcePurged()
+	s vals(61)=""
+	s vals(65)=formattedRole
+	s vals(80)=""
+	s vals(81)=""
+	s vals(105)=dob
+	s vals(110)=edgID
+	s vals(130)=""
+	s vals(131)=""
+	s vals(132)=""
+	s vals(133)=""
+	q
+	;
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Stores a deferred source-purged conversion in the pending global.
+	;               The vals array is merged into the pending structure keyed
+	;               by item number, so it can be fed into a CDO save later.
+	; PARAMETERS:
+	;   pclID  (I,REQ) - the PCL record ID
+	;   pclDAT (I,REQ) - the contact DAT for the PCL record
+	;   vals   (I,REQ) - the CDO vals array to store
+	;---------
+deferSourcePurged(pclID,pclDAT,vals) ;
+	n pendGlo
+	s pendGlo=$name(@($$credpclPendGetGlo($$credpclPendTypeDefer()))@(pclID,pclDAT))
+	m @pendGlo=vals
+	q
+	;
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Processes all deferred updates from the pending global.
+	;               For each pending record, locks it, applies the stored CDO vals
+	;               for all pending contacts, and removes the pending nodes. If the
+	;               record still cannot be locked, leaves it for the next cycle.
+	; PARAMETERS:
+	;   stop (IO,REQ) - set to 1 if job throttling requires us to stop
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+processDeferredUpdates(stop) ;
+	n glo,pclID,pclDAT,batchId,flushCount
+	;
+	s glo=$$credpclPendGetGlo($$credpclPendTypeDefer())
+	s batchId=$$zAuditOpenBatch()
+	s pclID=""
+	f  s pclID=$o(@glo@(pclID)) q:pclID=""  d  q:stop
+	. i $$zJobThrottle() s stop=1 quit
+	. i '$$zlock("PCL",pclID,1) quit  ; still locked, try next cycle
+	. ;
+	. s pclDAT=""
+	. f  s pclDAT=$o(@glo@(pclID,pclDAT)) q:pclDAT=""  d
+	. . ; sanity-check that the PCL contact is still around to update
+	. . i '$$isDAT("PCL",pclID,pclDAT) k @glo@(pclID,pclDAT) quit
+	. . ;
+	. . ;#GENERATE#
+	. . ; Type: SAVE
+	. . ; Tag: cdoApplyDeferredUpdate
+	. . ; INI: PCL
+	. . ; Global: Yes
+	. . ; Items:
+	. . ; 30,61,65,80,81,105,110,130,131,132,133
+	. . ;#ENDGEN#
+	. . d cdoApplyDeferredUpdate(pclID,pclDAT,$name(@glo@(pclID,pclDAT)))
+	. . d %zcredutilFlushBatchIfNeeded(.flushCount,batchId)
+	. . k @glo@(pclID,pclDAT)
+	. ;
+	. s %=$$zunlock("PCL",pclID)
+	;
+	s %=$$zAuditCloseBatch(batchId)
+	q
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Hook for Identity patient deletion. Converts all case log
+	;               contacts for the given patient CSN to source-purged entries,
+	;               preserving the provider's case log data while removing
+	;               references to patient chart data. Also marks the relevant
+	;               PCL items as handled so the framework does not try to clear
+	;               them separately.
+	;
+	;               Called from PrePatientDeletionContactLoop^IDPATDELETIONEPT
+	;               once per patient CSN.
+	; PARAMETERS:
+	;   eptId        (I,REQ) - internal EPT record ID of the patient being deleted
+	;   eptCSN       (I,REQ) - the patient encounter CSN being processed
+	;   isReportMode (I,REQ) - if true, do not modify data (report-only pass)
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+handlePatientDeletion(eptId,eptCSN,isReportMode) ;
+	n pclID,pclDAT,batchId,flushCount
+	;
+	i isReportMode QUIT
+	;
+	; Tell the framework we handle these items ourselves
+	d %zIDDelSkipItemForNetbackClear(eptId,"PCL",61)
+	d %zIDDelSkipItemForNetbackClear(eptId,"PCL",80)
+	d %zIDDelSkipItemForNetbackClear(eptId,"PCL",81)
+	d %zIDDelSkipItemForNetbackClear(eptId,"PCL",130)
+	d %zIDDelSkipItemForNetbackClear(eptId,"PCL",131)
+	d %zIDDelSkipItemForNetbackClear(eptId,"PCL",132)
+	d %zIDDelSkipItemForNetbackClear(eptId,"PCL",133)
+	;
+	s batchId=$$zAuditOpenBatch()
+	s pclID=""
+	f  s pclID=$$credpclNextPclForPatCsn(eptCSN,pclID) q:pclID=""  d
+	. s pclDAT=""
+	. f  s pclDAT=$$credpclNextPclDatForPatCsn(eptCSN,pclID,pclDAT) q:pclDAT=""  s %=$$handleSourcePurged(pclID,pclDAT,.flushCount,batchId)
+	;
+	s %=$$zAuditCloseBatch(batchId)
+	q
+	q  ;;#eor#

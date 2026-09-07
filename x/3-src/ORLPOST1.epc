@@ -1,0 +1,556 @@
+ORLPOST1 ; ; ;2026-03-16 10:04:08;11.8;06HxFIrH5o5hOCIOncZjk5y7QHap/V9rg/mnT7v1b54=;Copyright 2026 Epic Systems Corporation
+	;*********************************************************************
+	; TITLE:   ORLPOST1
+	; PURPOSE: Post Log
+	; CALLABLE TAGS:
+	;    check       - make sure log can be posted
+	;    checkNoBulk - Pre-Posting checks in server callable format
+	; REVISION HISTORY:
+	; ...
+	; *ABX 08/23 991609 - Update Care Companion anchor events hook
+	; *AKB 02/24 2028409 - Trigger CERM referral message
+	; *BJB 07/24 2107817 - Add in-house inventory depletion trigger
+	; *QD  08/24 2111078 - Adding trigger to send Professional Billing Exchange documents
+	; *SMM 08/24 2085101 - Trigger default resource type logic in ORLSEL8 on log post
+	; *MSZ 09/24 2132398 - Record surgeons' recently performed procedures
+	; *DPU 10/24 2121253 - Record target procedure cost on log post.
+	; *ftm 12/24 2159171 - Only send referral complete upon posting log, no CE event notification
+	; *SMM 01/25 2089543 - Add side effect for all logs to store recently added staff data at log post
+	; *MSZ 01/25 2133547 - Call storePerformedProcedures in a background process
+	; *RB  02/25 2174728 - use IsThinLog AP
+	; *dtc 03/25 2181283 - Remove references to $$isStaffRTLSEnabled^ORSONNET
+	; *RB  03/25 2174729 - Switch to IsThinLog API
+	; *LVL 05/25 2199186 - Don't allow posting if missing required performer
+	; *KWH 07/25 2193345 - Learn about staffing on log post
+	; *EAL 08/25 2229025 - Include Unified Procedure Logs
+	; *SEH 08/25 2183413 - Add feature tracking logic for Supplies on Time
+	; *LVL 08/25 2199206 - Add feature tracking for performing surgeon roles
+	; *CBA 10/25 2239982 - Set Mobile Pick List case-level analytics items on log post
+	; *JXM 11/25 2244814 - Add code hook for temporary code status
+	; *RLG 12/25 2233716 - Set suggested locations items on log post
+	; *NP  12/25 2273724 - Replace $zisR and $zisID with $IsSurgicalCase
+	; *DNL 02/26 2259608 - Update provider case logs when posting ORL
+	; *EXD 02/26 2284652 - Add a check after log post for whether to create an Oncology History "surgery" event
+	; *BBZ 03/26 2298203 - Don't manually update counts after posting
+	;*********************************************************************
+	;---------
+	; NAME:   check (PUBLIC)
+	; DESCRIPTION: Make sure log can be posted
+	;                If there is nothing stopping the log from being posted, it will be posted
+	; CALLED BY:   ORPOSTLOG.CTL
+	; COMM METHOD: BulkRPC
+	; REQUEST:
+	;   orlId (REQ) - log ID
+	;   clistat (REQ) - Current status of the log
+	;   changed (REQ) - log changed flag
+	;   fmap (REQ) - Mapping of error array by e2u/lvn descriptor. Used to create activity links for certain errors
+	;   modified (REQ) - if log recently modified
+	;   empid (OPT) - user ID
+	;   valstr (OPT) - value string
+	; REVISIONS:
+	;---------
+check ;
+	n orlId,clistat,changed,fmap,modified,empid,valstr,infoary,errMsg,errMsgPP,itemact
+	n reqItms,recItms,doPost
+	;
+	s orlId=$$zBulkNxF("","",1)
+	s clistat=$$zBulkNxF("","",1)
+	s changed=$$zBulkNxF("","",1)
+	s fmap=$$zBulkNxF("","",1)
+	s modified=$$zBulkNxF("","",1)
+	;
+	i modified]"" d   ;if modified is 0 or 1 then its new client
+	. s empid=$$zBulkNxF("","",1)
+	. s valstr=$$zBulkNxF("","",1) ; infoary("UNIQHTMP")
+	. s %=$$parseSt(valstr,.infoary)
+	. s infoary("MODIFIED")=modified
+	. s infoary("EMPID")=$$zgUserID()
+	. s:infoary("UNIQHTMP")="" infoary("UNIQHTMP")=$$zGtTmpGlo()
+	;
+	s doPost=$$checkPostNoBulk(orlId,clistat,.errMsg,.errMsgPP,.infoary,.fmap,.itemact,.reqItms,.recItms)
+	;
+	i doPost d                  ;If dopost is not called, temp global will be released later by the client by calling postGUI.
+	. d post(orlId,,changed,,,.infoary)
+	. Q:infoary("UNIQHTMP")=""
+	. d %zRelTmpGlo(infoary("UNIQHTMP"))
+	. k infoary("UNIQHTMP")
+	;
+	s %=$$zBulkRNF(doPost)
+	s %=$$zBulkRSA(.reqItms)
+	s %=$$zBulkRSA(.recItms)
+	s %=$$zBulkRSA(.errMsg)
+	s %=$$zBulkRSA(.errMsgPP)
+	s %=$$sendmap^ORRQITM1(.fmap)
+	s %=$$zBulkRNF($$arytostr(.infoary))
+	s %=$$zBulkRNF(itemact)
+	s %=$$zBulkDon()
+	q
+	;---------
+	; NAME:         checkPostNoBulk (PUBLIC)
+	; DESCRIPTION:   Checks if a log is ok to post.
+	;
+	; KEYWORDS:     check, Post, No, Bulk
+	; PARAMETERS:
+	;  orlId        (I,REQ)  - Log ID to check
+	;  curStat      (I,REQ)  - Current status of the log.
+	;                            If the log status changes prior to running this check, it's an error.
+	;  errMsg       (O,OPT)  - Array of error messages from checks in this function.
+	;  errMsgPP     (O,OPT)  - Array of error messages from Verify, Charging, or Before Post LPPs
+	;  infoary      (IO,OPT) - Standard Charging info array (see technical charging wiki for full node descriptions)
+	;  fmap         (IO,OPT) - Mapping of error array by e2u/lvn descriptor. Used to create activity links for certain errors
+	;  itemProfAct  (IO,OPT) - E2U of the item profile activity
+	;  reqItems     (IO,OPT) - Array of required items that have not been filled in for this log
+	;  recItems     (IO,OPT) - Array of recommended items that have not been filled in for this log
+	;  skipErrClear (I,OPT) - Flag to skip clear of error array
+	; RETURNS:
+	;   1 - Log is OK to post
+	;   0 - Log has errors or warnings that need to be reviewed
+	;        Look at errMsg, errMsgPP for error messages
+	;
+	; REVISION HISTORY:
+	; *RB  02/25 2174728 - use IsThinLog AP
+	; *dtc 03/25 2181283 - Remove references to $$isStaffRTLSEnabled^ORSONNET
+	; *LVL 05/25 2199186 - don't allow posting if missing required performer
+	; *EAL 08/25 2229025 - Include Unified Procedure Logs
+	;---------
+checkPostNoBulk(orlId,curStat,errMsg,errMsgPP,infoary,fmap,itemProfAct,reqItems,recItems,skipErrClear) ;
+	n canPost,user,loc,date,befPPary,ppcnt,c9
+	n itmRes,bl412
+	n srvstat,status,cstatus
+	n logcomp,flags,eventsGlo,isSurgLog
+	;
+	s canPost=1,c9=$c(9)
+	;
+	; check user security
+	s user=$$zgUserID()
+	s bl412=$$zgetbll("ORL",orlId,412)
+	s loc=$$zgetpcl(bl412,21,1)
+	i '$$oraccloc(12,user,loc) d
+	. s canPost=0
+	. s errMsg=errMsg+1
+	. s errMsg(errMsg)=30_c9_$$yy001()   ;#I18N# 30_c9_"You do not have security to post logs in this location."
+	;
+	; check if log is on a future date
+	s date=$$getn("ORL",orlId,1,"40;1")
+	i date>(+$H) d
+	. s canPost=0
+	. s errMsg=errMsg+1
+	. s errMsg(errMsg)=30_c9_$$yy002($$zFmtDate(date))   ;#I18N# 30_c9_"The date of this log is "_zFmtDate(date,"NNP/")_". You cannot this location.post a log for a future date."
+	;
+	s srvstat=$$zgetpcl(bl412,24,1)
+	i srvstat'=curStat d
+	. s canPost=0
+	. s errMsg=errMsg+1
+	. s errMsg(errMsg)=30_c9_$$yy003()   ;#I18N# 30_c9_"The status of the log has changed, possibly"_" due to the actions of another "_"user.  Changes may not be visible "_"until the log is reopened."
+	;
+	i srvstat=2 d  i 1
+	. s canPost=0
+	. s errMsg=errMsg+1
+	. s errMsg(errMsg)=30_c9_$$yy004()   ;#I18N# 30_c9_"The log has already been posted."
+	e  i srvstat=4 d  i 1
+	. s canPost=0
+	. s errMsg=errMsg+1
+	. s errMsg(errMsg)=30_c9_$$yy005()   ;#I18N# 30_c9_"The log has already been voided."
+	;
+	d VerifySettings^ORVERIFY("ORL",orlId,.errMsgPP,.fmap,.infoary,loc,2,.itemProfAct,,skipErrClear)
+	s status=srvstat
+	i status'=6,itemProfAct="" d   ;log not canceled
+	. s cstatus=$$getn("ORC",orlId,1,"180;28") ;ORC 510
+	. Q:cstatus=2              ;case canceled
+	. s itemProfAct=$$getLogPr(1,"",loc)
+	i itemProfAct]"" d getitems^ORRQITM1("ORL",orlId,itemProfAct,loc,.itmRes,.reqItems,1,.recItems,"","",.fmap)
+	s:itmRes=0 canPost=0
+	;
+	;don't allow the log to be posted if the report isn't final or the log hasn't been completed
+	s isSurgLog='($$IsThinLog(orlId)!$$IsUnifiedProcedureLog(orlId))
+	i $$gtORLocType(loc),$$surgHasImgOrds("ORL",orlId),isSurgLog=1 d  ; Exclude OpTime logs and thin logs from log complete requirement
+	. s logcomp=$s(status=5:1,1:($$znxLx2Ln("ORL",orlId,5000,12)>0))  ; Status 5=Complete, Audit Action 12=Completed
+	. i 'logcomp d  ;the log has not been marked as completed
+	. . s canPost=0
+	. . s errMsg=errMsg+1
+	. . s errMsg(errMsg)=30_c9_$$yy007()   ;#I18N# ;The log is not complete.
+	d checkEventSymplants^JEDNARRDATASUPPLIES(orlId,.errMsg,.canPost)
+	;
+	;don't allow log to be posted if missing a required performer
+	d checkPerformingSurgeon(orlId,.errMsg,.canPost)
+	;
+	i '$$isStaffRTLSStatusOff(orlId) d
+	. s eventsGlo=$$zGtTmpGlo()
+	. s flags("fillInEndTime")=1
+	. d GetStaffInLocationOverTime^ORSTAFFRTLSCORE(orlId,,eventsGlo,"","","",.flags)
+	. d %zRelTmpGlo(eventsGlo)
+	;
+	d CanPostImplant^ORINTRAOPIMPLANT2(orlId,.errMsg,.canPost)  ;Check for implant locks before posting. pass posted variable to check if we should continue with post
+	s %=$$genchrgs^OR2CHARG1(orlId,3,.infoary,.errMsgPP)
+	; before log posting programming point
+	s %=$$getPPTag(53237,loc,"(orlId,.errMsgPP,.errMsg,.reqItms,.recItms)","","",.befPPary,1)
+	i befPPary]"" f ppcnt=1:1:befPPary X "d "_befPPary(ppcnt)
+	s:errMsgPP]"" canPost=0
+	q canPost
+	;---------
+	; SCOPE: PUBLIC
+	; DESCRIPTION: Checks for errors regarding primary perforing surgeons. Either missing, or has too many.
+	; PARAMETERS:
+	;   orlId (I,REQ) - log ID
+	;   errMsg (IO,REQ) - error message array
+	;   canPost (IO,REQ) - if the log can be posted. Will be set to 0 if an error is found.
+	;  REVISION HISTORY:
+	;    *LVL 05/25 2199186 - Created
+	;    *EAL 08/25 2229025 - Include Unified Procedure Logs
+	;---------
+checkPerformingSurgeon(orlId,errMsg,canPost) ;
+	n panels,panel,perfRequired,isPnP,perfSurgCnt,errLvl
+	i '$$isUsingPerfSurgRoles("ORL",orlId) q
+	i ($$IsThinLog(orlId)!$$IsUnifiedProcedureLog(orlId)) q
+	s perfRequired=$$primPerfLogic("ORL",orlId)
+	i perfRequired=$$cnRequireDocPerformer() s errLvl=30
+	e  i perfRequired=$$cnRecommendDocPerformer() s errLvl=10
+	s isPnP=$$geti("ORL",orlId,7800,1)
+	s panels=$$geti("ORL",orlId,75,1)
+	f panel=1:1:panels d
+	. s perfSurgCnt=$$perfSurgeonCount("ORL",orlId,panel)
+	. i perfSurgCnt>1 d  q  ;this should always be checked
+	. . s errMsg=errMsg+1
+	. . s errMsg(errMsg)=30_$c(9)_$$yy008(panel)
+	. . s canPost=0
+	. ;
+	. ;Only need to check the requirement if configured and the procedure was performed
+	. i 'perfRequired q
+	. i isPnP q
+	. i perfSurgCnt<1 d
+	. . s errMsg=errMsg+1
+	. . s errMsg(errMsg)=errLvl_$c(9)_$$yy006(panel)
+	. . s canPost=0
+	q
+	;
+	;---------
+	; NAME:   postGUI       (PUBLIC)
+	; DESCRIPTION: tag to be called from GUI to bypass checks
+	;---------
+postGUI n orlId,changed,notcomp,valstr,infoary
+	n posted
+	s orlId=$$zBulkNxF("","",1)
+	s changed=$$zBulkNxF("","",1)
+	s notcomp=$$zBulkNxF("","",1)
+	s valstr=$$zBulkNxF("","",1)
+	s %=$$parseSt(valstr,.infoary)
+	i 'notcomp d
+	. s posted=1
+	. d post(orlId,"",changed,"","",.infoary)
+	i infoary("UNIQHTMP")]"" d
+	. d %zRelTmpGlo(infoary("UNIQHTMP"))
+	. k infoary("UNIQHTMP")
+	s %=$$zBulkDon()
+	Q
+	;
+	;---------
+	; NAME:   post       (PUBLIC)
+	; DESCRIPTION: post the log
+	; REVISION HISTORY:
+	; *ABX 08/23 991609 - Update Care Companion anchor events hook
+	; *AKB 02/24 2028409 - Trigger CERM referral message
+	; *BJB 07/24 2107817 - Add in-house inventory depletion trigger
+	; *QD  08/24 2111078 - Adding trigger to send Professional Billing Exchange documents
+	; *SMM 08/24 2085101 - Trigger default resource type logic in ORLSEL8 on log post
+	; *MSZ 09/24 2132398 - Record surgeons' recently performed procedures
+	; *DPU 10/24 2121253 - Record target procedure cost on log post.
+	; *ftm 12/24 2159171 - Change call to CE Notification tag to only send a referral complete
+	; *SMM 01/25 2089543 - Add side effect for all logs to store recently added staff data at log post
+	; *MSZ 01/25 2133547 - Call storePerformedProcedures in a background process
+	; *RB  03/25 2174729 - Switch to IsThinLog API
+	; *KWH 07/25 2193345 - Learn about staffing from log post
+	; *EAL 08/25 2229025 - Include Unified Procedure Logs
+	; *SEH 08/25 2183413 - Add feature tracking logic for Supplies on Time
+	; *LVL 08/25 2199206 - Add feature tracking for performing surgeon roles
+	; *CBA 10/25 2239982 - Set Mobile Pick List case-level analytics items on log post
+	; *JXM 11/25 2244814 - Add code hook for temporary code status
+	; *RLG 12/25 2233716 - Set suggested locations items on log post
+	; *NP  12/25 2273724 - Replace $zisR and $zisID with $IsSurgicalCase
+	; *DNL 02/26 2259608 - Update provider case logs when posting ORL
+	; *BBZ 03/26 2298203 - Stop manually incrementing the rflCnt
+	; *EXD 02/26 2284652 - Add a check after log post for whether to create an Oncology History "surgery" event
+	;---------
+post(id,loc,changed,status,cstatus,infoary) ;
+	n postPPary,ppcnt,aftPPary,bl412,eptid,userid,surgdat,CaseInvalid,inteptid
+	n eventInfo,isThinLog,alreadyexists,shouldUpdateHistory,isUPL,primSurg,perfSurg,panels,panel,samePerfFound,diffPerfFound
+	s userid=$$zgUserID()
+	i (loc="")!(status="") d
+	. s bl412=$$zgetbll("ORL",id,412)
+	. s:loc="" loc=$$zgetpcl(bl412,21,1)         ; ORL 510 - Location
+	. s:status="" status=$$zgetpcl(bl412,24,1)   ; ORL 510 - STATUS
+	s isThinLog=+$$IsThinLog(id)
+	s isUPL=+$$IsUnifiedProcedureLog(id)
+	;
+	; Log posting programming point
+	s %=$$getPPTag(53239,loc,"","","",.postPPary,1)
+	i postPPary'="" f ppcnt=1:1:postPPary X ("s %="_postPPary(ppcnt))
+	;
+	d RtlsCleanup^ORLPOSTRTLS(id)
+	s %=$$updstat("ORL",id,2)   ;change log status
+	d UpdateSyncItems(id)
+	s inteptid=$$SurgPat(id,.eptid)  ;update ChartSync items at log post
+	d checkLatexFromCaseLog^ORLPP2("ORL",id)
+	d pteptitm^ORCPP8("ORL",id,eptid,1,1)
+	d recEqpmt^ORLPOST6(id)  ;record equipment used times
+	;d updtBal(id,loc)  ;update balance for supplies/drugs  ;*bsherman 142328 - remove BAL updating
+	;
+	; record various values for performed (and not canceled) logs
+	i ($$getn("ORL",id,1,"40;34")=""),status'=6 d  ; ORL 7800 - PROCEDURE NOT PERFORMED, ORL 510 - STATUS '= 6 (Canceled)
+	. d recSrgn^ORLPOST4(id,loc) ; record surgeon/staff times and history
+	. s %=$$zeqBkgShort("d storePerformedProcedures^ORRECENTORP("_$$zSafeParam(id)_")") ; record surgeons' performed procedures
+	. d LearnFromLog^ORMAGGEN(id)
+	;
+	d:('$$getn("ORL",id,1,"40;48")) updtImp^ORLPOST6(id,loc)    ; update implant information  ;ORL-32 LOG CREATED FOR NAVIGATORS ? update only for non-navigator logs.
+	d submitImplantsForLog^ORLIR(id,loc)
+	;
+	i changed d log^ORAUDIT(id,2)
+	d log^ORAUDIT(id,7)             ; Audit trail
+	d build^ORLPOST3(id,loc)        ; Precompile utilization
+	d synchsurg^ORCSUTL1("ORL",id)  ; Build html summary for log
+	s %=$$insrti(30499,+$h,"","","",id,99999,"ORL") ;set last changed date for OR metrics
+	s %=$$RecordSurgChartUpdate(id)
+	i $$isLicPAS() d afterLogPost^PAWTISAPI(id)
+	;
+	; Change case status to complete
+	i $$IsSurgicalCase(id) d  i 1
+	. i status'=6 d  ; If log is cancelled, don't mark case as complete
+	. . s:cstatus="" cstatus=$$getn("ORC",id,1,"180;28")  ;ORC-510 SCHEDULING STATUS
+	. . Q:cstatus=2
+	. . n compstat
+	. . s compstat=$$loadeaf(loc,53046,,$$zgetTWRC("EAF",53046))
+	. . i compstat'="" s %=$$insrti(512,compstat,"","","",id,99999,"ORC")  ;don't clear the case progress status if no value is specified
+	. . Q:cstatus=8
+	. . d rflCnt("ORL",id)
+	. . s %=$$updstat("ORC",id,8)
+	. . d touchrec^ORLPP10("ORC",id)
+	. . d case^ORAUDIT(id,12,"",$$yy010())   ;"Log Posted"  only update Audit Trail if case was changed to complete
+	. . d CaseCompSupTimeFeatureTracking^ORVENDORFEATURE(id)  ;Update feature tracking metrics for Supplies on Time
+	. . s %=$$calculateCasePickingItems(id)  ; Set Mobile Pick List case-level analytics items
+	. s %=$$ortrig("OR_LOG_POST",id,"")
+	e  d:'$$csAudNfo^ORCPP1("ORL",id,12) rflCnt("ORL",id)
+	;
+	; update the implant lock statuses on log post.
+	s %=$$setImplantLockStatus(id)
+	;
+	; Mark orders as complete, also cancel/discontinue un-performed orders
+	s %=$$compOrders^ORLPOSTORD(id)
+	;
+	;Trigger inventory interface messages
+	s %=$$triginv(id,"","",1)
+	d DepleteSupplyBalancesInHouse^ORDEPLETION4(id,"ORL","LogPosted")
+	;
+	; Update surgical history on the patient
+	s alreadyexists=$$chkSurgHistExists^ORLPP7(id) ;Check surgical history for invalid
+	s CaseInvalid=$$CaseVoidedCanceled(id)
+	i CaseInvalid,alreadyexists s shouldUpdateHistory=1
+	i (status'=4),(status'=6),('CaseInvalid) s shouldUpdateHistory=1
+	i shouldUpdateHistory d sendUpdTask^ORLPOST5(id,"",userid,alreadyexists)
+	;
+	d ChargeOSMForLogPost^ORINTRAOPMEDSUTIL(id) ;Charge for OSM at post.
+	s infoary("SKIPINVASIVE")=1  ;skip invasive billing on log post.
+	s %=$$sndchrgs^OR2CHARG1(id,.infoary)
+	; after log posting programming point
+	s %=$$getPPTag(53238,loc,"","","",.aftPPary,1)
+	i aftPPary]"" f ppcnt=1:1:aftPPary X ("s %="_aftPPary(ppcnt))
+	;
+	; *EXD 02/26 2284652 - add the surgery Onc Hx event here
+	;
+	; Revert temporary code status after log post if applicable
+	d reactivateCSAfterEventCore^LNOUTL46(id)
+	;
+	i '(isThinLog!isUPL) d callEpisodeAPI^ORHSB1(id) ;Send updates to billing for autocreating episodes
+	d CheckIBrules^ORINBSK6(id,loc,2,1) ;source - log / action - post
+	s %=$$SurgeryDAT(id,inteptid,.surgdat)
+	i $$gtORLocType(loc)'=0 d
+	. i id'="" s %=$$addMnemonic(.eventInfo,"ORLID",id)
+	. s %=$$logPatient("PL_POSTED",eptid,$$getCSN(inteptid,surgdat),userid,"",.eventInfo)
+	s eptid=inteptid
+	; Update referral counts when posting a log
+	d rflCnt("ORL",id)
+	d sendLogPostJob^ORSUPUSAGEHIST(id)
+	d doCostBenchmarkLogPostJob^ORCOSTVARIANCE(id)
+	;
+	s %=$$FileFinalANTypeToLog^ANCLOSEENC4(eptid,surgdat,"","","ENCOUNTER","",1)   ;Save final anesthesia type
+	;
+	;-- 2-in-1 staff section combo!
+	;-- Trigger default resource type logic. Only runs on thin logs where the appointment was scheduled directly to a provider.
+	;-- Trigger recently added staff logic. Updates TUN record for staff members associated with the log.
+	d orlStaffProcEnded^ORLSEL8(id)
+	;
+	;-- Set the MyChart questionnaire categorization flag. Needed to make sure questionnaire series work correctly for surgeries.
+	d SetQnrSeriesCatFlag^ORQSUTIL(id)
+	;
+	;--Triggers Care Companion anchor events.
+	d triggerAncWkflwSurgery^WCAPIANCEVTTRGR(inteptid,surgdat,id)
+	;
+	i '(isThinLog!isUPL) d cosmosSurgeryTrigger^COSTRIGGER2(id,inteptid,surgdat)
+	;
+	d PBxPushTrigger^CSCPBXAPI(eptid,surgdat) ;Trigger to send Professional Billing Exchange document
+	;
+	;--Trigger Care Everywhere updates.
+	d processCaseUpdateForCESync^ORCERMSYNC(id)
+	;--Send referral complete ONLY. Previously, we sent an empty Event Notifcation
+	d Notification^CSCRETSNDO(eptid,surgdat,"",userid,"","","",1)
+	;
+	;--Trigger provider case log updates for providers who are tracking case logs
+	s %=$$credpclUpdateFromSource($$credpclTypeOpTime(),id,"","","",1)
+	;
+	;--Log feature tracking for performing surgeon functionality
+	i $$isUsingPerfSurgRoles("ORL",id,loc) d
+	. s panels=$$geti("ORL",id,75,1)
+	. f panel=1:1:panels d  q:(diffPerfFound&samePerfFound)
+	. . s primSurg=$$gtPrmSrg("ORL",id,panel)
+	. . i primSurg="" q
+	. . s perfSurg=$$primaryPerfSurgeon("ORL",id,panel)
+	. . i perfSurg="" q  ;no performer documented
+	. . i perfSurg=primSurg s samePerfFound=1
+	. . e  s diffPerfFound=1
+	. i samePerfFound d logFeatureTracking^ORLCOPY(id,loc,69156)
+	. i diffPerfFound d logFeatureTracking^ORLCOPY(id,loc,69157)
+	;
+	d SetCaseLocationSuggestions^ORSUGGESTEDLOCATIONS(id,1)
+	Q
+	;
+	;---------
+	; NAME:   UpdateSyncItems  (PUBLIC)
+	; DESCRIPTION: saves the synced EPT items at log post
+	; PARAMETERS:
+	;   orlID (I,REQ) - the log ID
+	; REVISION HISTORY:
+	;   *plp 02/13 259477 - created
+	;---------
+UpdateSyncItems(orlID) n eptID,surgDAT,class,notPerf,ary
+	s surgDAT=$$SurgeryDAT(orlID,.eptID)
+	i (eptID="")!(surgDAT="") q  ;bad data
+	i $$getn("ORL",orlID,1,"40;34")'="" s notPerf=1 i 1   ;ORL-7800
+	s class=$$GetIPorOPStatus(orlID,eptID,surgDAT)
+	s ary(24136)=+notPerf
+	s ary(24137)=class
+	d SaveLogPostSyncItems(eptID,surgDAT,.ary)
+	q
+	;;#GENERATE#
+	; Tag: SaveLogPostSyncItems
+	; Type: Save
+	; INI: EPT
+	; Items:
+	;   24136,24137
+	;;#ENDGEN#
+	;
+	;
+	;
+	;
+	;---------
+	; NAME:         recEqpmt (PRIVATE)
+	; DESCRIPTION:  Record equipment used times in their SER records. Only
+	;               uses start and end time pairs where both values exist.
+	; KEYWORDS:     record, equipment, used, SER
+	; CALLED BY:    post (above)
+	; PARAMETERS:
+	;  id (I,REQ,DEFAULT:None)-Log ID.
+	; RETURNS:      Nothing
+	; ASSUMES:      Nothing
+	; SIDE EFFECTS: None
+	; REVISION HISTORY:  code moved to ORLPOST6
+recEqpmt(id) d recEqpmt^ORLPOST6(id)
+	Q
+	;
+	;---------
+	; NAME:         updtBal (PRIVATE)
+	; DESCRIPTION:  update balance information for supplies and drugs which were used in this case
+	; PARAMETERS:
+	;   orlId (I,REQ) - log ID
+	;   locid (I,OPT) - log location.
+updtBal(orlId,locid) n pckid,supAry,supid,impdec,invloc
+	Q:orlId=""
+	s:locid="" locid=$$getn("ORL",orlId,1,"412;21")
+	Q:($$loadeafp(locid,1,"53254;2")=0)
+	s impdec=+$$loadeaf(locid,53257,,$$zgetTWRC("EAF",53257))
+	f  s pckid=$$zRIxNextID("PCK",40,orlId,pckid) Q:pckid=""  d
+	. Q:$$zgetnp("PCK",pckid,425,1)=1
+	. d updtSD(pckid,100,locid,orlId,.supAry,impdec)
+	. d updtSD(pckid,200,locid,orlId,.supAry,impdec)
+	f  s supid=$o(supAry(supid)) Q:supid=""  d
+	. s invloc=""
+	. f  s invloc=$o(supAry(supid,invloc)) Q:invloc=""  d
+	. . s %=$$update^ORBALUPD(supid,locid,orlId,supAry(supid,invloc),$s(invloc="~":"",1:invloc))
+	Q
+	;---------
+	; NAME:         updtSD (PRIVATE)
+	; DESCRIPTION:  update balance information for either supplies or drugs for a picklist
+	; DECLARES:     orlId,loc
+	; sd : 100 for supplies, 200 for drugs
+updtSD(pckid,sd,loc,orlId,ary,decImp) n numUsed,numWstd,supid,count
+	n lines,ln,invloc
+	s ln=$$zgetblu("PCK",pckid,sd,0)
+	s lines=$$zgetpcu(ln,1)
+	f count=1:1:lines d
+	. n inValid
+	. s ln=$$zgetblu("PCK",pckid,sd,count)
+	. s supid=$$zgetpcu(ln,1)
+	. Q:supid=""      ;bad data
+	. i decImp'=1 d  Q:inValid
+	. . s:$$IsPCKLineImplantable(pckid,count,supid) inValid=1
+	. s numUsed=$$zgetpcu(ln,5),numWstd=$$zgetpcu(ln,6)
+	. s invloc=$$zgetpcu(ln,11) s:invloc="" invloc="~"
+	. s ary(supid,invloc)=ary(supid,invloc)+numUsed+numWstd
+	Q
+	;
+	;---------
+	; NAME:         updtImp (PRIVATE)
+	; DESCRIPTION:  Updates the information in the implant records, e.g.,
+	;               implanted, explanted, etc.
+	; KEYWORDS:     update, implant, IMP
+	; CALLED BY:    post (above)
+	; PARAMETERS:
+	;  orlId (I,REQ,DEFAULT:None)-Log ID.
+	;  locid (I/O,OPT,DEFAULT:Location of Log <orlId>)-Location of
+	;               surgery. Will look it up if not passed in.
+	; RETURNS:      locid if passed as null
+	; ASSUMES:      Nothing
+	; SIDE EFFECTS: None
+updtImp(orlId,locid) d updtImp^ORLPOST6(orlId,locid)
+	Q
+	;
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Increment the referral count for a case/log
+	; PARAMETERS:
+	;  ini (I,REQ) - ORC or ORL
+	;  id (I,REQ) - ID of the case or log
+	; REVISIONS:
+	;---------
+rflCnt(ini,id) n eptId,eptDat,rflId
+	i ini="" Q
+	i id="" Q
+	s rflId=$$rfrlId^ORCPP1(ini,id,1,.eptId,.eptDat)
+	i rflId="" Q
+	i eptId="" Q
+	i eptDat="" Q
+	i $$IsContactAppointment(eptId,eptDat),'$$IsApptLive(eptId,eptDat) q
+	d rflCnt^HRFLEOD(6,"EPT",eptId,eptDat,rflId,6,1)
+	Q
+	;
+	;#STR#001#You do not have security to post logs in this location.
+	;  #CMT#001#@CONTEXT@This is an error message.@
+	;#STR#002#The date of this log is {{0}}. You cannot post a log for a future date.
+	;  #CMT#002#@CONTEXT@This is an error message.
+	;  #CMT#002#{0}-This holds the surgery date.@
+	;#STR#003#The status of the log has changed, possibly due to the actions of another user.  Changes may not be visible until the log is reopened.
+	;  #CMT#003#@CONTEXT@This is an error message.@
+	;#STR#004#The log has already been posted.
+	;  #CMT#004#@CONTEXT@This is an error message.@
+	;#STR#005#The log has already been voided.
+	;  #CMT#005#@CONTEXT@This is an error message.@
+	;#STR#006#Panel {{0}} is missing a primary performing surgeon.
+	;  #CMT#006#@CONTEXT@Error message to inform the user that a required primary performing surgeon/provider is not documented on a given panel of a surgical log.
+	;  #CMT#006#{{0}} - Panel number@
+	;#STR#007#The log is not complete.
+	;  #CMT#007#@CONTEXT@This is an error message.@
+	;#STR#008#Panel {{0}} has multiple primary performing surgeons.
+	;  #CMT#008#@CONTEXT@Error message to tell a user that a panel on a surgical log has more than one surgeon/provider indicated as a primary performer.
+	;  #CMT#008#{{0}} - Panel number@
+	;#STR#010#Log Posted
+	;  #CMT#010#@CONTEXT@This is a part of audit trail.
+	;  #CMT#010#Audit trails help in maintaining a record of the actions carried out by a user.
+	;  #CMT#010#Such as editing patient information, surgery logs, etc.@
+	q  ;;#eor#

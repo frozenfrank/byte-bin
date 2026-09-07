@@ -1,0 +1,635 @@
+PWCPCLUTIL ; ; ;2026-03-13 12:33:48;11.8;++I06K6jyH1wb3ZiiCFzMRFqC1w9LU/VemYXyS0d4fk=;Copyright 2026 Epic Systems Corporation
+	d providerCaseLog()
+	q
+	;*********************************************************************
+	; PURPOSE:  EASEL report for looking up a provider's case logs
+	; AUTHOR:   Daniel Leatherwood
+	; REVISIONS:
+	;  *DNL 11/25 2268290 Created
+	;  *DNL 02/26 2259608 - support loading case logs from PCL
+	;  *DNL 02/26 2268902 - support loading case logs on shadow
+	;*********************************************************************
+	;---------
+	; See: https://wiki.epic.com/main/Chronicles/EASEL_APIs
+	;---------
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Look up case logs for a given provider and display in an EASEL format
+	; PARAMETERS:
+	;   serIDext (I,OPT) - external ID of the provider to look up.  If not provided, user will be prompted to select a provider.
+	;   startDate (I,OPT) - view logs starting at this point: will be prompted for if not given: provide in ($$)din format
+	;   endDate (I,OPT) - don't show logs ending after this point: will be prompted for if not given: provide in ($$)din format
+	;   usePCL (I,OPT,DEFAULT:false) - if true, load the data from PCL, building PCL if necessary. If false, look up the data but do not store it.
+	; DECLARES:     OPT, STOP - unused variables often set as a side effect of EASEL
+	; REVISIONS:
+	;  *DNL 12/25 2268290 - Created
+	;  *DNL 02/26 2259608 - support loading case logs from PCL
+	;  *DNL 02/26 2268902 - don't allow updating records in shadow
+	;---------
+providerCaseLog(serIDext,startDate,endDate,usePCL) ;
+	n easelGlo,top,bottom,header,expandHeader,condense,label,attr,expandLabel,OPT,STOP,del,line,currRou
+	s currRou=$$zCurrRou()  ; doing this allows this to be loaded using %ZeEPIC into test environments
+	; only evaluating this if we're using the released version of the code allow us to use this in a ZRZL, but not otherwise if PCL isn't enabled.
+	i currRou="PWCPCLUTIL",'$$credpclIsEnabled^elibPLIBWPCLREC() w !,"Provider Case Logs are not enabled in this environment." QUIT
+	i serIDext="" s serIDext=$$askList^LUCT("Retrieve case logs for this provider","SER","",2)
+	QUIT:serIDext=""
+	;
+	i startDate'="" s startDate=$$din(startDate)
+	i endDate'="" s endDate=$$din(endDate)
+	i startDate="" s startDate=$$askDte^LUCT("Start date: ",$$zSymbLcl("Y-2"),"",.OPT)
+	i OPT QUIT
+	;
+	i endDate="" s endDate=$$askDte^LUCT("End date: ",$$zSymbLcl("T"),"",.OPT)
+	i OPT QUIT
+	;
+	i usePCL'=0,'$$zLibTagExists("PLIB","credpclHasCompleteCaseLog") s usePCL=0  ; if this code has been bootstrapped into an environment without PCL, don't ask about trying to use it
+	i usePCL="" s usePCL=$$yn("Load data from PCL",1,"","w ! d %zWrapPrint^%Zelibh(""Answer 'Yes' to load data from the provider's case logs stored in PCL, 'No' to search for case log data from Chronicles without saving it permanently."")")
+	i OPT QUIT
+	i usePCL="" QUIT  ; user canceled
+	;
+	s serIDext=$$getidout(serIDext,"SER")
+	s top=2,bottom=24
+	s header="Case Log for "_$$FtPrvNm("SER",serIDext),expandHeader="Details"
+	s condense=1
+	s del=$$getColumnDelim^EASEL7()
+	;
+	; define column labels and placeholder widths
+	d addColumn^EASEL7(.label,.attr,"Date",11)
+	d addColumn^EASEL7(.label,.attr,"Procedure",30)
+	d addColumn^EASEL7(.label,.attr,"Provider Role",20)
+	d addColumn^EASEL7(.label,.attr,"Location",22)
+	d addColumn^EASEL7(.label,.attr,"CSN",12)
+	d addColumn^EASEL7(.label,.attr,"Patient Age",12)
+	d addColumn^EASEL7(.label,.attr,"Patient Sex",12)
+	d addColumn^EASEL7(.label,.attr,"Code",13)
+	;
+	; use main labels for expand labels
+	s expandLabel=$$initExpandLabel^EASEL7(label)
+	s expandLabel=$$zStrBuildDelimList(del,expandLabel,"INI","ID","Code Source")  ; add extra columns for expand view
+	;
+	; initialize EASEL display
+	d init^EASEL7(.easelGlo,header,expandHeader,.label,expandLabel,top,bottom,condense,.attr)
+	;
+	; set data load routine
+	d setDataLoadCode^EASEL7(easelGlo,"loadProviderCaseLog^"_currRou_"()")
+	;
+	; add commands (line 2)
+	s line=2
+	d addExpandCmd^EASEL7(easelGlo,"[E]xpand Entry Details",1,"",line)
+	d addSaveCmd^EASEL7(easelGlo,"   [S]ave Report","",line)
+	d addCmd^EASEL7(easelGlo,"   [V]iew Record","runOutsideEASEL^"_currRou_"(""cmdViewRecord"")",line,"","","","Jump into EAVIEWID for one of the records on this line")
+	i usePCL,$$credpclCanUpdateLogs^elibPLIBWPCLREC() d
+	. d addCmd^EASEL7(easelGlo,"   [U]pdate Line","cmdUpdateLine^"_currRou_"()",line,"","","","Update the highlighted PCL entry from its source record")
+	. d addCmd^EASEL7(easelGlo,"   [M]ark Incomplete","cmdMarkIncomplete^"_currRou_"()",line,"","","","Mark this provider's case log as incomplete and reload from source records")
+	d addCmd^EASEL7(easelGlo,"[Q]uit","",line,"","",125)
+	;
+	; add filtering command row (line 1)
+	s line=1
+	d addCmdLabel^EASEL7(easelGlo,"Filter by:",line,"",1)
+	;
+	; use placeholders for initial creation to avoid have two sources of truth: rebuildFilterCmds will set the actual data, but we need to have the command exist first
+	d addCmd^EASEL7(easelGlo,"   [P]rocedure","placeholder",line,"",1,"","placeholder",1)
+	d addCmd^EASEL7(easelGlo,"   [D]ate","placeholder",line,"",1,"","placeholder",1)
+	d addCmd^EASEL7(easelGlo,"   [R]ole","placeholder",line,"",1,"","placeholder",1)
+	d rebuildFilterCmds(easelGlo)
+	;
+	d setAttr^EASEL7(easelGlo,"serIDext",serIDext)
+	d setAttr^EASEL7(easelGlo,"usePCL",usePCL)
+	d setAttr^EASEL7(easelGlo,$$lcFilterStart(),startDate)
+	d setAttr^EASEL7(easelGlo,$$lcFilterEnd(),endDate)
+	;
+	; launch report
+	d singleMain^EASEL7(easelGlo,"",1)
+	q
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Loads provider case log entries into EASEL global.
+	; REVISIONS:
+	; *DNL 02/26 2259608 - support progress bars, loading case logs from PCL
+	; *DNL 02/26 2268902 - support loading data in shadow
+	;---------
+loadProviderCaseLog() ;
+	n completionGlo,caseLogLine,code,codeSource,count,currRou,dat,data,del,detail,eafID,eapID,easelGlo
+	n encounterDate,endDate,eptID,eptAge,displayDate,filterCode,filterProcedure,filterRole,hasProcedures,hideThisLine,id
+	n isAmbiguous,iterator,knownRoles,ln,needsRoles,orderGlo,orpIDext,otherProviderID,packedDataArr
+	n packedLine,patientCSN,procedure,role,roleGlo,searchType,searchTypes,serIDext,sex,sourceID
+	n sourceINI,startDate,stop,totalEntries,processedEntries,usePCL,hasUpToDatePCL
+	;
+	s currRou=$$zCurrRou()
+	s easelGlo=$$getCurrentGlo^EASEL7()
+	s del=$$getColumnDelim^EASEL7()
+	s serIDext=$$getAttr^EASEL7(easelGlo,"serIDext")
+	s usePCL=$$getAttr^EASEL7(easelGlo,"usePCL")
+	s startDate=$$getAttr^EASEL7(easelGlo,$$lcFilterStart())
+	s endDate=$$getAttr^EASEL7(easelGlo,$$lcFilterEnd())
+	s filterProcedure=$$getAttr^EASEL7(easelGlo,$$lcFilterProcedure())
+	s filterRole=$$getAttr^EASEL7(easelGlo,$$lcFilterRole())
+	i $$zStrStartsWith(filterProcedure,$$lcProcFiltSpecificCode()) s filterCode=$e(filterProcedure,$l($$lcProcFiltSpecificCode())+1,$l(filterProcedure))
+	s orderGlo=$name(@easelGlo@(currRou,"orderGlo"))
+	s roleGlo=$name(@easelGlo@(currRou,"roleList"))
+	i $d(@roleGlo)<10 s needsRoles=1
+	;
+	; Initialize load statistics
+	d resetLoadStats^EASEL7(easelGlo)
+	d %zcurs(0)  ; hide cursor during load
+	;
+	i usePCL,$$credpclHasCompleteCaseLog^elibPLIBWPCLREC(serIDext) d
+	. s hasUpToDatePCL=1
+	;
+	; Phase 0: Estimate total entries (fast pass without inclusion checks)
+	s totalEntries=0
+	i hasUpToDatePCL d
+	. s totalEntries=$$countEntriesFromPCL^PWCPCLREC(serIDext,startDate,endDate,easelGlo,.stop)
+	e  f  s id=$$credpclLookupNextID(serIDext,.searchType,id,.dat,startDate,.iterator,.searchTypes,1) q:id=""  d  q:stop
+	. s totalEntries=totalEntries+1
+	. d dispLoadStats^EASEL7(easelGlo,totalEntries,"",.stop)
+	;
+	; Exit if user quit during phase 0
+	i stop QUIT
+	;
+	; Phase 1: Build ordered array (with progress tracking and percentage)
+	k iterator
+	s id="",processedEntries=0
+	i usePCL d
+	. i 'hasUpToDatePCL,$$credpclCanUpdateLogs^elibPLIBWPCLREC() s %=$$buildAllLogsForProvider^PWCPCLREC(serIDext,1,startDate,.stop,easelGlo,totalEntries)
+	. e  i '$$buildOrDeferCaseLog^PWCPCLREC(serIDext,.completionGlo),completionGlo'="" d
+	. . ; wait for PRD to finish building the case log, while allowing the user to interrupt
+	. . f  q:@completionGlo'=""  d  q:stop
+	. . . h 1  ; wait for 1 second before checking again to avoid hammering the system with requests
+	. . . s processedEntries=processedEntries+1
+	. . . d dispLoadStats^EASEL7(easelGlo,processedEntries,totalEntries,.stop)
+	. i stop quit
+	. ;
+	. s processedEntries=0  ; reset count for actual load
+	. d loadFromPCL^PWCPCLREC(serIDext,startDate,endDate,orderGlo,easelGlo,filterProcedure,.processedEntries,.stop,totalEntries)
+	e  f  s id=$$credpclLookupNextID(serIDext,.searchType,id,.dat,startDate,.iterator,.searchTypes) q:id=""  d  q:stop
+	. d %zcredpclGetInfo(searchType,id,dat,.packedDataArr,1)
+	. f caseLogLine=1:1:packedDataArr(0) d  q:stop
+	. . s packedLine=packedDataArr(caseLogLine)
+	. . d %zcredpclUnpackLine(packedLine,"","","",.encounterDate,.patientCSN,.eapID,.orpIDext)
+	. . i encounterDate="" s encounterDate="(none)"
+	. . e  i encounterDate<startDate quit  ; skip entries before the start date: credpclLookupNextID does not always prevent this. It depends on whether the search has a natural date-based index.
+	. . i endDate'="",encounterDate>endDate quit  ; skip entries after the end date
+	. . ;
+	. . i patientCSN="" s patientCSN="(none)"
+	. . i (filterProcedure=$$lcProcFiltAnyProc())!(filterProcedure=$$lcProcFiltAnyProcCode()),eapID="",orpIDext="" quit  ; skip entries with no procedures if filtering for any procedure
+	. . i filterProcedure=$$lcProcFiltNoProc() quit:(eapID'="")!(orpIDext'="")  ; skip entries with procedures if filtering for no procedure
+	. . ;
+	. . s count=@orderGlo@(encounterDate,patientCSN,0)+1
+	. . s @orderGlo@(encounterDate,patientCSN,count)=packedLine
+	. . s @orderGlo@(encounterDate,patientCSN,0)=count
+	. . s processedEntries=processedEntries+1
+	. . ; Display progress with percentage
+	. . d dispLoadStats^EASEL7(easelGlo,processedEntries,totalEntries,.stop)
+	;
+	; Exit if user quit during phase 1
+	i stop k @orderGlo QUIT
+	;
+	; Phase 2: Process ordered array and add to EASEL (with percentage)
+	; Reset the total counts: this will scale against the number of encounters we need to process
+	s encounterDate="",searchType="",id="",caseLogLine="",patientCSN=""
+	s processedEntries=0,totalEntries=0
+	f  s encounterDate=$o(@orderGlo@(encounterDate),-1) q:encounterDate=""  d
+	. f  s patientCSN=$o(@orderGlo@(encounterDate,patientCSN)) q:patientCSN=""  d
+	. . s totalEntries=totalEntries+1
+	;
+	f  s encounterDate=$o(@orderGlo@(encounterDate),-1) q:encounterDate=""  q:stop  d
+	. f  s patientCSN=$o(@orderGlo@(encounterDate,patientCSN)) q:patientCSN=""  q:stop  d
+	. . k packedDataArr
+	. . s hasProcedures=0
+	. . s packedDataArr(0)=@orderGlo@(encounterDate,patientCSN,0)
+	. . f caseLogLine=1:1:packedDataArr(0) d
+	. . . s packedLine=@orderGlo@(encounterDate,patientCSN,caseLogLine)
+	. . . s packedDataArr(caseLogLine)=packedLine
+	. . . d %zcredpclUnpackLine(packedLine,"","","","","",.eapID,.orpIDext)
+	. . . i (eapID'="")!(orpIDext'="") s hasProcedures=1
+	. . ;
+	. . i hasProcedures,'usePCL d getProcedureCodes^PWCPCLLOADCODES(.packedDataArr,encounterDate)
+	. . ;
+	. . s eptID=$$zRecCSNToID("EPT",patientCSN)
+	. . s sex=$$getReliablePatientSex(eptID)
+	. . s sex=$s(sex="":"Ambiguous",1:$$zgetCat(sex,1,"EPT",130))
+	. . s displayDate=$$zFmtDate(encounterDate)
+	. . s eptAge=$$eptAge(eptID,encounterDate)
+	. . ;
+	. . f caseLogLine=1:1:packedDataArr(0) d  q:stop
+	. . . s packedLine=packedDataArr(caseLogLine)
+	. . . d %zcredpclUnpackLine(packedLine,"",.otherProviderID,"","","","","",.eafID,"","","",.code,.hideThisLine)
+	. . . i code="" s isAmbiguous="",codeSource=""
+	. . . e  d addBillingRecs(packedLine,.codeSource,1,.isAmbiguous)
+	. . . i hideThisLine quit
+	. . . i otherProviderID'=serIDext quit
+	. . . ;
+	. . . s procedure=$$credpclGetProcedureName(packedLine)
+	. . . s role=$$credpclGetProviderRole(packedLine)
+	. . . i needsRoles,role'="" s knownRoles(role)="",@roleGlo@(role)=""
+	. . . i filterRole=$$lcRoleFiltNone() quit:role'=""
+	. . . e  i filterRole'="",role'=filterRole quit
+	. . . ;
+	. . . i filterProcedure=""
+	. . . e  i filterProcedure=$$lcProcFiltNoProcCode(),code'="" quit
+	. . . e  i filterProcedure=$$lcProcFiltAnyProcCode(),code="" quit
+	. . . e  i filterProcedure=$$lcProcFiltOnlyAmbiguousCodes(),(code="")!('isAmbiguous) quit
+	. . . e  i filterProcedure=$$lcProcFiltNoAmbiguousCodes(),(code="")!(isAmbiguous) quit
+	. . . e  i filterCode'="",code'=filterCode quit
+	. . . ;
+	. . . s %=$$credpclGetPrimaryRecord(packedLine,"",.sourceINI,.sourceID,"",1)
+	. . . ;
+	. . . i isAmbiguous s code=code_" ?",isAmbiguous="Yes"
+	. . . e  s isAmbiguous=""
+	. . . s data=$$zStrBuildDelimList(del,displayDate,procedure,role,$$DisplayName("EAF",eafID),patientCSN,eptAge,sex,code)
+	. . . s detail=$$zStrBuildDelimList(del,data,sourceINI,sourceID,codeSource,isAmbiguous)
+	. . . d addData^EASEL7(easelGlo,data,detail,.ln)
+	. . . d setDataAttr^EASEL7(easelGlo,ln,"packedData",packedLine)
+	. . . i usePCL d setDataAttr^EASEL7(easelGlo,ln,"extraData",@orderGlo@(encounterDate,patientCSN,caseLogLine,"extraData"))
+	. . ;
+	. . ; Display progress with percentage
+	. . s processedEntries=processedEntries+1
+	. . d dispLoadStats^EASEL7(easelGlo,processedEntries,totalEntries,.stop)
+	;
+	s role=""
+	f  s role=$o(knownRoles(role)) q:role=""  d
+	. s @roleGlo@(role)=""
+	;
+	k @orderGlo
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Launches EAVIEWID for the current line in the EASEL global.
+	;---------
+cmdViewRecord() ;
+	n easelGlo,line,del,extraData,INI,ID,packedData,ASK,choice
+	n csn,sourceRecs,sourceINI,sourceID
+	s easelGlo=$$getCurrentGlo^EASEL7()
+	s line=$$getCurrentIndex^EASEL7(easelGlo)
+	i line="" QUIT
+	;
+	s packedData=$$getDataAttr^EASEL7(easelGlo,line,"packedData")
+	s %=$$credpclGetPrimaryRecord(packedData,"","","","",1,.sourceRecs)
+	s sourceINI=""
+	f  s sourceINI=$o(sourceRecs(sourceINI)) q:sourceINI=""  d
+	. s sourceID=sourceRecs(sourceINI)
+	. d %zFmtViewRecordPrompt(.ASK,sourceINI,sourceID,sourceINI="EPT")
+	s del=$$getColumnDelim^EASEL7()
+	s extraData=$$getDataAttr^EASEL7(easelGlo,line,"extraData")
+	s ID=$p(extraData,del,1)
+	i ID'="" d
+	. s csn=$p(extraData,del,2),csn=$$geti("PCL",ID,8,1,csn)
+	. d %zFmtViewRecordPrompt(.ASK,"PCL",csn,1)
+	d addBillingRecs(packedData,.ASK,0)
+	i ASK<1 QUIT  ; nothing to view
+	;
+	s choice=$$genMenu^LUCT(.ASK,"Open record in EAVIEWID")
+	s INI=$p(choice,"-",1),ID=$p(choice,"-",2)
+	i $$zStrChkAnyNull(2,INI,ID) QUIT
+	;
+	d Main^EAV(INI,ID)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Formats a view record confirmation prompt for generic INIs
+	; PARAMETERS:
+	;   ASK (IO,REQ) - The output variable that will be presented to ($$)genMenu^LUCT
+	;   sourceINI (I,REQ) - The INI of the record to display
+	;   identifier (I,REQ) - The identifier (Record ID or CSN) to view
+	;   isCSN (I,OPT,DEFAULT:0) - Specifies whether the identifier is a CSN; otherwise, a record ID
+	; REVISIONS:
+	;  *JFF 03/26 2268290 - Created
+	;---------
+%zFmtViewRecordPrompt(ASK,sourceINI,identifier,isCSN) ;
+	n fmtIdentifier
+	s fmtIdentifier=$S(isCSN:"CSN."_identifier,1:identifier)
+	; Format: Title=Help Text^ResultValue
+	s ASK=ASK+1,ASK(ASK)=sourceINI_" "_fmtIdentifier_"=Open "_sourceINI_" "_fmtIdentifier_" in EAVIEWID^"_sourceINI_"-"_fmtIdentifier
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Updates the highlighted PCL entry from its source record. If the entry is already
+	;               up to date, shows a message. If stale, updates from source and reloads data.
+	; REVISIONS:
+	;  *DNL 02/26 2259608 - Created
+	;---------
+cmdUpdateLine() ;
+	n easelGlo,line,del,extraData,packedData,pclID,pclDAT,searchType,id,dat,invalid,matchLine,error,message
+	s easelGlo=$$getCurrentGlo^EASEL7()
+	s line=$$getCurrentIndex^EASEL7(easelGlo)
+	i line="" QUIT
+	;
+	s packedData=$$getDataAttr^EASEL7(easelGlo,line,"packedData")
+	i packedData="" QUIT
+	;
+	s del=$$getColumnDelim^EASEL7()
+	s extraData=$$getDataAttr^EASEL7(easelGlo,line,"extraData")
+	s pclID=$p(extraData,del,1),pclDAT=$p(extraData,del,2)
+	s matchLine=$$getMatchingLine^PWCPCLREC(pclID,pclDAT,packedData,.searchType,.id,.dat,.invalid)
+	i invalid d ShowMsg^EASEL2("Source record could not be found.","","","",1) QUIT
+	i matchLine>0 d ShowMsg^EASEL2("This entry is already up to date.","","","",1) QUIT
+	i '$$credpclUpdateFromSource^elibPLIBWPCLREC(searchType,id,dat,.error) d  QUIT
+	. d %zcredutilErrorUnpack^elibPLIBWPCLREC(error,"","",.message)
+	. d ShowMsg^EASEL2(message,"","","",2)
+	;
+	d ShowMsg^EASEL2("Entry updated successfully.","","","",1)
+	d loadData^EASEL7(easelGlo)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Marks the current provider's case log as incomplete and reloads data,
+	;               triggering a full search of source records.
+	; REVISIONS:
+	;  *DNL 02/26 2259608 - Created
+	;---------
+cmdMarkIncomplete() ;
+	n easelGlo,serIDext
+	s easelGlo=$$getCurrentGlo^EASEL7()
+	s serIDext=$$getAttr^EASEL7(easelGlo,"serIDext")
+	d %zcredpclPendMarkIncomplete^elibPLIBWPCLREC(serIDext)
+	d ShowMsg^EASEL2("Provider marked as incomplete. Reloading from source records...","","","",1)
+	d loadData^EASEL7(easelGlo)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Wrapper function for calling EASEL6 correctly to run a command that needs to work outside of EASEL
+	; PARAMETERS:
+	;   code (I,REQ) - the tag name in this routine to call
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+runOutsideEASEL(code) ;
+	d Code^EASEL6("d "_code_"^"_$$zCurrRou()_"()","","d CONDENSE^EAMODE")
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Displays a user menu for filtering by procedure-related criteria. The user selects from various options
+	;               (e.g., any procedure, specific code, no procedure), and the chosen filter value is stored in the easel
+	;               global. Rebuilds the command display and reloads the data view accordingly.
+	;---------
+cmdFilterProcedure() ;
+	n easelGlo,ASK,choice,code,termCtrl,OPT
+	s easelGlo=$$getCurrentGlo^EASEL7()
+cfpPrompt ;
+	i OPT QUIT
+	;
+	s ASK=ASK+1,ASK(ASK)="Any procedure=Show only lines associated with procedures^"_$$lcProcFiltAnyProc()
+	s ASK=ASK+1,ASK(ASK)="Any procedure code=Show only lines associated with a procedure code^"_$$lcProcFiltAnyProcCode()
+	s ASK=ASK+1,ASK(ASK)="No procedure=Show lines associated no procedure^"_$$lcProcFiltNoProc()
+	s ASK=ASK+1,ASK(ASK)="Procedures without code=Show lines associated with a procedure, but no procedure code^"_$$lcProcFiltNoProcCode()
+	s ASK=ASK+1,ASK(ASK)="Specific procedure code=Show lines associated with a specific procedure code^"_$$lcProcFiltSpecificCode()
+	s ASK=ASK+1,ASK(ASK)="No ambiguous codes=Show only lines associated with unambiguous codes^"_$$lcProcFiltNoAmbiguousCodes()
+	s ASK=ASK+1,ASK(ASK)="Only ambiguous codes=Show only lines associated with ambiguous codes^"_$$lcProcFiltOnlyAmbiguousCodes()
+	s ASK=ASK+1,ASK(ASK)="Clear filter=Stop filtering by procedure^"_$$lcClearFilter()
+	s choice=$$genMenu^LUCT(.ASK,"Filter by Procedure")
+	i choice="" QUIT
+	;
+	i choice=$$lcClearFilter() s choice=""
+	i choice=$$lcProcFiltSpecificCode() d  g:choice="" cfpPrompt
+	. s code=$$zScrPromptAndReadLine(.termCtrl,15,"Procedure code: ","Enter the procedure code to search for.",20)
+	. i $$up(code)="OPT" s OPT=1,choice="" quit
+	. i termCtrl'="RET" s choice="" quit
+	. i code="" s choice="" quit
+	. ;
+	. s choice=$$lcProcFiltSpecificCode()_code
+	;
+	d setAttr^EASEL7(easelGlo,$$lcFilterProcedure(),choice)
+	d rebuildFilterCmds(easelGlo)
+	d loadData^EASEL7(easelGlo)
+	q
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Prompts the user to enter a start and end date for filtering data in the EASEL
+	;               interface. If valid dates are entered, the corresponding attributes in the easel
+	;               global are updated. The command list is rebuilt and the data display is refreshed
+	;               based on the new filter settings.
+	;---------
+cmdFilterDate() ;
+	n easelGlo,start,end,dateFormatter,ctrl,OPT
+	s dateFormatter="formatDate^"_$$zCurrRou()_"(.X,.OK)"
+	s dateFormatter("HLP")="Not a valid date."
+fdPromptStart ;
+	d Read^EASEL2("Start date: ","Enter start date (blank clears).","",.start,.dateFormatter,.ctrl)
+	i OPT!(ctrl'="RET") QUIT  ; user cancelled
+	;
+fdPromptEnd ;
+	i start'="" s end=$$zFmtDate(start)  ; default end date to start date if start date entered
+	d Read^EASEL2("End date: ","Enter end date (blank clears).","",.end,.dateFormatter,.ctrl)
+	i OPT QUIT
+	;
+	i ctrl'="RET" g fdPromptStart
+	i end'="",end<start d ShowMsg^EASEL2("End date cannot be before start date.","","","",1) g fdPromptEnd
+	s easelGlo=$$getCurrentGlo^EASEL7()
+	d setAttr^EASEL7(easelGlo,$$lcFilterStart(),start)
+	d setAttr^EASEL7(easelGlo,$$lcFilterEnd(),end)
+	d rebuildFilterCmds(easelGlo)
+	d loadData^EASEL7(easelGlo)
+	q
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Validates and converts a user-entered date string to the internal date format.
+	;               If the conversion fails, clears the OK flag to indicate an invalid input. Intended
+	;               to be passed as a callback validator in EASEL Read prompts.
+	; PARAMETERS:
+	;   X (IO,REQ) - Input/output date string to be validated and reformatted.
+	;   OK (O,REQ) - Output flag set to null if the date is invalid; left unchanged otherwise.
+	;---------
+formatDate(X,OK) ;
+	n dte
+	s dte=$$din(X)
+	i dte="" s OK=""
+	s X=dte
+	q
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Displays a selection menu for filtering by provider role in the EASEL interface.
+	;---------
+cmdFilterRole() ;
+	n easelGlo,role,ASK,roleGlo
+	s easelGlo=$$getCurrentGlo^EASEL7()
+	s roleGlo=$name(@easelGlo@($$zCurrRou(),"roleList"))
+	f  s role=$o(@roleGlo@(role)) q:role=""  d
+	. s ASK=ASK+1,ASK(ASK)=role_"=^"_role
+	;
+	s ASK=ASK+1,ASK(ASK)="No role=Filter to lines where no role was identified^"_$$lcRoleFiltNone()
+	s ASK=ASK+1,ASK(ASK)="Clear filter=Stop filtering by role^"_$$lcClearFilter()
+	s role=$$genMenu^LUCT(.ASK,"Filter by Provider Role")
+	i role="" QUIT
+	;
+	i role=$$lcClearFilter() s role=""
+	d setAttr^EASEL7(easelGlo,"filterRole",role)
+	d rebuildFilterCmds(easelGlo)
+	d loadData^EASEL7(easelGlo)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Rebuilds the filter command options in the given easel global. The command labels are
+	;               updated to indicate which filters are currently active.
+	; PARAMETERS:
+	;   easelGlo (I,REQ)
+	;---------
+rebuildFilterCmds(easelGlo) ;
+	n proc,role,start,end,currRou
+	s proc=$$getAttr^EASEL7(easelGlo,$$lcFilterProcedure())
+	s role=$$getAttr^EASEL7(easelGlo,$$lcFilterRole())
+	s start=$$getAttr^EASEL7(easelGlo,$$lcFilterStart())
+	s end=$$getAttr^EASEL7(easelGlo,$$lcFilterEnd())
+	s currRou=$$zCurrRou()
+	;
+	d replaceCmd^EASEL7(easelGlo,"P","   [P]rocedure"_$s(proc'="":" (In Use)",1:""),"runOutsideEASEL^"_currRou_"(""cmdFilterProcedure"")","","Filter by procedure",1)
+	d replaceCmd^EASEL7(easelGlo,"D","   [D]ate"_$s((start'="")!(end'=""):" (In Use)",1:""),"cmdFilterDate^"_currRou_"()","","Filter by date range",1)
+	d replaceCmd^EASEL7(easelGlo,"R","   [R]ole"_$s(role'="":" (In Use)",1:""),"runOutsideEASEL^"_currRou_"(""cmdFilterRole"")","","Filter by provider role",1)
+	q
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Builds billing record reference strings from a packed PCL line. The routine unpacks
+	;               supporting billing references (HARs, HTRs, UCLs, ETRs) and formats them into a
+	;               consolidated output string or array. Useful for linking related records in a user-facing
+	;               view.
+	; PARAMETERS:
+	;   packedLine (I,REQ) - packed data line from a PCL entry.
+	;   output (O,REQ) - Either a delimited string or an array of formatted billing record links.
+	;                    When isSingleString=1, output is a "|" delimited string of "<INI>-<ID>" entries.
+	;                    Otherwise output is an ASK-style array where each entry is a formatted reference:
+	;                    output(n)="<INI>-<ID>=Open <INI> <ID> in EAVIEWID^<INI>-<ID>"
+	;                    and output itself contains the count of entries
+	;   isSingleString (I,REQ) - Flag indicating desired output format.
+	;                            1 = single delimited string; 0 = structured array.
+	;   isAmbiguous (O,REQ) - Boolean set by unpacking routine, indicating whether the billing line is
+	;                         marked as ambiguous. Passed by reference to retrieve value.
+	; REVISIONS:
+	;  *DNL 02/26 2259608 - remove unnecessary line: that was a holdover when from when I was exploring a problem with inlining
+	;---------
+addBillingRecs(packedLine,output,isSingleString,isAmbiguous) ;
+	n supportingHARs,supportingHTRs,supportingUCLs,supportingETRs
+	d %zcredpclUnpackBillingInfo(packedLine,"","",.isAmbiguous,.supportingHARs,.supportingHTRs,.supportingUCLs,.supportingETRs)
+	;
+	i isSingleString s output=""
+	d formatBillingReferences(.output,"HAR",.supportingHARs,isSingleString)
+	d formatBillingReferences(.output,"HTR",.supportingHTRs,isSingleString)
+	d formatBillingReferences(.output,"ETR",.supportingETRs,isSingleString)
+	d formatBillingReferences(.output,"UCL",.supportingUCLs,isSingleString)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Includes all 'records' in the consolidated output string or array expected by addBillingRecs().
+	; PARAMETERS:
+	;   output (IO,REQ) - The output that matching the format defined by addBillingRecs.
+	;   ini (I,REQ) - The INI from from which all 'records' point to.
+	;   records (I,REQ) - Records from INI supporting the code for this line, as a 0-based array
+	;   isSingleString (I,REQ) - Flag indicating desired output format.
+	;                            1 = single delimited string; 0 = structured array.
+	; REVISIONS:
+	;  *JFF 03/26 2268290 - Created
+	;---------
+formatBillingReferences(output,ini,records,isSingleString) ;
+	n id,line
+	f line=1:1:records(0) d
+	. s id=records(line)
+	. i isSingleString s output=$$zStrAddPiece(output,"|",ini_"-"_id)
+	. e  d %zFmtViewRecordPrompt(.output,ini,id)
+	q
+	;#localInline#
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  The current procedure filter is stored here
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcFilterProcedure() ;
+	q "filterProcedure"
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  The current role filter is stored here
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcFilterRole() ;
+	q "filterRole"
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  The current start date filter is stored here
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcFilterStart() ;
+	q "filterStart"
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  The current end date filter is stored here
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcFilterEnd() ;
+	q "filterEnd"
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Procedure filter option: any procedure
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcProcFiltAnyProc() ;
+	q "AnyProc"
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Procedure filter option: any procedure code
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcProcFiltAnyProcCode() ;
+	q "AnyProcCode"
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Procedure filter option: no procedure
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcProcFiltNoProc() ;
+	q "NoProcedure"
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Procedure filter option: procedures without code
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcProcFiltNoProcCode() ;
+	q "NoProcCode"
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Procedure filter option: specific procedure code
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcProcFiltSpecificCode() ;
+	q "SpecificCode-"
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Procedure filter option: use to include ONLY ambiguous codes
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcProcFiltOnlyAmbiguousCodes() ;
+	q "AmbiguousOnly"
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Procedure filter option: use to include codes that are unambiguous
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcProcFiltNoAmbiguousCodes() ;
+	q "NoAmbiguous"
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Role filter option: lines with no role at all
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcRoleFiltNone() ;
+	q "(none)"
+	;
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Return this to clear the active filter
+	; REVISIONS:
+	;  *DNL 01/26 2268290 - Created
+	;---------
+lcClearFilter() ;
+	q "ClearFilter"
+	;#endLocalInline#
+	q  ;;#eor#
