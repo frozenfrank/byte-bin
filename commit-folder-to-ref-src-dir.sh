@@ -31,7 +31,7 @@ shopt -s nullglob
 TEMP_INDEX_FILE=$(mktemp)
 export GIT_INDEX_FILE=$TEMP_INDEX_FILE
 git read-tree "$PREV_SHA^{tree}"
-git update-index --force-remove -- "$PLACEMENT_DIR/"
+git ls-files -z "$PLACEMENT_DIR" | git update-index  --force-remove -z --stdin
 
 # 5. Loop through every item inside the directory
 for file in "$TARGET_DIR"/*; do
