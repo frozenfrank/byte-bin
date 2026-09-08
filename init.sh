@@ -19,7 +19,11 @@ if git config --get remote.epc.url >/dev/null ; then
 fi
 
 # Verify the tag has been pulled
-git show-ref --verify test-initial-tree || exit 1
+if [ -z git rev-parse --verify --quiet test-initial-tree^{tree} 2> /dev/null ]; then
+    echo "Fatal: Missing required ref test-initial-tree."
+    echo "Fetch this ref from the remote or create the tag referencing a tree object."
+    exit 1
+fi
 
 # Init the special EPC remote
 echo "Initializing special 'epc' remote..."
