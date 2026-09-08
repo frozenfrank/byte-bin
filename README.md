@@ -39,8 +39,36 @@ Then explore the result:
 
 ```sh
 git log --oneline --graph --remotes=epc          # all server branch histories
-git show refs/remotes/epc/env/861                # newest snapshot for env 861
-./inspect-branch-trees.sh --remotes=epc/env/861  # commits alongside their trees
+git show epc/env/861                             # newest snapshot for Current Development Environment
+git show epc/env/5325                            # newest snapshot for Stage 1 Primary
+git show epc/env/40                              # newest snapshot for Final Packing
+./inspect-branch-trees.sh epc/env/861            # commits alongside their trees
+```
+
+Perform interactive testing:
+
+```sh
+git checkout env/861   # Notice the shortcut works
+
+# Generate server commits (as developer, and for server)
+git commit
+./commit-folder-to-ref-src-dir.sh x/1-alphabet refs/remotes/epc/env/861
+
+# Check the status
+git status             # Reports how many commits ahead/behind you are compared to the server
+git log --oneline --graph @ @{u}
+
+# Diff them!
+git diff @{u}..        # Raw diff between the branches
+git diff @{u}...       # Just what was committed by the developer
+git diff ...@{u}       # Just what has changed on the server
+git diff epc/env/5325 --stat  # Diff against stage 1
+git diff epc/env/40 --stat    # Diff against final
+
+# Reconcile them
+git merge @{u}         # Merge the results
+git rebase @{u}        # Alternatively, rebase instead
+
 ```
 
 ## The scripts
