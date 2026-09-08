@@ -6,7 +6,7 @@ if [ -z "$BRANCH" ]; then
     echo "Usage: $0 <remote_with_branch> [<initial_treeish>]"
     echo "Example: $0 env/861 my-initial-tree"
     exit 1
-fi    
+fi
 
 
 BASE_TREE="${2:-test-initial-tree}"
