@@ -1,8 +1,15 @@
 #!/bin/bash
 
+# Allow re-initialization
+case " $@ " in
+  *" --re-init "*)
+    echo "Re-initializing..."
+    git remote remove epc
+    ;;
+esac
+
+# Verify not already configured
 if git config --get remote.epc.url >/dev/null ; then
-    # NOTE: This action can be undone with the following command:
-    #         git remote remove epc
     echo "This initialization script can only be run once."
     echo "Invoke the other scripts individually to play around."
     echo ""
