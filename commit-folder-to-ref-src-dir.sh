@@ -60,6 +60,6 @@ COMMIT_HASH=$(git commit-tree $TREE_HASH -p $PREV_SHA -m "Programmatically gener
 unset GIT_INDEX_FILE
 rm -f $TEMP_INDEX_FILE
 
-git update-ref $GIT_REF $COMMIT_HASH $PREV_SHA || exit 1
+git update-ref $GIT_REF $COMMIT_HASH $PREV_SHA -m "replace src/ folder" || exit 1
 
 git show --stat $COMMIT_HASH
