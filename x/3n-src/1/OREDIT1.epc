@@ -1,0 +1,428 @@
+OREDIT1 ; ; ;2026-02-01 15:09:25;11.8;6t23JjdRTFQ1qUkfuIW9ISTtGAsKzdiWD2U0SrZWPtA=;Copyright 2026 Epic Systems Corporation
+	; Copyright (C) Epic Systems Corporation 2001-2024
+	;*********************************************************************
+	; TITLE:   OREDIT1
+	; PURPOSE: Log Addendum
+	; AUTHOR:  Jeff Weier
+	; REVISION HISTORY:
+	; *KWH 04/24 2080973 - Update supply usage history in background process when filing addendum
+	; *BJB 07/24 2107817 - Add in-house inventory depletion trigger
+	; *QD  08/24 2111078 - Adding trigger to send Professional Billing Exchange documents
+	; *MSZ 09/24 2132398 - Update surgeons' recently performed procedures
+	; *DPU 11/24 2121253 - Update cost benchmark items when filing addendums
+	; *LVL 12/24 2159773 - Send explicit addendum flag when updating WAL
+	; *MSZ 01/25 2133547 - Call storePerformedProcedures in a background process
+	; *RB  03/25 2174729 - Switch to IsThinLog API
+	; *EAL 08/25 2229025 - Include Unified Procedure logs with thin logs
+	; *DNL 02/26 2259608 - Update provider case logs when addending ORL
+	;*********************************************************************
+	; make sure addendum can be filed
+check d check^OREDIT6 Q
+	;---------
+	; NAME:         flushBatchForSecureAddendum (PRIVATE)
+	; DESCRIPTION:  call to flush batch before addendum is filed.
+	; CALLED BY:    ACEPTWSManager.cls
+	; REVISIONS:
+	; *RB 11/21 808432 - Created
+flushBatchForSecureAddendum() ;
+	n bid
+	s bid=$$zBulkNxF() ; bid containing log edits
+	d:bid'="" FlushBatch^EAETBT1(bid)
+	q
+	;---------
+	; NAME:         fileGUI (PRIVATE)
+	; DESCRIPTION:  tag to be called from GUI to bypass checks
+	; KEYWORDS:     file, GUI
+	; REVISIONS:
+	;---------
+fileGUI n orlId,batchId,valstr,notcomp,infoary,user
+	s orlId=$$zBulkNxF("","",1)
+	s batchId=$$zBulkNxF("","",1)
+	s notcomp=$$zBulkNxF("","",1)
+	s valstr=$$zBulkNxF("","",1) ; infoary("MODIFIED"),infoary("UNIQHTMP")
+	s user=$$zBulkNxF("","",1)
+	s %=$$parseSt(valstr,.infoary)
+	i 'notcomp d svAddend(orlId,"",batchId,.infoary,user)
+	i infoary("UNIQHTMP")]"" d
+	. d %zRelTmpGlo(infoary("UNIQHTMP"))
+	. ;k ^ HTMP(infoary("UNIQHTMP"))
+	. k infoary("UNIQHTMP")
+	s %=$$zBulkDon()
+	Q
+	;---------
+	; NAME:         startTX (PRIVATE)
+	; DESCRIPTION:  called by start tx pp for all log entry tx's
+	;               if log is posted, turn on tracking for entire ORL database
+	; KEYWORDS:     start, TX
+	; PARAMETERS:
+	;  orlId (I,REQ)
+	;---------
+startTX(orlId) s %=$$trkALL("ORL",orlId)
+	Q
+	;---------
+	; NAME:         trackINI (PRIVATE)
+	; DESCRIPTION:
+	; KEYWORDS:     track, INI
+	; ASSUMES: zTF
+	;---------
+trackINI n ini
+	f ini="ORL","PCK","EPT","HQA","ORM" d %zTxETdb(ini,1) s zTF("%ET",ini,1)=1
+	Q
+	;---------
+	; NAME:         trkALL (PRIVATE)
+	; DESCRIPTION:  track all changes
+	; KEYWORDS:     trk, ALL
+	; PARAMETERS:
+	;  ini (I,REQ)
+	;  id (I,REQ)
+	; REVISION HISTORY:
+	;---------
+trkALL(ini,id) n orlId
+	i ini="ORL" s orlId=id i 1
+	e  d
+	. i ini="PCK" s orlId=$$zgetnp("PCK",id,40,1,99999) Q  ;PCK-40
+	. i ini="ORM" s orlId=$$getn("ORM",id,1,"50;1")  ;ORM-50
+	Q:orlId="" ""
+	Q:$$getn("ORL",orlId,1,"412;24")'=2 ""  ;ORL-510
+	d trackINI
+	Q 1
+	;---------
+	; NAME:         stPckTX (PRIVATE)
+	; DESCRIPTION:  called by start tx pp for drugs transaction
+	; KEYWORDS:     st, Pck, TX
+	; DECLARES: pckId
+	; PARAMETERS:
+	;  orlId (I,REQ)
+	;  pckId (I,REQ)
+	;---------
+stPckTX(orlId,pckId) ;
+	i $$getn("ORL",orlId,1,"412;24")=2 d  ;ORL-510
+	. d %zTxETdb("PCK",1)
+	Q
+	;---------
+	; NAME:  svAddend       (INTERNAL)
+	; DESCRIPTION:  Save the addendum
+	; KEYWORDS:     save, addendum
+	; CALLED BY:  fileGUI,check^OREDIT6
+	; PARAMETERS:
+	;   orlId (I,REQ) - Log ID
+	;  loc (I,OPT) - Location of the log
+	;  batchId (I,REQ) - ID of the Chronicles batch
+	;  infoary (I,REQ) - Information Array from standard code
+	;  user (I,OPT) - the user filing the addendum
+	; ASSUMES:
+	; SIDE EFFECTS:
+	; create an addendum record
+	; FinalizeAuditBatch programming point
+	; REVISIONS:
+	;  *QD  08/24 2111078 Adding trigger to send Professional Billing Exchange documents
+	;  *RB  03/25 2174729 - Switch to IsThinLog API
+	;  *EAL 08/25 2229025 - Include Unified Procedure logs with thin logs
+	;  *DNL 02/26 2259608 - update provider case logs when saving addendums
+	;---------
+svAddend(orlId,loc,batchId,infoary,user) n INI,BKG,UID,OK,oadId,orlNam,cnt,tw,ary,eptid
+	n filePP,aftPPary,ppcnt ;
+	s:loc="" loc=$$getn("ORL",orlId,1,"412;21")  ;ORL-501
+	s filePP=$$getPP(53247,loc)
+	i filePP]"" X ("s %="_filePP)
+	;
+	i user="" d
+	. s user=$$zgUserID()
+	;
+	s UID=$$getidout(user,"EMP")
+	s INI="OAD",BKG=1
+	d ^EAINISET("OAD",.OK,1,1)
+	i 'OK d relAddendumGlo(orlId) Q   ; should return error message.  cant if this is called as pp
+	s oadId=$$STAR^EANEWID(1)
+	i oadId="" d relAddendumGlo(orlId) Q
+	s orlNam=$$znam("ORL",orlId)
+	d ^EAINSRT(oadId,orlNam,"","",+$H)
+	s %=$$insrti(40,$$getidout(user,"EMP"),"","","",oadId,99999,"OAD")
+	s %=$$insrti(50,+$H,"","","",oadId,99999,"OAD")
+	s %=$$zputnp("OAD",oadId,60,1,99999,$p($H,",",2))  ;OAD-60
+	s %=$$insrti(70,orlId,"","","",oadId,99999,"OAD")
+	d addendum(orlId,oadId,batchId)
+	d relAddendumGlo(orlId)
+	s %=$$zunlock("OAD",oadId)
+	s cnt=$$getiC("ORL",orlId,170,0,99999,.tw)
+	s ary(0)=cnt+1
+	s ary(cnt+1)=oadId
+	s %=$$insrti(170,.ary,3,"","",orlId,99999,"ORL",tw)
+	;
+	s %=$$insrti(30499,+$h,"","","",orlId,99999,"ORL")
+	;
+	d build^ORLPOST3(orlId,loc)
+	;
+	s infoary("SKIPINVASIVE")=1  ;skip invasive billing on log post.
+	s %=$$sndchrgs^OR2CHARG1(orlId,.infoary)
+	;programming point
+	s %=$$getPPTag(53248,loc,"","","",.aftPPary,1)
+	i aftPPary]"" f ppcnt=1:1:aftPPary X ("s %="_aftPPary(ppcnt))
+	i '($$IsThinLog(orlId)!$$IsUnifiedProcedureLog(orlId)) d callEpisodeAPI^ORHSB1(orlId) ;Send updates to billing for autocreating episodes
+	;
+	;  rebuild html summary
+	d synchsurg^ORCSUTL1("ORL",orlId)
+	; sync EPT items
+	d UpdateSyncItems^ORLPOST1(orlId)
+	s %=$$SurgPat(orlId,.eptid)         ;update ChartSync items at log addendum
+	d pteptitm^ORCPP8("ORL",orlId,eptid,1,1)
+	d PBxPushTrigger^CSCPBXAPI(eptid,$$SurgeryDAT(orlId,eptid)) ;Trigger to send Professional Billing Exchange document
+	;rebuild surgical history of the patient
+	d sendUpdTask^ORLPOST5(orlId,"",user,1,1)
+	d SetChrgFlag^ORCHGUTIL2(orlId,loc)
+	d CheckIBrules^ORINBSK6(orlId,loc,2,3)    ;source - log / action - addendum
+	d checkLatexFromCaseLog^ORLPP2("ORL",orlId)
+	s %=$$RecordSurgChartUpdate(orlId)
+	s %=$$credpclUpdateFromSource($$credpclTypeOpTime(),orlId,"","","",1)
+	d log^ORAUDIT(orlId,14,"","",$$getidout(user,"EMP"))
+	Q
+	;---------
+	; NAME:         relAddendumGlo (PUBLIC)
+	; DESCRIPTION:  release temporary global used for populating OAD during addendum
+	; PARAMETERS:
+	;  orlid (I,REQ)- ORL ID for which the addendum is taking place
+	;---------
+relAddendumGlo(orlid) ;
+	i %EA("OR_EDIT_ADDENDUM",orlid)="" Q
+	d %zRelTmpGlo(%EA("OR_EDIT_ADDENDUM",orlid))
+	Q
+	;---------
+	; NAME:         delEdInf (PRIVATE)
+	; DESCRIPTION:
+	; KEYWORDS:     del, Ed, Inf
+	; ASSUMES: %etGlo
+	; PARAMETERS:
+	;  bid (I,REQ)
+	; DECLARES: bid
+	;---------
+delEdInf(bid) Q
+	;---------
+	; NAME:         addendum (PRIVATE)
+	; DESCRIPTION:  files changes to the addendum and runs other addendum-specific actions
+	; KEYWORDS:     addendum
+	; PARAMETERS:
+	;  orlID   (I,REQ)- log ID on which the addendum is being created
+	;  oadId   (I,REQ)- addendum (OAD) record ID
+	;  batchID (I,REQ)- batch ID of the current user's process
+	; REVISION HISTORY:
+	; *KWH 04/24 2080973 - Update supply usage history in background process
+	; *BJB 07/24 2107817 - Add in-house inventory depletion trigger
+	; *MSZ 09/24 2132398 - Update surgeons' recently performed procedures
+	; *DPU 11/24 2121253 - Update cost benchmark items when filing addendums
+	; *LVL 12/24 2159773 - Send explicit addendum flag when updating WAL
+	; *MSZ 01/25 2133547 - Call storePerformedProcedures in a background process
+	; *RB  03/25 2174729 - Switch to IsThinLog API
+	; *EAL 08/25 2229025 - Include Unified Procedure logs with thin logs
+	;---------
+addendum(orlID,oadId,batchID) n oldValue,newValue,line,item,ini,id,addendumGlo,instant,firstInstant,comment,tw,eptID,eptDAT
+	n delim
+	s delim=$c(9)
+	i batchID="" s batchID=$$zCurBatch()
+	s addendumGlo=%EA("OR_EDIT_ADDENDUM",orlID)
+	;
+	f  s ini=$o(@addendumGlo@(ini)) Q:ini=""  d
+	. f  s id=$o(@addendumGlo@(ini,id)) Q:id=""  d
+	. . f  s item=$o(@addendumGlo@(ini,id,item)) Q:item=""  d
+	. . . k tw
+	. . . f  s line=$o(@addendumGlo@(ini,id,item,line)) Q:line=""  d
+	. . . . s firstInstant=1,comment=""
+	. . . . f  s instant=$o(@addendumGlo@(ini,id,item,line,instant)) Q:instant=""  d
+	. . . . . i firstInstant=1 s oldValue=$p(@addendumGlo@(ini,id,item,line,instant),delim,1) s firstInstant=""
+	. . . . . s newValue=$p(@addendumGlo@(ini,id,item,line,instant),delim,2)
+	. . . . i newValue=oldValue Q   ;only file the first old value and the last new value for each line, and don't file anything if it was changed and changed back
+	. . . . i line>0 s comment=$$gtCmt(ini,id,item,.tw,line)
+	. . . . d insLine(oadId,ini,item,line,oldValue,newValue,comment,id)
+	;
+	d:('$$getn("ORL",orlID,1,"40;48")) updImps^OREDIT5(orlID) ;update implant info for old non-navigator logs
+	s %=$$ortrig("OR_LOG_ADDENDUM",orlID,"")  ;Add interface trigger event - OR_LOG_ADDENDUM
+	s %=$$triginv(orlID,"Addendum","",1)      ;Call the interface trigger after saving picklist and implants.
+	d DepleteSupplyBalancesInHouse^ORDEPLETION4(orlID,"ORL","Addendum")
+	d submitImplantsForLog^ORLIR(orlID)
+	;Run order create/cancel/complete logic during log addendum
+	s %=$$Case2Study^HILSTUDY1("ORL",orlID,"","","",1,1)
+	d storePTAdata^ORPTASAVE(orlID,"",1) ;Update procedure time averaging information on addendum
+	d saveRecoveryTime^ORAVGRT(orlID,1) ;Update recovery time averaging information on addendum
+	s %=$$zeqBkgShort("d storePerformedProcedures^ORRECENTORP("_$$zSafeParam(orlID)_")") ; Update surgeons' recently performed procedures
+	d doCostBenchmarkLogPostJob^ORCOSTVARIANCE(orlID)
+	s %=$$zeqBkgLong("d doLogPostJob^ORSUPUSAGEHIST("_orlID_")")
+	s %=$$SurgeryDAT(orlID,.eptID,.eptDAT)   ;File final anesthesia type to log
+	s %=$$FileFinalANTypeToLog^ANCLOSEENC4(eptID,eptDAT,"","","ENCOUNTER","",1)
+	;
+	i '($$IsThinLog(orlID)!$$IsUnifiedProcedureLog(orlID)) d cosmosSurgeryTrigger^COSTRIGGER2(orlID,eptID,eptDAT)
+	d caseStatusChanged^ORWAL3(orlID,"","","",1)
+	Q
+	;---------
+	; NAME:         oneRec (PRIVATE)
+	; DESCRIPTION: update one record.
+	; DECLARES: INI,ID,DAT,conn,bId,tw,relid
+	; ASSUMES: oadId
+	;---------
+oneRec(INI,ID,DAT,conn,bId,tw,relid) Q
+	;---------
+	; NAME:         ormdelRec (PRIVATE)
+	; DESCRIPTION:  Handles Addendum of a deleted ORM record
+	; KEYWORDS:     deleted, ORM, addendum
+	; CALLED BY:    Handle
+	; PARAMETERS:
+	;  oadid (I,REQ,DEF:"") - Addendum record (OAD) ID
+	;  id (I,REQ,DEF:"")    - ID of the record whose data was changed
+	;  tw                   - twrguc array
+	; DECLARES: oadid,id,tw
+	;---------
+ormdelRec(oadid,id,tw) Q
+	;---------
+	; NAME:         UseHandler (PRIVATE)
+	; DESCRIPTION:  Performs special handling of edit trial for some
+	;               items. Returns 1 if special handling has been
+	;               performed
+	; KEYWORDS:     handler, edit, trail
+	; CALLED BY:    oneRec
+	; PARAMETERS:
+	;  oadid (I,REQ,DEF:"") - Addendum record (OAD) ID
+	;  ini (I,REQ,DEF:"")   - INI of the record whose data was changed
+	;  id (I,REQ,DEF:"")    - ID of the record whose data was changed
+	;  itm (I,REQ,DEF:"")   - Item in the record whose data was changed
+	;  dat (I,REQ,DEF:"")   - DAT of the record whose data was changed
+	;  tw (I,OPT,DEF:"")    - twrguc array
+	;  relid (I,OPT,DEF:"") - Parent ID associated with the current
+	;                         record
+	;  infoary (IO,OPT,DEF:"") - Cache array for storing random data
+	; DECLARES: oadid,ini,id,itm,dat,tw,relid,infoary
+	; RETURNS:      1 - If this has been handled here. Calling routine
+	;                   will not perform regular audit trail
+	;               0 - No action (edit trail as usual)
+	;---------
+UseHandler(oadid,ini,id,itm,dat,tw,relid,infoary) Q 0
+	;---------
+	; NAME:         insLine (PRIVATE)
+	; DESCRIPTION:  insert a line into addendum edit trail
+	; KEYWORDS:     ins, Line
+	; PARAMETERS:
+	;  id (I,REQ)
+	;  INI (I,REQ)
+	;  item (I,REQ)
+	;  line (I,REQ)
+	;  oldval (I,REQ)
+	;  newval (I,REQ)
+	;  comment (I,REQ)
+	;  recId (I,REQ)
+	;---------
+insLine(id,INI,item,line,oldval,newval,comment,recId) n bl,max,i
+	i $$secItm(item),line>0 d
+	. s oldval=$$cnvSec(oldval),newval=$$cnvSec(newval)
+	s bl(0)=$$zgetblu("OAD",id,100,0)
+	s max=$$zRecDataGetRelGrpLineCount("OAD",id,100,99999)+1
+	f i=1:1:7 s bl(0)=$$zputpcu(bl(0),i,max)
+	s %=$$zputblu("OAD",id,100,0,99999,bl(0))
+	s bl(max)=$$zputpcu(bl(max),1,INI)
+	s bl(max)=$$zputpcu(bl(max),2,item)
+	s bl(max)=$$zputpcu(bl(max),3,line)
+	s bl(max)=$$zputpcu(bl(max),4,oldval)
+	s bl(max)=$$zputpcu(bl(max),5,newval)
+	s bl(max)=$$zputpcu(bl(max),6,comment)
+	s bl(max)=$$zputpcu(bl(max),7,recId)
+	s %=$$zputblu("OAD",id,100,max,99999,bl(max))
+	Q
+	;---------
+	; NAME:         secItm (PRIVATE)
+	; DESCRIPTION:  returns true if this item represents number of seconds
+	; KEYWORDS:     sec, Itm
+	; PARAMETERS:
+	;  x (I,REQ)
+	;---------
+secItm(x) i (x=1065)!(x=1165)!(x=1265) Q 1
+	i (x=1085)!(x=1185)!(x=1285) Q 1
+	i (x=665)!(x=617)!(x=640)!(x=690)!(x=138)!(x=148)!(x=825) Q 1
+	Q ""
+	;---------
+	; NAME:         gtCmt (PRIVATE)
+	; DESCRIPTION:  return record name or category title of superitem if an item in a related group
+	; KEYWORDS:     gt, Cmt
+	; PARAMETERS:
+	;  ini (I,REQ)
+	;  id (I,REQ)
+	;  itm (I,REQ)
+	;  tw (I,REQ)
+	;  ln (I,REQ)
+	;---------
+gtCmt(ini,id,itm,tw,ln) n cmt,si,twr
+	s twr=tw(ini,itm)
+	s:twr="" (twr,tw(ini,itm))=$$zgetTWR(ini,itm)
+	i $p(twr,",",3)'="R" Q ""
+	s si=$p($p(twr,",",15),";",1)
+	i si="" Q ""
+	s cmt=$$geti(ini,id,si,ln,99999)
+	i cmt]"" s cmt=$$getItm(cmt,si,ini,1,1,"",1)
+	Q cmt
+	;---------
+	; NAME:         cnvSec (PRIVATE)
+	; DESCRIPTION:  convert seconds into readable format
+	; KEYWORDS:     cnv, Sec
+	; PARAMETERS:
+	;  val (I,REQ)
+	;---------
+cnvSec(val) n str,min,hour,sec
+	i val="" Q ""
+	s min=val\60,hour=min\60
+	s hour=hour#60,min=min#60,sec=val#60
+	i hour>0 s str=$$yy004(hour)   ;hour_" Hr"
+	i min>0 s:str]"" str=str_" " s str=str_$$yy005(min)   ;min_" Min"
+	i sec>0 s:str]"" str=str_" " s str=str_$$yy006(sec)   ;sec_" Sec"
+	Q str
+	;---------
+	; NAME:         endBAL (PRIVATE)
+	; DESCRIPTION:
+	; KEYWORDS:     end, BAL
+	;---------
+endBAL Q
+	;---------
+	; NAME:         endIMP (PRIVATE)
+	; DESCRIPTION:
+	; KEYWORDS:     end, IMP
+	;---------
+endIMP Q
+	;---------
+	; NAME:         endSUP (PRIVATE)
+	; DESCRIPTION:
+	; KEYWORDS:     end, SUP
+	;---------
+endSUP Q
+	;---------
+	; NAME:         endSER (PRIVATE)
+	; DESCRIPTION:
+	; KEYWORDS:     end, SER
+	;---------
+endSER Q
+	;---------
+	; NAME:         endOCT (PRIVATE)
+	; DESCRIPTION:  use before/after tags for SER admin can be extended to other
+	;               admin where OCT is used
+	; KEYWORDS:     end, OCT
+	;---------
+endOCT Q
+	;---------
+	; NAME:         TxETIsId (PRIVATE)
+	; DESCRIPTION:  check if id exists in edit trail
+	;               to etGlo
+	; KEYWORDS:     Tx, ETIs, Id
+	; DECLARES: conn
+	; ASSUMES: %etGlo
+	; PARAMETERS:
+	;  conn (I,REQ)
+	;  bid (I,REQ)
+	;  ini (I,REQ)
+	;  id (I,REQ)
+	; DECLARES: conn,bid,ini,id
+	;---------
+TxETIsId(conn,bid,ini,id) Q ""
+	;
+	;#STR#004#{{0}} Hr
+	;  #CMT#004#@Context@Short for "hours" as part of a time display function.
+	;  #CMT#004#{0} - Number of hours@
+	;#STR#005#{{0}} Min
+	;  #CMT#005#@Context@Minutes, as part of a time display function.
+	;  #CMT#005#{0} - Number of minutes.@
+	;#STR#006#{{0}} Sec
+	;  #CMT#006#@Context@Seconds, as part of a time display function.
+	;  #CMT#006#{0} - Number of seconds.@
+	Q  ;;#eor#

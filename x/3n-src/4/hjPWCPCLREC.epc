@@ -1,0 +1,1293 @@
+hjPWCPCLREC ; ; ;2026-03-05 10:08:04;11.8;/zal3d1oET5eYoZeBxtAuE5ZL5k4V3RaopQsgR48kDU=;Copyright 2026 Epic Systems Corporation
+	q
+	;*********************************************************************
+	; PURPOSE:  Unit tests for searching and updating case logs
+	; AUTHOR:   Daniel Leatherwood
+	; UNDER TEST: PWCPCLREC, PWCPCLRW, PLIBWPCLREC, PWCPCLLOADCODES, HULIBPCLPWC, ORLIBPCL, HULIBPCLJED, HULIBPCLDEFS
+	; REVISIONS:
+	;  *DNL 01/26 2259608 Created
+	;  *DNL 02/26 2268902 - Add tests for handleSourcePurged and handlePatientDeletion
+	;*********************************************************************
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^hjPWCPCLRECEXPENSIVE*
+	; DESCRIPTION:  Sets up mocking for the routine.
+	; PARAMETERS:
+	;  mockObject (IO,REQ) - Object containing data on which tags to allow,
+	;                        mock, stub, and spy.
+	; RETURNS:      1 if successful. 0 on failure.
+	; REVISIONS:
+	;  *DNL 01/26 2259608 Created
+	;  *DNL 02/26 2268902 - Stub (%)zIDDelSkipItemForNetbackClear
+	;---------
+installMocks(mockObject) ;
+	s %=$$InstallCHRMocks^evEDBMock(.mockObject) ;Install default mock settings
+	d %zzevUTSetGlobalModeStrict(.mockObject)
+	;
+	s %=$$zevUTMockCall(.mockObject,"main^EAKILLCT","myDeleteContact^hjPWCPCLREC")
+	;
+	; Mock billing code APIs
+	s %=$$zevUTMockCall(.mockObject,"getHARCPTCodes^KHUAPICODING1","mockGetHARCPTCodes^hjPWCPCLREC")
+	s %=$$zevUTMockCall(.mockObject,"NextCPT^KEUHADPHX5","mockNextCPT^hjPWCPCLREC")
+	s %=$$zevUTMockCall(.mockObject,"NextCharge^KEUHADPHX5","mockNextCharge^hjPWCPCLREC")
+	s %=$$zevUTMockCall(.mockObject,"credpclPendGetGlo","getMyMockGlo^hjPWCPCLREC")
+	s %=$$zevUTMockCall(.mockObject,"credpclCompletionGlo","getCompletionMockGlo^hjPWCPCLREC")
+	;
+	s %=$$zevUTStubCall(.mockObject,"SurgPeriShrd",1,1)
+	s %=$$zevUTAllowCall(.mockObject,"SurgAdmDAT")
+	s %=$$zevUTAllowCall(.mockObject,"SurgPeriDAT")
+	s %=$$zevUTAllowCall(.mockObject,"getCaseLogPatDAT")
+	s %=$$zevUTAllowCall(.mockObject,"surgloc")
+	s %=$$zevUTStubCall(.mockObject,"IsProcedurePlanCase","",0)
+	s %=$$zevUTAllowCall(.mockObject,"SurgeryDAT")
+	s %=$$zevUTAllowCall(.mockObject,"getCaseLogLocation")
+	s %=$$zevUTAllowCall(.mockObject,"DisplayName")
+	s %=$$zevUTAllowCall(.mockObject,"isCptFormat^COSLOADBILLINGDATA")
+	s %=$$zevUTAllowCall(.mockObject,"isOhipFormat^COSLOADBILLINGDATA")
+	s %=$$zevUTAllowCall(.mockObject,"orcosCodeSetCpt")
+	s %=$$zevUTAllowCall(.mockObject,"credpclCodeTypeCpt")
+	s %=$$zevUTAllowCall(.mockObject,"credpclCodeTypeOhip")
+	s %=$$zevUTAllowCall(.mockObject,"credpclCodeTypeToOrcos")
+	s %=$$zevUTAllowCall(.mockObject,"isAlphaNumeric")
+	s %=$$zevUTAllowCall(.mockObject,"orcosIsOhipFormat")
+	s %=$$zevUTAllowCall(.mockObject,"in")
+	s %=$$zevUTAllowCall(.mockObject,"orcosIsSurgicalCode")
+	s %=$$zevUTAllowCall(.mockObject,"orcosIsSurgicalCodeCpt")
+	s %=$$zevUTAllowCall(.mockObject,"SurgeryHARs")
+	s %=$$zevUTMockCall(.mockObject,"GetProcCodes","mockGetProcCodes^hjPWCPCLREC")
+	s %=$$zevUTAllowCall(.mockObject,"SurgDTE")
+	s %=$$zevUTAllowCall(.mockObject,"SurgPat")
+	s %=$$zevUTAllowCall(.mockObject,"getCSN")
+	s %=$$zevUTAllowCall(.mockObject,"itemTrunc")
+	s %=$$zevUTStubCall(.mockObject,"isHBHAR","",1)
+	s %=$$zevUTStubCall(.mockObject,"isHARActive","",0)
+	s %=$$zevUTStubCall(.mockObject,"isHARClosed","",1)
+	s %=$$zevUTStubCall(.mockObject,"isResidentialRecurHAR","",0)
+	s %=$$zevUTStubCall(.mockObject,"%zIDDelSkipItemForNetbackClear","",1)
+	s %=$$zevUTAllowCall(.mockObject,"GetPrimaryDxIndex^LDXFILE4")
+	s %=$$zevUTAllowCall(.mockObject,"today")
+	s %=$$zevUTStubCall(.mockObject,"zFeatureIsSystemEnabled","",1)
+	s %=$$zevUTStubCall(.mockObject,"IsTestPat","",0)
+	q 1
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Mocked version of contact deletion that simply wipes out the data for that contact without deleting it.
+	; DECLARES:     CTNM,doSetup,%EdlPost,%EdlProt,%LogCDel,delRec,BKG,%EdlRec,%EdlSaveOV,KLB - unused parameters
+	;---------
+myDeleteContact(INI,ID,DAT,CTNM,doSetup,%EdlPost,%EdlProt,%LogCDel,delRec,BKG,%EdlRec,%EdlSaveOV,KLB) ;
+	i INI'="PCL" QUIT
+	;
+	d updatePclContactInfo^PWCPCLREC(ID,DAT,"")
+	d updatePclCodingInfo^PWCPCLREC(ID,DAT,"")
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Return a global we can use to stash data for this unit test.
+	; PARAMETERS:
+	;   subscript (I,REQ) - Subscript to append under the "hjPWCPCLREC" node of the test mock global.
+	; RETURNS:      Fully qualified global name used for accessing mock data.
+	;---------
+getMyMockGlo(subscript) ;
+	q $s(subscript="":$name(@($$zevUTGetMockGlo())@("hjPWCPCLREC")),1:$name(@($$zevUTGetMockGlo())@("hjPWCPCLREC",subscript)))
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Mock replacement for credpclCompletionGlo. Returns a test global subscript
+	;               so HADFLAG access stays within the mock framework.
+	; REVISIONS:
+	; *DNL 02/26 2268902 - created
+	;---------
+getCompletionMockGlo() ;
+	q $$getMyMockGlo("CompletedBuild")
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Returns the mock global reference used to store codes that are linked to specific CSNs.
+	;               Entries are structured as:
+	;               @mockGlo@(csn,svcDte,code,chargeInfo)=chargeIni^chargeId
+	; RETURNS:      Fully qualified global name for CSN code mock data.
+	;---------
+getCsnCodesMockGlo() ;
+	q $$getMyMockGlo("CSNCodes")
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Returns the mock global reference used to store codes that are linked to specific HARs.
+	;               Entries are structured to match the output of getHARCPTCodes^KHUAPICODING1:
+	;               @mockGlo@(harId,type,code)=<count of lines>
+	;               @mockGlo@(harId,type,code,n)=<data for line n>
+	;               @mockGlo@(harId,type,code,n,"htrList")=<comma-separated HTR IDs>
+	;               @mockGlo@(harId,type,code,n,"svcProv")=<service provider external ID>
+	;               @mockGlo@(harId,type,code,n,"svcDte")=<service date>
+	;               @mockGlo@(harId,type,code,n,"dataSrc")=<1 for HTR, 2 for HAR>
+	;               where type is typically "CPT" and n is the line number (1-based)
+	; RETURNS:      Fully qualified global name for HAR code mock data.
+	;---------
+getHarCodesMockGlo() ;
+	q $$getMyMockGlo("HARCodes")
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Returns the mock global reference used to store procedure codes for ORL records.
+	;               Entries are structured as:
+	;               @mockGlo@(ini,id,line,n)=<procedure code>
+	;               where line is the ORL 2000 line number and n is the line number (1-based).
+	; RETURNS:      Fully qualified global name for ORL procedure code mock data.
+	;---------
+getOrlCodesMockGlo() ;
+	q $$getMyMockGlo("OrlCodes")
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Mock implementation of getHARCPTCodes^KHUAPICODING1
+	; DECLARES:     outFormat,outMsg,dataSrc,inclRelatedInfo,addlInfoArray
+	;---------
+mockGetHARCPTCodes(harId,codesGlo,outFormat,outMsg,dataSrc,inclRelatedInfo,addlInfoArray) ;
+	n mockGlo
+	s mockGlo=$$getHarCodesMockGlo()
+	; Copy mock data if it exists for this HAR
+	m @codesGlo=@mockGlo@(harId)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Mock implementation of NextCPT^KEUHADPHX5
+	; RETURNS:      Next CPT code or empty string
+	; DECLARES:     nodeType,onlyFiled
+	;---------
+mockNextCPT(node,nodeType,svcDte,CPT,onlyFiled) ;
+	q $o(@($$getCsnCodesMockGlo())@(node,svcDte,CPT))
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Mock implementation of NextCharge^KEUHADPHX5
+	; PARAMETERS:
+	;   csn (I,REQ) - Contact serial number
+	;   csnType (I,REQ) - Type of CSN
+	;   svcDte (I,REQ) - Service date
+	;   code (I,REQ) - CPT code
+	;   chargeInfo (I,REQ) - Current charge info (for iteration)
+	;   fileOption (I,REQ) - Filing option
+	;   chargeIni (O,REQ) - Charge INI
+	;   chargeId (O,REQ) - Charge ID
+	; RETURNS:      Next charge info or empty string
+	; DECLARES:     chargeLine,lineData,eapId,nodeOnly,fileOption,nodeType
+	;---------
+mockNextCharge(csn,nodeType,svcDte,code,chargeInfo,fileOption,chargeIni,chargeId,chargeLine,lineData,eapId,nodeOnly) ;
+	n mockGlo,nextInfo
+	s mockGlo=$$getCsnCodesMockGlo()
+	s nextInfo=$o(@mockGlo@(csn,svcDte,code,chargeInfo))
+	i nextInfo="" s chargeIni="",chargeId="" q ""
+	s chargeIni=$p(@mockGlo@(csn,svcDte,code,nextInfo),"^",1)
+	s chargeId=$p(@mockGlo@(csn,svcDte,code,nextInfo),"^",2)
+	q nextInfo
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Mock implementation of GetProcCodes that returns configured codes for a given ORL and line.
+	; DECLARES:     panel,returnSource
+	;---------
+mockGetProcCodes(ini,id,panel,line,codeList,returnSource) ;
+	n mockGlo,codeNum
+	k codeList
+	s mockGlo=$$getOrlCodesMockGlo()
+	f  s codeNum=$o(@mockGlo@(ini,id,line,codeNum)) q:codeNum=""  d
+	. d %zzArrAppend(.codeList,@mockGlo@(ini,id,line,codeNum))
+	q 1
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^hjPWCPCLRECEXPENSIVE*
+	; DESCRIPTION:  Setup code that runs once before the test.
+	; RETURNS:      1 if successful. 0 on failure.
+	; REVISIONS:
+	;  *DNL 01/26 2259608 Created
+	;---------
+testRoutineSetup(message) ;
+	n lockedRecs,ini,id,caseLog1,caseLog2,order1,order2,providerA,providerB,providerC,patientX,contact1,contact2,contact3,orp1,orp2,eap1,result,date1,date2,expectedData,admissionCSN
+	n htr1,htr2,etr1,ucl1,har1,vals
+	; Set up initial data. Create two case logs. Provider A was the primary on case 1, Provider B was the primary on case 2, and provider C assisted on both.
+	; Then create two orders. One was performed by provider A, the other by provider C.
+	;
+	s date1=$$zdinISO("2026-01-20")
+	s date2=date1+1
+	;
+	; Create Provider A
+	s ini="SER"
+	s id=$$getidin("A",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"PROVIDER A") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",providerA=id
+	;
+	; Create Provider B
+	s id=$$getidin("B",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"PROVIDER B") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",providerB=id
+	;
+	; Create Provider C
+	s id=$$getidin("C",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"PROVIDER C") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",providerC=id
+	;
+	; Create Patient X
+	s ini="EPT"
+	s id=$$getidin("X",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"X, PATIENT",date1,"","",.result) s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",patientX=id
+	s contact1=result("DAT")
+	s contact2=$$zRecCreateContact(ini,id,date1)
+	s admissionCSN=$$geti("EPT",patientX,8,1,contact2)
+	s contact3=$$zRecCreateContact(ini,id,date2)
+	;
+	; Create Case Log 1 (ORL) - primary: Provider A, assistant: Provider C
+	s ini="ORL"
+	s id=$$getidin("1",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"CASE LOG 1") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",caseLog1=id
+	;
+	; Create Case Log 2 (ORL) - primary: Provider B, assistant: Provider C
+	s id=$$getidin("2",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"CASE LOG 2") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",caseLog2=id
+	;
+	; Create Order 1 (ORD) - performed by Provider A
+	s ini="ORD"
+	s id=$$getidin("1",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"ORDER 1") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",order1=id
+	;
+	; Create Order 2 (ORD) - performed by Provider C
+	s id=$$getidin("2",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"ORDER 2") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",order2=id
+	;
+	; Create ORP 1
+	s ini="ORP"
+	s id=$$getidin("1",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"ORP 1") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",orp1=id
+	;
+	; Create ORP 2
+	s id=$$getidin("2",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"ORP 2") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",orp2=id
+	;
+	; Create EAP 1
+	s ini="EAP"
+	s id=$$getidin("1",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"EAP 1") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",eap1=id
+	;
+	; Create placeholder billing records (not linked yet)
+	s ini="HTR"
+	s id=$$getidin("1",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"HTR 1") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",htr1=id
+	;
+	s id=$$getidin("2",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"HTR 2") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",htr2=id
+	;
+	s ini="ETR"
+	s id=$$getidin("1",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"ETR 1") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",etr1=id
+	;
+	s ini="UCL"
+	s id=$$getidin("1",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"UCL 1") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",ucl1=id
+	;
+	s ini="HAR"
+	s id=$$getidin("1",ini)
+	i '$$zRecCreateThisIDAndLock(ini,id,"HAR 1") s message="Failed to create "_ini_" "_id goto eotTestRoutineSetup
+	s lockedRecs(ini,id)="",har1=id
+	k vals
+	d %zzArrAppend(.vals,admissionCSN)
+	s %=$$insrti(105,.vals,"","","",har1,99999,"HAR")
+	;
+	d buildLog(caseLog1,providerA,providerC,patientX,contact1,orp1,"","",admissionCSN,.expectedData)
+	d buildLog(caseLog2,providerB,providerC,patientX,contact3,orp2,"","",admissionCSN,.expectedData)
+	;
+	s %=$$zevUTSaveSetupVariable($name(providerA))
+	s %=$$zevUTSaveSetupVariable($name(providerB))
+	s %=$$zevUTSaveSetupVariable($name(providerC))
+	s %=$$zevUTSaveSetupVariable($name(patientX))
+	s %=$$zevUTSaveSetupVariable($name(contact1))
+	s %=$$zevUTSaveSetupVariable($name(contact2))
+	s %=$$zevUTSaveSetupVariable($name(admissionCSN))
+	s %=$$zevUTSaveSetupVariable($name(contact3))
+	s %=$$zevUTSaveSetupVariable($name(date1))
+	s %=$$zevUTSaveSetupVariable($name(date2))
+	s %=$$zevUTSaveSetupVariable($name(caseLog1))
+	s %=$$zevUTSaveSetupVariable($name(caseLog2))
+	s %=$$zevUTSaveSetupVariable($name(order1))
+	s %=$$zevUTSaveSetupVariable($name(order2))
+	s %=$$zevUTSaveSetupVariable($name(orp1))
+	s %=$$zevUTSaveSetupVariable($name(orp2))
+	s %=$$zevUTSaveSetupVariable($name(eap1))
+	s %=$$zevUTSaveSetupVariable($name(htr1))
+	s %=$$zevUTSaveSetupVariable($name(htr2))
+	s %=$$zevUTSaveSetupVariable($name(etr1))
+	s %=$$zevUTSaveSetupVariable($name(ucl1))
+	s %=$$zevUTSaveSetupVariable($name(har1))
+	s %=$$zevUTSaveSetupVariable($name(expectedData))
+	;
+eotTestRoutineSetup ;
+	s ini="",id=""
+	f  s ini=$o(lockedRecs(ini)) q:ini=""  d
+	. f  s id=$o(lockedRecs(ini,id)) q:id=""  d
+	. . s %=$$zunlock(ini,id)
+	q message=""
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Builds a surgical case log
+	; PARAMETERS:
+	;   caseLogID (I,REQ) - store data to this ORL ID.
+	;   primaryProviderID (I,REQ) - SER ID of the primary surgeon.
+	;   assistantProviderID (I,REQ) - SER ID of the assistant surgeon.
+	;   patientID (I,REQ) - EPT ID of the patient undergoing surgery.
+	;   contactDAT (I,REQ) - Contact identifier (DAT) for the surgical event.
+	;   orpID (I,REQ) - ORP ID identifying the surgical procedure.
+	;   eafID (I,REQ) - EAF ID for the procedure location.
+	;   status (I,OPT,DEFAULT:5) - Surgery status category. Defaults to 5 (completed) if not provided.
+	;   admissionCSN (I,REQ) - CSN of the OR-linked admission.
+	;   expectedData (O,REQ) - Array of expected packed PCL entries used for validation or comparison.
+	;                          expectedData(caseLogID,n)=packed PCL line
+	;---------
+buildLog(caseLogID,primaryProviderID,assistantProviderID,patientID,contactDAT,orpID,eafID,status,admissionCSN,expectedData) ;
+	n date,vals,line,item,patientCSNs
+	s date=$$zDAT2DTE(contactDAT)
+	i status="" s status=5  ; default to completed
+	;
+	; 40: SURGERY DATE (Date, Sing)
+	; 50: PATIENT (NET-EPT, Sing)
+	; 501: LOCATION (NET-EAF, Sing)
+	; 510: STATUS (Cat, Sing)
+	; 2000: ALL PANELS - PROCEDURE (NET-ORP, Rel)
+	; 2023: ALL PANELS - ORDER ID (NET-ORD, Rel)
+	; 2040: ALL PANELS - PROC PANEL (Num, Rel)
+	; 2050: ALL PANELS - SURGEON (NET-SER, Rel)
+	; 2055: ALL PANELS - SURGEON ROLE (Cat, Rel)
+	; 2080: ALL PANELS - SURGEON PANEL (Num, Rel)
+	; 7800: PROCEDURE NOT PERFORMED (Cat, Sing)
+	;#GENERATE#
+	; Type: SAVE
+	; Tag: cdoBuildSurgicalCase
+	; INI: ORL
+	; Items:
+	; 40,50,501,510,2000,2023,2040,2050,2055,2080,7800
+	;#ENDGEN#
+	s vals(40)=date
+	s vals(50)=patientID
+	s vals(501)=eafID
+	s vals(510)=status
+	s line=1
+	s vals(2000,line)=$$getidout(orpID,"ORP")
+	s vals(2023,line)=""  ; No order associated yet
+	s vals(2040,line)=1  ; associate with panel 1
+	f item=2000,2023,2040 s vals(item,0)=line  ; set line 0
+	;
+	s line=1
+	s vals(2050,line)=$$getidout(primaryProviderID,"SER")
+	s vals(2055,line)=1  ; Primary Surgeon
+	s vals(2080,line)=1  ; associate with panel 1
+	s line=line+1
+	s vals(2050,line)=$$getidout(assistantProviderID,"SER")
+	s vals(2055,line)=2  ; Assistant Surgeon
+	s vals(2080,line)=1  ; associate with panel 1
+	f item=2050,2055,2080 s vals(item,0)=line  ; set line 0
+	;
+	d cdoBuildSurgicalCase(caseLogID,.vals)
+	;
+	; 30: CONTACT TYPE (Cat, Sing)
+	; 3000: CASE OR LOG ID (Str, Sing)
+	; 3020: OR LINKED ADMISSION CSN (CSN-EPT, Sing)
+	;#GENERATE#
+	; Type: SAVE
+	; Tag: cdoLinkEPTtoORL
+	; INI: EPT
+	; Items:
+	; 30,3000,3020
+	;#ENDGEN#
+	k vals
+	s vals(30)=51  ; Surgery Contact
+	s vals(3000)=caseLogID
+	s vals(3020)=admissionCSN
+	;
+	s patientCSNs=2_$c(2)_$$geti("EPT",patientID,8,1,contactDAT)_$c(2)_admissionCSN
+	s expectedData(caseLogID,0)=2
+	s expectedData(caseLogID,1)=$$credpclPackLine($$credpclTypeOpTime(),$$getidout(primaryProviderID,"SER"),1,date,patientCSNs,"",$$getidout(orpID,"ORP"),"",$$credpclOpTimePackExtraInfo(1,1,1),"",caseLogID)
+	s expectedData(caseLogID,2)=$$credpclPackLine($$credpclTypeOpTime(),$$getidout(assistantProviderID,"SER"),2,date,patientCSNs,"",$$getidout(orpID,"ORP"),"",$$credpclOpTimePackExtraInfo(1,1,2),"",caseLogID)
+	;
+	d cdoLinkEPTtoORL(patientID,contactDAT,.vals)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	; PARAMETERS:
+	;  message (O,OPT) - Message with details on the test outcome.
+	; RETURNS:      1 if the test case passed, 0 if it failed.
+	; REVISIONS:
+	;  *DNL 01/26 2259608 Created
+	;---------
+test1(message,caseLog1,expectedData) ;;#testTag#Basic verification of setup data
+	n packedData,expectedDataForLog
+	d %zcredpclGetInfo($$credpclTypeOpTime(),caseLog1,"",.packedData)
+	m expectedDataForLog=expectedData(caseLog1)
+	s %=$$zevUTAssertGraphsAreEqual(.packedData,.expectedDataForLog,.message,"Packed data does not match expected data.")
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	; PARAMETERS:
+	;  message (O,OPT) - Message with details on the test outcome.
+	; RETURNS:      1 if the test case passed, 0 if it failed.
+	; REVISIONS:
+	;  *DNL 01/26 2259608 Created
+	;---------
+test2(message,caseLog2,expectedData) ;;#testTag#verify data for surgical case 2
+	n packedData,expectedDataForLog
+	d %zcredpclGetInfo($$credpclTypeOpTime(),caseLog2,"",.packedData)
+	m expectedDataForLog=expectedData(caseLog2)
+	s %=$$zevUTAssertGraphsAreEqual(.packedData,.expectedDataForLog,.message,"Packed data does not match expected data.")
+	q message=""
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Compares two arrays of packed PCL lines and returns a formatted string indicating
+	;               the first detected difference. Uses PCL SI item list to identify the meaning of each
+	;               piece in the packed line.
+	; PARAMETERS:
+	;   arrPackedLines1 (I,REQ) - First array of packed PCL lines.
+	;                             arrPackedLines1(0)=number of lines
+	;                             arrPackedLines1(n)=packed line
+	;   arrPackedLines2 (I,REQ) - Second array of packed PCL lines.
+	;                             arrPackedLines2(n)=packed line
+	; RETURNS:      Formatted string showing the first difference between lines or an empty string if
+	;               all lines match.
+	;---------
+diffPackedLines(arrPackedLines1,arrPackedLines2) ;
+	n maxLine,line,diff
+	s maxLine=$$zMaxNum(arrPackedLines1(0),arrPackedLines2(0))
+	f line=1:1:maxLine d  q:diff'=""
+	. s diff=$$diffLimitedLinesSI(arrPackedLines1(line),arrPackedLines2(line),$$zgetSIItmLst("PCL",2))
+	q diff
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Compares two individual packed PCL lines piece by piece using the PCL SI item list.
+	;               Returns a formatted string describing the first difference found, or an empty string
+	;               if lines are identical. Blank control characters are treated as null.
+	; PARAMETERS:
+	;   line1 (I,REQ) - First packed line string.
+	;   line2 (I,REQ) - Second packed line string.
+	;   itemList (I,REQ) - Comma-delimited list of SI items for contextual labeling of each piece.
+	; RETURNS:      Description of first differing item and values, or an empty string if lines match.
+	;---------
+diffLimitedLinesSI(line1,line2,itemList) ;
+	n piece1,piece2,pcNum,diff,maxPiece
+	i line1=line2 QUIT ""  ; they match
+	;
+	; compare piece by piece. There are some benign differences that will be ignored, such as the difference between $c(1)_$c(2)_$c(1) and $c(1)_$c(1)
+	s maxPiece=$$zMaxNum($l(line1,$c(1)),$l(line2,$c(1)))
+	f pcNum=1:1:maxPiece d  q:diff'=""
+	. s piece1=$p(line1,$c(1),pcNum)
+	. s piece2=$p(line2,$c(1),pcNum)
+	. i piece1=$c(2) s piece1=""  ; treat as blank
+	. i piece2=$c(2) s piece2=""  ; treat as blank
+	. i piece1=piece2 q  ; they match
+	. s diff="Item "_$p(itemList,",",pcNum)_": '"_$$zEncCtl(piece1)_"' vs '"_$$zEncCtl(piece2)_"'"
+	q diff
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	;---------
+testSearch(message,providerA,providerB,providerC,caseLog1,caseLog2,date1) ;;#testTag# search results for providers
+	n matchingEntries,expectedEntries
+	k expectedEntries
+	s expectedEntries($$credpclTypeOpTime(),caseLog1,99999)=""
+	d searchProvider($$getidout(providerA,"SER"),.matchingEntries,date1)
+	s %=$$zevUTAssertGraphsAreEqual(.matchingEntries,.expectedEntries,.message,"Provider A results")
+	k expectedEntries
+	s expectedEntries($$credpclTypeOpTime(),caseLog2,99999)=""
+	d searchProvider($$getidout(providerB,"SER"),.matchingEntries,date1)
+	s %=$$zevUTAssertGraphsAreEqual(.matchingEntries,.expectedEntries,.message,"Provider B results")
+	k expectedEntries
+	s expectedEntries($$credpclTypeOpTime(),caseLog1,99999)=""
+	s expectedEntries($$credpclTypeOpTime(),caseLog2,99999)=""
+	d searchProvider($$getidout(providerC,"SER"),.matchingEntries,date1)
+	s %=$$zevUTAssertGraphsAreEqual(.matchingEntries,.expectedEntries,.message,"Provider C results")
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	;---------
+testPCLcreation(message,providerA,providerB,providerC,caseLog1,caseLog2,date1,date2,expectedData) ;;#testTag# create case logs
+	n error,foundPCLs,pcl1,pcl2,pcl3,siPCL2,foundPCLs2,expectedLine
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"updating case log 1")
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog2,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"updating case log 2")
+	;
+	s %=$$zevUTAssertAreEqual($$credpclNextDate($$getidout(providerA,"SER"),""),date1,.message,"provider A first date")
+	s %=$$zevUTAssertAreEqual($$credpclNextDate($$getidout(providerA,"SER"),date1),"",.message,"provider A second date")
+	s %=$$zevUTAssertAreEqual($$credpclNextDate($$getidout(providerB,"SER"),""),date2,.message,"provider B first date")
+	s %=$$zevUTAssertAreEqual($$credpclNextDate($$getidout(providerB,"SER"),date2),"",.message,"provider B second date")
+	s %=$$zevUTAssertAreEqual($$credpclNextDate($$getidout(providerC,"SER"),"",-1),date2,.message,"provider C first date")
+	s %=$$zevUTAssertAreEqual($$credpclNextDate($$getidout(providerC,"SER"),date2,-1),date1,.message,"provider C second date")
+	s %=$$zevUTAssertAreEqual($$credpclNextDate($$getidout(providerC,"SER"),date1,-1),"",.message,"provider C third date")
+	;
+	d getPclForProvider($$getidout(providerA,"SER"),.foundPCLs)
+	d getPclForProvider($$getidout(providerC,"SER"),.foundPCLs)
+	d getPclForProvider($$getidout(providerB,"SER"),.foundPCLs)
+	;
+	s %=$$zevUTAssertAreEqual(foundPCLs(0),4,.message,"total PCL contacts")
+	s pcl1=$p(foundPCLs(1),"|",3)
+	s pcl2=$p(foundPCLs(2),"|",3)
+	s pcl3=$p(foundPCLs(4),"|",3)
+	s %=$$zevUTAssertAreNotEqual(pcl1,pcl2,.message,"PCLs for case log 1 and 2 should be different: different providers")
+	s %=$$zevUTAssertAreEqual(pcl2,$p(foundPCLs(3),"|",3),.message,"PCLs for entries 2 and 3 should be the same: provider C case log 2")
+	s %=$$zevUTAssertAreNotEqual(pcl2,pcl3,.message,"PCLs for case log 2 and 3 should be different: different providers")
+	;
+	s siPCL2=$$zgetbll("PCL",pcl1,2,$p(foundPCLs(1),"|",4))
+	s %=$$zevUTAssertIsNull($$diffLimitedLinesSI(siPCL2,expectedData(caseLog1,1),$$zgetSIItmLst("PCL",2)),.message,"PCL 1 entry 1")
+	s siPCL2=$$zgetbll("PCL",pcl2,2,$p(foundPCLs(2),"|",4))
+	s %=$$zevUTAssertIsNull($$diffLimitedLinesSI(siPCL2,expectedData(caseLog1,2),$$zgetSIItmLst("PCL",2)),.message,"PCL 2 entry 1")
+	s siPCL2=$$zgetbll("PCL",pcl2,2,$p(foundPCLs(3),"|",4))
+	s %=$$zevUTAssertIsNull($$diffLimitedLinesSI(siPCL2,expectedData(caseLog2,2),$$zgetSIItmLst("PCL",2)),.message,"PCL 2 entry 2")
+	s siPCL2=$$zgetbll("PCL",pcl3,2,$p(foundPCLs(4),"|",4))
+	s %=$$zevUTAssertIsNull($$diffLimitedLinesSI(siPCL2,expectedData(caseLog2,1),$$zgetSIItmLst("PCL",2)),.message,"PCL 3 entry 1")
+	;
+	; Now, let's change the date on case log 2 to a date more than a month in the future. That should cause a new PCL to be created for provider B and C.
+	s %=$$insrti(40,date2+40,"","","",caseLog2,99999,"ORL")  ; change surgery date
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog2,"",.error)
+	;
+	d getPclForProvider($$getidout(providerA,"SER"),.foundPCLs2)
+	d getPclForProvider($$getidout(providerC,"SER"),.foundPCLs2)
+	d getPclForProvider($$getidout(providerB,"SER"),.foundPCLs2)
+	;
+	; provider 1's PCLs should be unchanged
+	s %=$$zevUTAssertAreEqual(foundPCLs2(1),foundPCLs(1),.message,"Data for provider A should be unchanged")
+	s siPCL2=$$zgetbll("PCL",pcl1,2,$p(foundPCLs2(1),"|",4))
+	s %=$$zevUTAssertIsNull($$diffLimitedLinesSI(siPCL2,expectedData(caseLog1,1),$$zgetSIItmLst("PCL",2)),.message,"PCL 1 entry 1")
+	;
+	s %=$$zevUTAssertAreEqual(foundPCLs2(2),foundPCLs(2),.message,"Data for provider C from first PCL should be unchanged")
+	s siPCL2=$$zgetbll("PCL",pcl2,2,$p(foundPCLs2(2),"|",4))
+	s %=$$zevUTAssertIsNull($$diffLimitedLinesSI(siPCL2,expectedData(caseLog1,2),$$zgetSIItmLst("PCL",2)),.message,"PCL 2 entry 1")
+	;
+	s %=$$zevUTAssertAreNotEqual($p(foundPCLs2(3),"|",3),$p(foundPCLs(3),"|",3),.message,"Provider C's second PCL should be new (different month)")
+	s siPCL2=$$zgetbll("PCL",pcl3,2,$p(foundPCLs2(4),"|",4))
+	s %=$$zevUTAssertIsNull(siPCL2,.message,"Provider B's initial PCL should have been erased: contact/record deletion is not supported in unit tests :(")
+	;
+	s siPCL2=$$zgetbll("PCL",pcl2,2,$p(foundPCLs2(3),"|",4))
+	s %=$$zevUTAssertIsNull(siPCL2,.message,"Provider C's second contact PCL should have been erased")
+	;
+	s expectedLine=expectedData(caseLog2,2)
+	s expectedLine=$$zputpcl(expectedLine,4,1,date2+40)  ; modify the expected date: that should be the only difference
+	s siPCL2=$$zgetbll("PCL",$p(foundPCLs2(3),"|",3),2,$p(foundPCLs2(3),"|",4))
+	; there SHOULD be a difference compared with the original expected data
+	s %=$$zevUTAssertIsNotNull($$diffLimitedLinesSI(siPCL2,expectedData(caseLog2,2),$$zgetSIItmLst("PCL",2)),.message,"PCL 2 entry 2")
+	; there should NOT be a difference compared with the updated expected data
+	s %=$$zevUTAssertIsNull($$diffLimitedLinesSI(siPCL2,expectedLine,$$zgetSIItmLst("PCL",2)),.message,"PCL 2 entry 2")
+	;
+	s expectedLine=expectedData(caseLog2,1)
+	s expectedLine=$$zputpcl(expectedLine,4,1,date2+40)
+	s siPCL2=$$zgetbll("PCL",$p(foundPCLs2(4),"|",3),2,$p(foundPCLs2(4),"|",4))
+	s %=$$zevUTAssertIsNull($$diffLimitedLinesSI(siPCL2,expectedLine,$$zgetSIItmLst("PCL",2)),.message,"PCL 3 entry 1")
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	;---------
+testCreateAndModify1(message,mockObject,caseLog1,providerA,orp2) ;;#testTag# create entries for case log 1, modify source, lock failure
+	n error,foundPCLs,pcl1,serExtID,vals
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"updating case log 1")
+	s serExtID=$$getidout(providerA,"SER")
+	d getPclForProvider(serExtID,.foundPCLs)
+	s pcl1=$p(foundPCLs(1),"|",3)
+	s vals(0)=1
+	s vals(1)=$$getidout(orp2,"ORP")
+	s %=$$insrti(2000,.vals,1,"","",caseLog1,99999,"ORL")  ; change the procedure to orp2
+	s %=$$zevUTStubCall(.mockObject,"zlock","pclID="_pcl1,0)  ; simulate lock failure to prevent update
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNotNull(error,.message,"attempt to update should fail")
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	;---------
+testCreateAndModify2(message,caseLog1,expectedData,providerA,providerC,orp2) ;;#testTag# create entries for case log 1, modify source, update
+	n error,foundPCLs,pcl1,serExtID,vals,expectedLine
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries")
+	s serExtID=$$getidout(providerA,"SER")
+	d getPclForProvider(serExtID,.foundPCLs)
+	d getPclForProvider($$getidout(providerC,"SER"),.foundPCLs)
+	s pcl1=$p(foundPCLs(1),"|",3)
+	s vals(0)=1
+	s vals(1)=$$getidout(orp2,"ORP")
+	s %=$$insrti(2000,.vals,1,"","",caseLog1,99999,"ORL")  ; change the procedure to orp2
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"update case log 1")
+	s expectedLine=expectedData(caseLog1,1)
+	s expectedLine=$$zputpcl(expectedLine,7,1,$$getidout(orp2,"ORP"))  ; modify the expected procedure: that should be the only difference
+	s %=$$zevUTAssertIsNull($$diffLimitedLinesSI($$zgetbll("PCL",pcl1,2,$p(foundPCLs(1),"|",4)),expectedLine,$$zgetSIItmLst("PCL",2)),.message,"PCL 1 entry 1 updated correctly")
+	s expectedLine=expectedData(caseLog1,2)
+	s expectedLine=$$zputpcl(expectedLine,7,1,$$getidout(orp2,"ORP"))  ; modify the expected procedure: that should be the only difference
+	s %=$$zevUTAssertIsNull($$diffLimitedLinesSI($$zgetbll("PCL",$p(foundPCLs(2),"|",3),2,$p(foundPCLs(2),"|",4)),expectedLine,$$zgetSIItmLst("PCL",2)),.message,"PCL 2 entry 1 updated correctly")
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	;---------
+testCreateAndModify3(message,caseLog1,expectedData,providerA,providerC) ;;#testTag# create entries for case log 1, modify source to an invalid date, update
+	n error,foundPCLs,pcl1,serExtID
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries")
+	s serExtID=$$getidout(providerA,"SER")
+	d getPclForProvider(serExtID,.foundPCLs)
+	d getPclForProvider($$getidout(providerC,"SER"),.foundPCLs)
+	s pcl1=$p(foundPCLs(1),"|",3)
+	s %=$$insrti(40,"INVALID DATE","","","",caseLog1,99999,"ORL")  ; change surgery date to invalid value
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNotNull(error,.message,"update case log 1")
+	s %=$$zevUTAssertIsNull($$diffLimitedLinesSI($$zgetbll("PCL",pcl1,2,$p(foundPCLs(1),"|",4)),expectedData(caseLog1,1),$$zgetSIItmLst("PCL",2)),.message,"PCL 1 entry 1 should not be updated")
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	;---------
+testTestPatient(message,mockObject,caseLog1,providerA,patientX) ;;#testTag# Verify we do not create entries for test patients.
+	n error,foundPCLs,serExtID
+	s %=$$zevUTStubCall(.mockObject,"IsTestPat","eptIntID="""_patientX_"""",1)  ; simulate test patient
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"updating case log 1")  ; currently, this is not considered an error: we just ignore this
+	s serExtID=$$getidout(providerA,"SER")
+	d getPclForProvider(serExtID,.foundPCLs)
+	s %=$$zevUTAssertIsTrue(foundPCLs(0)<1,.message,"should not create PCL entries for test patient")
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	;---------
+testBillingDirectLink(message,caseLog1,providerA,providerC,htr1,date1,patientX,contact2) ;;#testTag# billing codes with direct HTR->ORL link
+	n error,mockGlo,foundPCLs,pcl1,pcl2,siPCL2,code,codeType,isAmbiguous,hideThisLine
+	n harIDs,htrIDs,uclIDs,etrIDs,csn
+	;
+	; Set up mock billing data: HTR linked to caseLog1 with CPT code 12345
+	s mockGlo=$$getCsnCodesMockGlo()
+	;
+	; Link HTR to ORL via reverse index (simulates HTR-470 pointing to caseLog1)
+	s %=$$insrti(470,caseLog1,"","","",htr1,99999,"HTR")
+	s csn=$$geti("EPT",patientX,8,1,contact2)  ; get CSN from contact2: the admission CSN
+	;
+	; Mock HAR code data - empty for this test since we're testing direct HTR link
+	; (no HAR lookup needed)
+	;
+	; Create PCL entries
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries")
+	d updateProcedureCodes^PWCPCLREC(csn,date1,.error)
+	s %=$$zevUTAssertIsNull(error,.message,"load billing data")
+	;
+	; Get the PCL contacts
+	d getPclForProvider($$getidout(providerA,"SER"),.foundPCLs)
+	d getPclForProvider($$getidout(providerC,"SER"),.foundPCLs)
+	s %=$$zevUTAssertAreEqual(foundPCLs(0),2,.message,"should have 2 PCL contacts")
+	s pcl1=$p(foundPCLs(1),"|",3)
+	s pcl2=$p(foundPCLs(2),"|",3)
+	;
+	; Verify no billing codes yet (baseline)
+	s siPCL2=$$zgetbll("PCL",pcl1,2,$p(foundPCLs(1),"|",4))
+	d %zcredpclUnpackBillingInfo(siPCL2,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertIsNull(code,.message,"no code before billing search")
+	;
+	; Now add billing code to mock and trigger update
+	; Mock NextCPT to return code 12345 for this CSN/date
+	s @mockGlo@(csn,date1,"12345",1)="HTR^"_htr1
+	;
+	; Update PCL entries - should now pull billing codes
+	d updateProcedureCodes^PWCPCLREC(csn,date1,.error)
+	s %=$$zevUTAssertIsNull(error,.message,"update with billing codes 2")
+	;
+	; Check Provider A's entry
+	s siPCL2=$$zgetbll("PCL",pcl1,2,$p(foundPCLs(1),"|",4))
+	d %zcredpclUnpackLine(siPCL2,"","","","","","","","","","","","",.hideThisLine)
+	d %zcredpclUnpackBillingInfo(siPCL2,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertAreEqual(code,"12345",.message,"Provider A code")
+	s %=$$zevUTAssertAreEqual(codeType,$$credpclCodeTypeCpt(),.message,"Provider A code type is CPT")
+	s %=$$zevUTAssertAreEqual(isAmbiguous,0,.message,"Provider A code not ambiguous")
+	s %=$$zevUTAssertIsFalse(hideThisLine,.message,"Provider A line not hidden")
+	s %=$$zevUTAssertAreEqual(htrIDs(0),1,.message,"Provider A has 1 HTR")
+	s %=$$zevUTAssertAreEqual(htrIDs(1),htr1,.message,"Provider A HTR ID matches")
+	;
+	; Check Provider C's entry
+	s siPCL2=$$zgetbll("PCL",pcl2,2,$p(foundPCLs(2),"|",4))
+	d %zcredpclUnpackLine(siPCL2,"","","","","","","","","","","","",.hideThisLine)
+	d %zcredpclUnpackBillingInfo(siPCL2,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertAreEqual(code,"12345",.message,"Provider C code")
+	s %=$$zevUTAssertAreEqual(codeType,$$credpclCodeTypeCpt(),.message,"Provider C code type is CPT")
+	s %=$$zevUTAssertAreEqual(isAmbiguous,0,.message,"Provider C code not ambiguous")
+	s %=$$zevUTAssertIsFalse(hideThisLine,.message,"Provider C line not hidden")
+	s %=$$zevUTAssertAreEqual(htrIDs(0),1,.message,"Provider C has 1 HTR")
+	s %=$$zevUTAssertAreEqual(htrIDs(1),htr1,.message,"Provider C HTR ID matches")
+	;
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - created
+	;---------
+testBillingIndirectLink(message,caseLog1,providerA,providerC,htr1,date1,patientX,contact2,har1) ;;#testTag# billing codes with indirect provider link via HAR
+	n error,mockGlo,foundPCLs,pcl1,pcl2,siPCL2,code,codeType,isAmbiguous,hideThisLine
+	n harIDs,htrIDs,uclIDs,etrIDs,csn,serExtA
+	;
+	; Set up mock billing data: HTR with CPT code linked to providerA via HAR, but NOT directly to ORL
+	s mockGlo=$$getHarCodesMockGlo()
+	s csn=$$geti("EPT",patientX,8,1,contact2)  ; get CSN from contact2: the admission CSN
+	s serExtA=$$getidout(providerA,"SER")
+	;
+	; Mock HAR code data with provider link
+	; Structure: @mockGlo@(harId,type,code,n)=various fields
+	; @mockGlo@(harId,type,code,n,"svcProv")=provider
+	; @mockGlo@(harId,type,code,n,"svcDte")=service date
+	; @mockGlo@(harId,type,code,n,"dataSrc")=1 (HTR)
+	; @mockGlo@(harId,type,code,n,"htrList")=comma-separated HTR IDs
+	s @mockGlo@(har1)=1
+	s @mockGlo@(har1,"CPT")=1
+	s @mockGlo@(har1,"CPT","67890")=1
+	s @mockGlo@(har1,"CPT","67890",1)=""
+	s @mockGlo@(har1,"CPT","67890",1,"svcProv")=serExtA
+	s @mockGlo@(har1,"CPT","67890",1,"svcDte")=date1
+	s @mockGlo@(har1,"CPT","67890",1,"dataSrc")=1  ; 1 = HTR source
+	s @mockGlo@(har1,"CPT","67890",1,"htrList")=htr1
+	;
+	; Link the HTR to providerA (via item 110 - service provider)
+	s %=$$insrti(110,serExtA,"","","",htr1,99999,"HTR")
+	;
+	; Create PCL entries
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries")
+	;
+	; Update with billing codes
+	d updateProcedureCodes^PWCPCLREC(csn,date1,.error)
+	s %=$$zevUTAssertIsNull(error,.message,"load billing data via indirect link")
+	;
+	; Get the PCL contacts
+	d getPclForProvider(serExtA,.foundPCLs)
+	d getPclForProvider($$getidout(providerC,"SER"),.foundPCLs)
+	s %=$$zevUTAssertAreEqual(foundPCLs(0),2,.message,"should have 2 PCL contacts")
+	s pcl1=$p(foundPCLs(1),"|",3)
+	s pcl2=$p(foundPCLs(2),"|",3)
+	;
+	; Check Provider A's entry - should have code from HAR via provider link
+	s siPCL2=$$zgetbll("PCL",pcl1,2,$p(foundPCLs(1),"|",4))
+	d %zcredpclUnpackLine(siPCL2,"","","","","","","","","","","","",.hideThisLine)
+	d %zcredpclUnpackBillingInfo(siPCL2,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertAreEqual(code,"67890",.message,"Provider A code from HAR")
+	s %=$$zevUTAssertAreEqual(codeType,$$credpclCodeTypeCpt(),.message,"Provider A code type is CPT")
+	s %=$$zevUTAssertAreEqual(isAmbiguous,0,.message,"Provider A code not ambiguous")
+	s %=$$zevUTAssertIsFalse(hideThisLine,.message,"Provider A line not hidden")
+	s %=$$zevUTAssertAreEqual(htrIDs(0),1,.message,"Provider A has 1 HTR")
+	s %=$$zevUTAssertAreEqual(htrIDs(1),htr1,.message,"Provider A HTR ID matches")
+	s %=$$zevUTAssertIsTrue(harIDs(0)<1,.message,"Provider A's HAR does not link to the HAR. That is because the code was found in HTR, not HAR")
+	;
+	; Check Provider C's entry - should also have the code (assistant on same case)
+	s siPCL2=$$zgetbll("PCL",pcl2,2,$p(foundPCLs(2),"|",4))
+	d %zcredpclUnpackLine(siPCL2,"","","","","","","","","","","","",.hideThisLine)
+	d %zcredpclUnpackBillingInfo(siPCL2,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertAreEqual(code,"67890",.message,"Provider C code (assistant on same case)")
+	s %=$$zevUTAssertAreEqual(codeType,$$credpclCodeTypeCpt(),.message,"Provider C code type is CPT")
+	s %=$$zevUTAssertAreEqual(isAmbiguous,0,.message,"Provider C code not ambiguous")
+	s %=$$zevUTAssertIsFalse(hideThisLine,.message,"Provider C line not hidden")
+	s %=$$zevUTAssertAreEqual(htrIDs(0),1,.message,"Provider C has 1 HTR")
+	s %=$$zevUTAssertAreEqual(htrIDs(1),htr1,.message,"Provider C HTR ID matches")
+	;
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	;---------
+testBillingCSNIndirectLink(message,caseLog1,providerA,providerC,htr1,date1,patientX,contact2) ;;#testTag# billing codes with indirect provider link via CSN
+	n error,mockGlo,foundPCLs,pcl1,pcl2,siPCL2,code,codeType,isAmbiguous,hideThisLine
+	n harIDs,htrIDs,uclIDs,etrIDs,csn,serExtA
+	;
+	; Set up mock billing data: HTR with CPT code linked to providerA via service provider field,
+	; but NOT directly linked to ORL (no HTR-470 link)
+	s mockGlo=$$getCsnCodesMockGlo()
+	s csn=$$geti("EPT",patientX,8,1,contact2)  ; get CSN from contact2: the admission CSN
+	s serExtA=$$getidout(providerA,"SER")
+	;
+	; Link the HTR to providerA via service provider field (HTR-110)
+	s %=$$insrti(110,serExtA,"","","",htr1,99999,"HTR")
+	;
+	; Mock NextCPT to return code 54321 for this CSN/date
+	; This code is found via CSN search but HTR is NOT directly linked to ORL
+	s @mockGlo@(csn,date1,"54321",1)="HTR^"_htr1
+	;
+	; Create PCL entries
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries")
+	;
+	; Update with billing codes - should find code via CSN and match to providerA via service provider
+	d updateProcedureCodes^PWCPCLREC(csn,date1,.error)
+	s %=$$zevUTAssertIsNull(error,.message,"load billing data via CSN indirect link")
+	;
+	; Get the PCL contacts
+	d getPclForProvider(serExtA,.foundPCLs)
+	d getPclForProvider($$getidout(providerC,"SER"),.foundPCLs)
+	s %=$$zevUTAssertAreEqual(foundPCLs(0),2,.message,"should have 2 PCL contacts")
+	s pcl1=$p(foundPCLs(1),"|",3)
+	s pcl2=$p(foundPCLs(2),"|",3)
+	;
+	; Check Provider A's entry - should have code from HTR via provider link
+	s siPCL2=$$zgetbll("PCL",pcl1,2,$p(foundPCLs(1),"|",4))
+	d %zcredpclUnpackLine(siPCL2,"","","","","","","","","","","","",.hideThisLine)
+	d %zcredpclUnpackBillingInfo(siPCL2,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertAreEqual(code,"54321",.message,"Provider A code from CSN indirect link")
+	s %=$$zevUTAssertAreEqual(codeType,$$credpclCodeTypeCpt(),.message,"Provider A code type is CPT")
+	s %=$$zevUTAssertAreEqual(isAmbiguous,0,.message,"Provider A code not ambiguous")
+	s %=$$zevUTAssertIsFalse(hideThisLine,.message,"Provider A line not hidden")
+	s %=$$zevUTAssertAreEqual(htrIDs(0),1,.message,"Provider A has 1 HTR")
+	s %=$$zevUTAssertAreEqual(htrIDs(1),htr1,.message,"Provider A HTR ID matches")
+	;
+	; Check Provider C's entry - should also have the code (assistant on same case)
+	s siPCL2=$$zgetbll("PCL",pcl2,2,$p(foundPCLs(2),"|",4))
+	d %zcredpclUnpackLine(siPCL2,"","","","","","","","","","","","",.hideThisLine)
+	d %zcredpclUnpackBillingInfo(siPCL2,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertAreEqual(code,"54321",.message,"Provider C code (assistant on same case)")
+	s %=$$zevUTAssertAreEqual(codeType,$$credpclCodeTypeCpt(),.message,"Provider C code type is CPT")
+	s %=$$zevUTAssertAreEqual(isAmbiguous,0,.message,"Provider C code not ambiguous")
+	s %=$$zevUTAssertIsFalse(hideThisLine,.message,"Provider C line not hidden")
+	s %=$$zevUTAssertAreEqual(htrIDs(0),1,.message,"Provider C has 1 HTR")
+	s %=$$zevUTAssertAreEqual(htrIDs(1),htr1,.message,"Provider C HTR ID matches")
+	;
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	;---------
+testBillingOrlSourceCode(message,caseLog1,caseLog2,providerC,orp1,orp2,admissionCSN,date1,htr1) ;;#testTag# ORL source codes disambiguate billing codes for ambiguous providers
+	n arrPackedLines,serExtC,patientCSNs,mockGlo,code,codeType,isAmbiguous
+	n harIDs,htrIDs,uclIDs,etrIDs
+	;
+	s serExtC=$$getidout(providerC,"SER")
+	;
+	; Build two packed lines for providerC with two different ORL records on the same date.
+	; Both use admissionCSN so mapCSNsAndHARs adds it to searchCSNs regardless of SurgeryHARs output.
+	; This makes providerC ambiguous: billing links to the provider but not to either ORL directly.
+	s patientCSNs=1_$c(2)_admissionCSN
+	s arrPackedLines(0)=2
+	s arrPackedLines(1)=$$credpclPackLine($$credpclTypeOpTime(),serExtC,2,date1,patientCSNs,"",$$getidout(orp1,"ORP"),"",$$credpclOpTimePackExtraInfo(1,1,2),"",caseLog1)
+	s arrPackedLines(2)=$$credpclPackLine($$credpclTypeOpTime(),serExtC,2,date1,patientCSNs,"",$$getidout(orp2,"ORP"),"",$$credpclOpTimePackExtraInfo(1,1,2),"",caseLog2)
+	;
+	; Mock GetProcCodes to return "12345" for caseLog1 ORL line 1 only. caseLog2 returns nothing.
+	s mockGlo=$$getOrlCodesMockGlo()
+	s @mockGlo@("ORL",caseLog1,1,1)="12345"
+	;
+	; Mock CSN billing: HTR with "12345" linked to providerC via service provider (no direct ORL link).
+	s %=$$insrti(110,serExtC,"","","",htr1,99999,"HTR")
+	s mockGlo=$$getCsnCodesMockGlo()
+	s @mockGlo@(admissionCSN,date1,"12345",1)="HTR^"_htr1
+	;
+	d getProcedureCodes^PWCPCLLOADCODES(.arrPackedLines,date1)
+	;
+	; caseLog1's line should get the code: ORL source code matched billing code, resolving ambiguity.
+	d %zcredpclUnpackBillingInfo(arrPackedLines(1),.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertAreEqual(code,"12345",.message,"caseLog1 entry should have disambiguated code")
+	s %=$$zevUTAssertAreEqual(isAmbiguous,0,.message,"caseLog1 code should not be ambiguous")
+	s %=$$zevUTAssertAreEqual(htrIDs(0),1,.message,"caseLog1 entry has 1 HTR source")
+	s %=$$zevUTAssertAreEqual(htrIDs(1),htr1,.message,"caseLog1 HTR source matches")
+	;
+	; caseLog2's line should not have the code: no ORL source code, and provider was ambiguous.
+	d %zcredpclUnpackBillingInfo(arrPackedLines(2),.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertIsNull(code,.message,"caseLog2 entry should not have a billing code")
+	;
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	;---------
+testBillingCodeRemoval(message,caseLog1,providerA,providerC,htr1,date1,patientX,contact2) ;;#testTag# previously stored billing codes are cleared when billing data is removed
+	n error,mockGlo,foundPCLs,pcl1,pcl2,siPCL2,code,codeType,isAmbiguous
+	n harIDs,htrIDs,uclIDs,etrIDs,csn
+	;
+	; Set up mock billing data: HTR linked to caseLog1 with CPT code 12345
+	s mockGlo=$$getCsnCodesMockGlo()
+	s %=$$insrti(470,caseLog1,"","","",htr1,99999,"HTR")
+	s csn=$$geti("EPT",patientX,8,1,contact2)
+	s @mockGlo@(csn,date1,"12345",1)="HTR^"_htr1
+	;
+	; Create PCL entries and load billing codes
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries")
+	d updateProcedureCodes^PWCPCLREC(csn,date1,.error)
+	s %=$$zevUTAssertIsNull(error,.message,"initial billing load")
+	;
+	; Verify codes are present
+	d getPclForProvider($$getidout(providerA,"SER"),.foundPCLs)
+	d getPclForProvider($$getidout(providerC,"SER"),.foundPCLs)
+	s %=$$zevUTAssertAreEqual(foundPCLs(0),2,.message,"should have 2 PCL contacts")
+	s pcl1=$p(foundPCLs(1),"|",3),pcl2=$p(foundPCLs(2),"|",3)
+	;
+	s siPCL2=$$zgetbll("PCL",pcl1,2,$p(foundPCLs(1),"|",4))
+	d %zcredpclUnpackBillingInfo(siPCL2,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertAreEqual(code,"12345",.message,"Provider A should have code before removal")
+	s %=$$zevUTAssertAreEqual(htrIDs(0),1,.message,"Provider A should have 1 HTR before removal")
+	;
+	s siPCL2=$$zgetbll("PCL",pcl2,2,$p(foundPCLs(2),"|",4))
+	d %zcredpclUnpackBillingInfo(siPCL2,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertAreEqual(code,"12345",.message,"Provider C should have code before removal")
+	;
+	; Remove the mock billing data and update again
+	k @mockGlo@(csn,date1)
+	d updateProcedureCodes^PWCPCLREC(csn,date1,.error)
+	s %=$$zevUTAssertIsNull(error,.message,"update after billing removal")
+	;
+	; Verify codes have been cleared
+	s siPCL2=$$zgetbll("PCL",pcl1,2,$p(foundPCLs(1),"|",4))
+	d %zcredpclUnpackBillingInfo(siPCL2,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertIsNull(code,.message,"Provider A code should be cleared after removal")
+	s %=$$zevUTAssertIsTrue(htrIDs(0)<1,.message,"Provider A HTR should be cleared after removal")
+	;
+	s siPCL2=$$zgetbll("PCL",pcl2,2,$p(foundPCLs(2),"|",4))
+	d %zcredpclUnpackBillingInfo(siPCL2,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertIsNull(code,.message,"Provider C code should be cleared after removal")
+	;
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	; REVISIONS:
+	;  *DNL 03/26 2259608 Created
+	;---------
+testUpdateProcCodeUnrelatedDate(message,caseLog1,caseLog2,providerA,providerB,htr1,date1,patientX,contact2) ;;#testTag# PCL records on an unrelated service date are not updated
+	n error,mockGlo,foundPCLs,pcl1,pcl2,siPCL,code,codeType,isAmbiguous,harIDs,htrIDs,uclIDs,etrIDs,csn
+	;
+	s csn=$$geti("EPT",patientX,8,1,contact2)
+	;
+	; Create PCL entries for both case logs: caseLog1 on date1, caseLog2 on date2
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries for case log 1")
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog2,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries for case log 2")
+	;
+	; Set up billing code linked to caseLog1
+	s mockGlo=$$getCsnCodesMockGlo()
+	s %=$$insrti(470,caseLog1,"","","",htr1,99999,"HTR")
+	s @mockGlo@(csn,date1,"12345",1)="HTR^"_htr1
+	;
+	; Update procedure codes for date1 only
+	d updateProcedureCodes^PWCPCLREC(csn,date1,.error)
+	s %=$$zevUTAssertIsNull(error,.message,"update procedure codes for date1")
+	;
+	; Provider A's entry (date1) should have the billing code
+	k foundPCLs
+	d getPclForProvider($$getidout(providerA,"SER"),.foundPCLs)
+	s pcl1=$p(foundPCLs(1),"|",3)
+	s siPCL=$$zgetbll("PCL",pcl1,2,$p(foundPCLs(1),"|",4))
+	d %zcredpclUnpackBillingInfo(siPCL,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertAreEqual(code,"12345",.message,"Provider A (date1) should have billing code")
+	;
+	; Provider B's entry (date2 only) should not have any code: it was not on the target service date
+	k foundPCLs
+	d getPclForProvider($$getidout(providerB,"SER"),.foundPCLs)
+	s pcl2=$p(foundPCLs(1),"|",3)
+	s siPCL=$$zgetbll("PCL",pcl2,2,$p(foundPCLs(1),"|",4))
+	d %zcredpclUnpackBillingInfo(siPCL,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertIsNull(code,.message,"Provider B (date2) should not receive billing code from date1 update")
+	;
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	; REVISIONS:
+	;  *DNL 03/26 2259608 Created
+	;---------
+testUpdateProcCodeManualCode(message,caseLog1,providerA,providerC,htr1,date1,patientX,contact2) ;;#testTag# PCL entries with manually-entered codes are not overwritten by billing update
+	n error,mockGlo,foundPCLs,pcl1,pcl2,siPCL,code,codeType,isAmbiguous,harIDs,htrIDs,uclIDs,etrIDs,csn
+	;
+	s csn=$$geti("EPT",patientX,8,1,contact2)
+	;
+	; Create PCL entries for case log 1 (providerA and providerC on date1)
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries")
+	;
+	; Get providerA's PCL and set a manually-entered code (code piece set, no billing source pieces)
+	k foundPCLs
+	d getPclForProvider($$getidout(providerA,"SER"),.foundPCLs)
+	s pcl1=$p(foundPCLs(1),"|",3)
+	s %=$$zevUTAssertIsTrue($$zlock("PCL",pcl1,1),.message,"lock PCL for manual code setup")
+	s %=$$insrti(125,"88888",1,"","",pcl1,$p(foundPCLs(1),"|",4),"PCL")
+	s %=$$zunlock("PCL",pcl1)
+	;
+	; Set up billing code for date1
+	s mockGlo=$$getCsnCodesMockGlo()
+	s %=$$insrti(470,caseLog1,"","","",htr1,99999,"HTR")
+	s @mockGlo@(csn,date1,"12345",1)="HTR^"_htr1
+	;
+	; Update procedure codes: provider A's manual code should be left alone, provider C should get the billing code
+	d updateProcedureCodes^PWCPCLREC(csn,date1,.error)
+	s %=$$zevUTAssertIsNull(error,.message,"update procedure codes")
+	;
+	; Provider A's manually-entered code should be preserved
+	s siPCL=$$zgetbll("PCL",pcl1,2,$p(foundPCLs(1),"|",4))
+	d %zcredpclUnpackBillingInfo(siPCL,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertAreEqual(code,"88888",.message,"Provider A manually-entered code should be preserved")
+	s %=$$zevUTAssertIsTrue(htrIDs(0)<1,.message,"Provider A should not have billing source references")
+	;
+	; Provider C's entry should have received the billing code normally
+	k foundPCLs
+	d getPclForProvider($$getidout(providerC,"SER"),.foundPCLs)
+	s pcl2=$p(foundPCLs(1),"|",3)
+	s siPCL=$$zgetbll("PCL",pcl2,2,$p(foundPCLs(1),"|",4))
+	d %zcredpclUnpackBillingInfo(siPCL,.code,.codeType,.isAmbiguous,.harIDs,.htrIDs,.uclIDs,.etrIDs)
+	s %=$$zevUTAssertAreEqual(code,"12345",.message,"Provider C should have billing code")
+	;
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	; REVISIONS:
+	;  *DNL 03/26 2259608 Created
+	;---------
+testUpdateProcCodeNoEntries(message,mockObject,caseLog1,patientX,contact2,date1) ;;#testTag# getProcedureCodes is not called when no entries match the service date
+	n error,csn
+	;
+	s csn=$$geti("EPT",patientX,8,1,contact2)
+	;
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries")
+	;
+	s %=$$zevUTStubCallAndSpy(.mockObject,"getProcedureCodes^PWCPCLLOADCODES")
+	d updateProcedureCodes^PWCPCLREC(csn,date1+400,.error)
+	s %=$$zevUTAssertIsNull(error,.message,"no matching entries should not be an error")
+	s %=$$zevUTAssertSpyCalledNumTimes(.mockObject,"getProcedureCodes^PWCPCLLOADCODES",0,.message)  ; should not be called when arrPackedData is empty
+	;
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+testHandleSourcePurged(message,caseLog1,providerA) ;;#testTag# handleSourcePurged preserves role and clears patient refs
+	n error,foundPCLs,pclID,pclDAT,result,role
+	;
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries")
+	d getPclForProvider($$getidout(providerA,"SER"),.foundPCLs)
+	s pclID=$p(foundPCLs(1),"|",3),pclDAT=$p(foundPCLs(1),"|",4)
+	;
+	s result=$$handleSourcePurged^PWCPCLREC(pclID,pclDAT)
+	s %=$$zevUTAssertIsTrue(result,.message,"handleSourcePurged should succeed")
+	;
+	s %=$$zevUTAssertAreEqual($$geti("PCL",pclID,30,1,pclDAT),$$credpclTypeSourcePurged(),.message,"search type should be source-purged")
+	s role=$$geti("PCL",pclID,65,1,pclDAT)
+	s %=$$zevUTAssertIsNotNull(role,.message,"provider role should be preserved in PCL 65")
+	s %=$$zevUTAssertIsNull($$geti("PCL",pclID,61,1,pclDAT),.message,"CSN should be cleared")
+	s %=$$zevUTAssertIsNull($$geti("PCL",pclID,81,1,pclDAT),.message,"source ORL should be cleared")
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+testHandleSourcePurgedDeferred(message,mockObject,caseLog1,providerA) ;;#testTag# handleSourcePurged defers when lock fails
+	n error,foundPCLs,pclID,pclDAT,result,pendGlo,stop
+	;
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries")
+	d getPclForProvider($$getidout(providerA,"SER"),.foundPCLs)
+	s pclID=$p(foundPCLs(1),"|",3),pclDAT=$p(foundPCLs(1),"|",4)
+	;
+	s %=$$zevUTStubCall(.mockObject,"zlock","",0)
+	s result=$$handleSourcePurged^PWCPCLREC(pclID,pclDAT)
+	s %=$$zevUTAssertIsFalse(result,.message,"should return 0 when lock fails")
+	;
+	s %=$$zevUTAssertAreEqual($$geti("PCL",pclID,30,1,pclDAT),$$credpclTypeOpTime(),.message,"search type should still be OpTime")
+	s pendGlo=$$getMyMockGlo($$credpclPendTypeDefer())
+	s %=$$zevUTAssertIsTrue($d(@pendGlo@(pclID,pclDAT))>0,.message,"pending node should exist for deferred conversion")
+	;
+	s %=$$zevUTStubCall(.mockObject,"zJobThrottle","",0)
+	d processDeferredUpdates^PWCPCLREC(.stop)
+	s %=$$zevUTAssertAreEqual($$geti("PCL",pclID,30,1,pclDAT),$$credpclTypeOpTime(),.message,"search type should still be OpTime (2)")
+	s %=$$zevUTAssertIsTrue($d(@pendGlo@(pclID,pclDAT))>0,.message,"pending node should still exist for deferred conversion (2)")
+	s %=$$zevUTAssertIsFalse(stop,.message,"We should not set the STOP flag on lock failure.")
+	;
+	s %=$$zevUTStubCall(.mockObject,"zlock","",1)
+	s %=$$zevUTStubCall(.mockObject,"zJobThrottle","",1)
+	d processDeferredUpdates^PWCPCLREC(.stop)
+	s %=$$zevUTAssertAreEqual($$geti("PCL",pclID,30,1,pclDAT),$$credpclTypeOpTime(),.message,"search type should still be OpTime (3)")
+	s %=$$zevUTAssertIsTrue($d(@pendGlo@(pclID,pclDAT))>0,.message,"pending node should still exist for deferred conversion (2)")
+	s %=$$zevUTAssertIsTrue(stop,.message,"if the environment is down, no conversion should be done")
+	;
+	s %=$$zevUTStubCall(.mockObject,"zJobThrottle","",0)
+	s stop=0
+	d processDeferredUpdates^PWCPCLREC(.stop)
+	s %=$$zevUTAssertAreEqual($$geti("PCL",pclID,30,1,pclDAT),$$credpclTypeSourcePurged(),.message,"search type should be updated now.")
+	s %=$$zevUTAssertIsFalse($d(@pendGlo@(pclID,pclDAT))>0,.message,"pending node should not exist")
+	s %=$$zevUTAssertIsFalse(stop,.message,"We should not set the STOP flag now either.")
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+testClearBadData(message,mockObject) ;;#testTag# verify the deferred update job clears out bad entries
+	n pclID,pclDAT,pendGlo,stop,vals
+	s vals("test")=1
+	s pclID="blarg",pclDAT="blat"
+	d deferSourcePurged^PWCPCLREC(pclID,pclDAT,.vals)
+	;
+	s pendGlo=$$getMyMockGlo($$credpclPendTypeDefer())
+	s %=$$zevUTAssertIsTrue($d(@pendGlo@(pclID,pclDAT))>0,.message,"pending node should exist for deferred conversion")
+	;
+	s %=$$zevUTStubCall(.mockObject,"zJobThrottle","",0)
+	s %=$$zevUTStubCallAndSpy(.mockObject,"cdoApplyDeferredUpdate^PWCPCLREC")
+	d processDeferredUpdates^PWCPCLREC(.stop)
+	s %=$$zevUTAssertIsFalse($d(@pendGlo@(pclID,pclDAT))>0,.message,"pending node should not exist")
+	s %=$$zevUTAssertSpyCalledNumTimes(.mockObject,"cdoApplyDeferredUpdate^PWCPCLREC",0,.message)  ; we should not try to save this data to Chronicles
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+testHandlePatientDeletion(message,caseLog1,caseLog2,providerA,providerB,providerC,patientX,admissionCSN) ;;#testTag# patient deletion converts all contacts for a CSN to source-purged
+	n error,foundPCLs,i,pclID,pclDAT
+	;
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog1,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries for case log 1")
+	d updateLog^PWCPCLREC($$credpclTypeOpTime(),caseLog2,"",.error)
+	s %=$$zevUTAssertIsNull(error,.message,"create PCL entries for case log 2")
+	;
+	d getPclForProvider($$getidout(providerA,"SER"),.foundPCLs)
+	d getPclForProvider($$getidout(providerC,"SER"),.foundPCLs)
+	d getPclForProvider($$getidout(providerB,"SER"),.foundPCLs)
+	s %=$$zevUTAssertAreEqual(foundPCLs(0),4,.message,"should have 4 PCL contacts before deletion")
+	;
+	d handlePatientDeletion^PWCPCLREC(patientX,admissionCSN,0)
+	;
+	f i=1:1:foundPCLs(0) d
+	. s pclID=$p(foundPCLs(i),"|",3),pclDAT=$p(foundPCLs(i),"|",4)
+	. s %=$$zevUTAssertAreEqual($$geti("PCL",pclID,30,1,pclDAT),$$credpclTypeSourcePurged(),.message,"contact "_i_" should be source-purged")
+	. s %=$$zevUTAssertIsNotNull($$geti("PCL",pclID,65,1,pclDAT),.message,"contact "_i_" role should be preserved")
+	. s %=$$zevUTAssertIsNull($$geti("PCL",pclID,81,1,pclDAT),.message,"contact "_i_" source ORL should be cleared")
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  see testTag description
+	; REVISIONS:
+	;  *DNL 02/26 2268902 - Created
+	;---------
+testMarkBuildComplete(mockObject,message,providerA,providerB) ;;#testTag# markBuildComplete sets HADFLAG entries and kills B node
+	n buildingGlo,completionGlo,serExtA,serExtB,dte,dte2,dte3
+	s serExtA=$$getidout(providerA,"SER")
+	s serExtB=$$getidout(providerB,"SER")
+	;
+	; Set up a "B" checkpoint node
+	s buildingGlo=$$credpclPendGetGlo($$credpclPendTypeBuilding())
+	s @buildingGlo@(serExtA)="12345^1"
+	;
+	; Set up completion markers: two pending for A, one already marked for A, one pending for B
+	s completionGlo=$$credpclCompletionGlo()
+	s dte=$$today()
+	s @completionGlo@(dte,serExtA,"guid-1")=""
+	s @completionGlo@(dte,serExtA,"guid-2")=""
+	s @completionGlo@(dte,serExtA,"guid-already")="99999"
+	s @completionGlo@(dte,serExtB,"guid-3")=""
+	;
+	d markBuildComplete^PWCPCLREC(serExtA,buildingGlo)
+	;
+	; "B" node should be killed
+	s %=$$zevUTAssertIsFalse($d(@buildingGlo@(serExtA)),.message,"B node should be killed")
+	;
+	; Provider A's pending entries should now have values
+	s %=$$zevUTAssertIsNotNull(@completionGlo@(dte,serExtA,"guid-1"),.message,"guid-1 should be marked complete")
+	s %=$$zevUTAssertIsNotNull(@completionGlo@(dte,serExtA,"guid-2"),.message,"guid-2 should be marked complete")
+	;
+	; Already-marked entry should not be overwritten
+	s %=$$zevUTAssertAreEqual(@completionGlo@(dte,serExtA,"guid-already"),"99999",.message,"already-marked entry should not be overwritten")
+	;
+	; Provider B's entry should be untouched
+	s %=$$zevUTAssertIsNull(@completionGlo@(dte,serExtB,"guid-3"),.message,"provider B entry should be untouched")
+	;
+	; --- Test scheduledTaskEntry cleanup logic ---
+	; Add entries at two older DTEs alongside today's entries
+	s dte2=dte-2,dte3=dte-3
+	s @completionGlo@(dte2,serExtA,"guid-old1")="55555"
+	s @completionGlo@(dte3,serExtB,"guid-old2")="66666"
+	;
+	; Mock today as dte+1 so yesterday=dte.  Today's entries should survive; older ones should be killed.
+	s %=$$zevUTStubCall(.mockObject,"today","",dte+1)
+	d scheduledTaskEntry^PWCPCLREC
+	;
+	s %=$$zevUTAssertIsTrue($d(@completionGlo@(dte,serExtA,"guid-1")),.message,"today entries should survive when yesterday=dte")
+	s %=$$zevUTAssertIsFalse($d(@completionGlo@(dte2)),.message,"dte-2 subtree should be cleared when yesterday=dte")
+	s %=$$zevUTAssertIsFalse($d(@completionGlo@(dte3)),.message,"dte-3 subtree should be cleared when yesterday=dte")
+	;
+	; Mock today as dte+2 so yesterday=dte+1.  Now today's entries should also be cleared.
+	s %=$$zevUTStubCall(.mockObject,"today","",dte+2)
+	d scheduledTaskEntry^PWCPCLREC
+	;
+	s %=$$zevUTAssertIsFalse($d(@completionGlo@(dte)),.message,"today entries should be cleared when yesterday=dte+1")
+	q message=""
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Find all records that match a given provider and store them in matchingEntries
+	; PARAMETERS:
+	;   serIDext (I,REQ) - External SER ID representing the provider to search for.
+	;   matchingEntries (O,REQ) - Array populated with matching PCL entries.
+	;                             matchingEntries(searchType,id,dat)=""
+	;   startDate (I,OPT) - Optional start date to begin search from.
+	;---------
+searchProvider(serIDext,matchingEntries,startDate) ;
+	n id,searchType,dat,iterator,searchTypes
+	k matchingEntries
+	f  s id=$$credpclLookupNextID(serIDext,.searchType,id,.dat,startDate,.iterator,.searchTypes) q:id=""  d
+	. s matchingEntries(searchType,id,dat)=""
+	q
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^hjPWCPCLRECEXPENSIVE*
+	; DESCRIPTION:  Gathers all PCLs for a given provider (by external SER ID). This one loops over PCL, searchProvider loops over the source data.
+	; PARAMETERS:
+	;   serIDext (I,REQ) - External SER ID representing the provider whose PCLs are being fetched.
+	;   caseLogs (O,REQ) - Array that accumulates the resulting PCL identifiers.
+	;                      caseLogs(n)=serIDext_"|"_caseLogDate_"|"_pclID_"|"_pclDAT
+	;---------
+getPclForProvider(serIDext,caseLogs) ;
+	n caseLogDate,pclID,pclDAT
+	f  s caseLogDate=$$credpclNextDate(serIDext,caseLogDate) q:caseLogDate=""  d
+	. f  s pclID=$$credpclNextPCL(serIDext,caseLogDate,pclID) q:pclID=""  d
+	. . ; do this in reverse order so that the first contacts returns are the first ones created, which is not the default
+	. . f  s pclDAT=$$credpclNextContact(serIDext,caseLogDate,pclID,pclDAT,-1) q:pclDAT=""  d
+	. . . d %zzArrAppend(.caseLogs,serIDext_"|"_caseLogDate_"|"_pclID_"|"_pclDAT)
+	q
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Permanently deletes PCL data for a single provider or for all providers. Also clears
+	;               pending-tracking globals to remove any queued work for the deleted providers.
+	; PARAMETERS:
+	;   serExtID (I,OPT) - External SER ID of the provider to delete. If blank, deletes data for all providers.
+	; RETURNS:      None.
+	;---------
+deletePclData(serExtID) ;
+	n batchId,pclID,serviceDate,loopOverAll,gloNode,trackingGlo,error
+	;
+	i serExtID="" w !,"This will delete ALL PCL data for ALL providers."
+	i serExtID'="" w ! d %zWrapPrint("This will delete ALL PCL data for provider: "_$$DisplayName("SER",serExtID,1))
+	i '$$yn("Are you sure you want to continue",0,1) QUIT
+	;
+	s batchId=$$zAuditOpenBatch()
+	s trackingGlo=$$credpclPendGetGlo()
+	i serExtID="" s loopOverAll=1
+	f  d:serExtID'=""  q:'loopOverAll  s serExtID=$$zDKCIxNextPrimary("PCL","","",40,60,serExtID) q:serExtID=""
+	. f  s serviceDate=$$credpclNextDate(serExtID,serviceDate) q:serviceDate=""  d
+	. . f  s pclID=$$credpclNextPCL(serExtID,serviceDate,pclID) q:pclID=""  d
+	. . . s %=$$zRecHardDeleteDontCheckRR("PCL",pclID,.error)
+	. . . s %=$$zAuditFlushBatch(batchId)
+	. . . i error'="" w !! d %zWrapPrint("Error deleting PCL record "_$$DisplayName("PCL",pclID,1)_": "_error)
+	. f gloNode=$$credpclPendTypeBuilding(),$$credpclPendTypeContactBySer(),$$credpclPendTypeIncomplete(),$$credpclPendTypeSourceRec() d
+	. . k @trackingGlo@(gloNode,serExtID)
+	;
+	i loopOverAll k @trackingGlo@($$credpclPendTypeContactByDate())
+	;
+	s %=$$zAuditCloseBatch(batchId)
+	q
+	q  ;;#eor#

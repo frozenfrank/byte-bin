@@ -1,0 +1,269 @@
+hjPWCPCLLIBMAKER ; ; ;2026-02-27 08:43:00;11.8;VGkB19X1c7shGODggFJ6EVC2irZ2WCw/jw0v9SykAIqbcTwDVAeSqW0iwx9UY2Vf;Copyright 2026 Epic Systems Corporation
+	d makeLibrary
+	q
+	;*********************************************************************
+	; PURPOSE:  Code for autogenerating library code in HULIBPCLPWC
+	; AUTHOR:   Daniel Leatherwood
+	; REVISIONS:
+	;  *DNL 01/26 2268290 Created
+	;  *DNL 02/26 2259608 - Update credpclGetProcedureName to use PCL 126 category values for code type
+	;  *DNL 02/26 2268902 - credpclGetProviderRole: return stored role for unrecognized search types
+	;*********************************************************************
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Reads the documentation for app-specific logic for case logs ensures that the library tags for reading it are up to date.
+	;---------
+makeLibrary ;
+	n glo,rouGlo,err,tagName,rhsGlo,docBlocks,docBlocksIndex,badLine,lineNum,line,STOP,rouName,lineCount,searchType,searchTypeTag,iteratorInit,searchLogic,getInfoLogic,procNameFormatter,inclusionCheck,roleFormatter,primaryINI
+	w #
+	s glo=$$zGtTmpGlo()
+	s rouGlo=$name(@glo@(1))
+	s rouName="HULIBPCLDEFS"
+	s %=$$rload(rouName,rouGlo,1)
+	i '$$csdocParseBlock($name(@rouGlo@(rouName)),"Case Log Search Methods",.docBlocks,.docBlocksIndex,.badLine,.err) d  g eotMakeLibrary
+	. s err="Line "_badLine_": "_@rouGlo@(rouName,badLine)_": "_err
+	;
+	f searchType=1:1:docBlocks(0) d  q:err'=""
+	. f lineNum=1:1:docBlocks(searchType,0) d  q:searchTypeTag(searchType)'=""
+	. . i $$zStrStartsWith(docBlocks(searchType,lineNum),"TYPE TAG...") d addLogicToArray(.searchTypeTag,searchType,docBlocks(searchType,lineNum)) q
+	. ;
+	. s searchTypeTag=searchTypeTag(searchType)
+	. i searchTypeTag="" s err="TYPE TAG is required and none was found for "_docBlocks(searchType) quit
+	. ;
+	. i $e(searchTypeTag,1,2)'="$$" s err="TYPE TAG must be a library tag starting with '$$' for "_docBlocks(searchType) quit
+	. i '$$zLibTagExists("HULIB",$$zStrExtractToEnd(searchTypeTag,3)) s err="Library tag "_searchTypeTag_" does not exist." quit
+	. ;
+	. s searchTypeTag(searchType)=searchTypeTag_"()"
+	. ;
+	. f lineNum=lineNum+1:1:docBlocks(searchType,0) d
+	. . s line=docBlocks(searchType,lineNum)
+	. . i $$zStrStartsWith(line,"SEARCH LOGIC") d addLogicToArray(.searchLogic,searchType,line) q
+	. . i $$zStrStartsWith(line,"PRIMARY INI") d addLogicToArray(.primaryINI,searchType,line) q
+	. . i $$zStrStartsWith(line,"ITERATOR INITIALIZATION") d addLogicToArray(.iteratorInit,searchType,line) q
+	. . i $$zStrStartsWith(line,"GET INFO") d addLogicToArray(.getInfoLogic,searchType,line) q
+	. . i $$zStrStartsWith(line,"PROCEDURE NAME FORMATTER") d addLogicToArray(.procNameFormatter,searchType,line) q
+	. . i $$zStrStartsWith(line,"ROLE FORMATTER") d addLogicToArray(.roleFormatter,searchType,line) q
+	. . i $$zStrStartsWith(line,"INCLUSION CHECK") d addLogicToArray(.inclusionCheck,searchType,line) q
+	. ;
+	. i searchLogic(searchType)="" s err="Search logic is required and none was found for "_docBlocks(searchType) quit
+	. i getInfoLogic(searchType)="" s err="GET INFO logic is required and none was found for "_docBlocks(searchType) quit
+	;
+	i err'="" g eotMakeLibrary
+	;
+	s rouName="HULIBPCLPWC"
+	s rhsGlo=$name(@glo@(2))
+	;
+	s tagName="credpclLookupNextID",lineCount=0
+	k @rhsGlo
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount," ; SCOPE:        INTERNAL")
+	d %zzGloAppend(rhsGlo,.lineCount," ; DESCRIPTION:  Returns the next record that should be added to a provider's case log for a given provider, starting")
+	d %zzGloAppend(rhsGlo,.lineCount," ;               from a specified date. This function loops through supported search types (e.g., ORL) until a matching")
+	d %zzGloAppend(rhsGlo,.lineCount," ;               ID is found or all options are exhausted.")
+	d %zzGloAppend(rhsGlo,.lineCount," ; PARAMETERS:")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   serExtID (I,REQ) - Provider SER ID (unpadded)")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   searchType (IO,REQ) - Current search type to use (e.g., OpTime). Updated if exhausted.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   id (IO,REQ) - Output: next matching ID of the current search type.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   dat (IO,OPT) - DAT for the specific contact that should be added. Currently only used for contact-level entries in")
+	d %zzGloAppend(rhsGlo,.lineCount," ;                  the case log as opposed to procedure-level entries. Will be passed back as 99999 in that case.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   startDate (I,REQ) - Starting point for the search.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   iterator (IO,OPT) - Tracks progress through each search type. Pass dotted and do not make assumptions about its structure.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   searchTypes (IO,OPT) - Array of search types to go through. If not provided, we search over all types.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   skipInclusionCheck (I,OPT) - If true, skips checking whether the record should be included: use this if you're going to")
+	d %zzGloAppend(rhsGlo,.lineCount," ;                                run the exclusion check later and want to optimize performance of the search.")
+	d %zzGloAppend(rhsGlo,.lineCount," ; RETURNS:      The next valid ID matching the search criteria, or null if none found.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount,"credpclLookupNextID(serExtID,searchType,id,dat,startDate,iterator,searchTypes,skipInclusionCheck) ;")
+	d %zzGloAppend(rhsGlo,.lineCount," ; WARNING: This code is auto-generated. Do not update directly. Instead, call makeLibrary^hjPWCPCLLIBMAKER.")
+	d %zzGloAppend(rhsGlo,.lineCount," i searchType="""" s searchType=$$"_"credpclNextSearchType(searchType,.searchTypes)")
+	d %zzGloAppend(rhsGlo,.lineCount,"credpclNextTypeLoop ; avoids recursion: we'll GOTO here if we reach the end of one type and need to move to the next")
+	d %zzGloAppend(rhsGlo,.lineCount," ;")
+	d %zzGloAppend(rhsGlo,.lineCount," ; Initialize the iterator if necessary")
+	s searchType=""
+	f  s searchType=$o(iteratorInit(searchType)) q:searchType=""  d
+	. d %zzGloAppend(rhsGlo,.lineCount," i iterator="""",searchType="_searchTypeTag(searchType)_" s iterator="_iteratorInit(searchType))
+	d %zzGloAppend(rhsGlo,.lineCount," ;")
+	s searchType=""
+	f  s searchType=$o(searchLogic(searchType)) q:searchType=""  d
+	. i inclusionCheck(searchType)'="" d
+	. . d %zzGloAppend(rhsGlo,.lineCount," i searchType="_searchTypeTag(searchType)_" f  "_searchLogic(searchType)_" q:id=""""  q:skipInclusionCheck  q:"_inclusionCheck(searchType))
+	. e  d
+	. . d %zzGloAppend(rhsGlo,.lineCount," i searchType="_searchTypeTag(searchType)_" "_searchLogic(searchType))
+	d %zzGloAppend(rhsGlo,.lineCount," ;")
+	d %zzGloAppend(rhsGlo,.lineCount," ; If that search type is exhausted, move to the next one")
+	d %zzGloAppend(rhsGlo,.lineCount," i id="""" s iterator="""",dat="""",searchType=$$"_"credpclNextSearchType(searchType,.searchTypes) GOTO:searchType'="""" credpclNextTypeLoop")
+	d %zzGloAppend(rhsGlo,.lineCount," ;")
+	d %zzGloAppend(rhsGlo,.lineCount," i id'="""",dat="""" s dat=99999")
+	d %zzGloAppend(rhsGlo,.lineCount," ;")
+	d %zzGloAppend(rhsGlo,.lineCount," q id")
+	d %zzGloAppend(rhsGlo,.lineCount," ;;#"_"eof#")
+	s @rhsGlo@(0)=lineCount
+	d doCompareRoutine^CSSXDOCGEN(tagName,rouName,rhsGlo,rouGlo,.STOP)
+	i STOP GOTO eotMakeLibrary
+	;
+	s tagName="credpclGetProcedureName",lineCount=0
+	k @rhsGlo
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount," ; SCOPE:        EPIC")
+	d %zzGloAppend(rhsGlo,.lineCount," ; DESCRIPTION:  Extracts and returns the procedure name from a packed provider case log (PCL) line.")
+	d %zzGloAppend(rhsGlo,.lineCount," ; PARAMETERS:")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   packedLine (I,REQ) - Packed case log line, formatted using `credpclPackLine`.")
+	d %zzGloAppend(rhsGlo,.lineCount," ; RETURNS:      Procedure name as a string, based on the search type context.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount,"credpclGetProcedureName(packedLine) ;")
+	d %zzGloAppend(rhsGlo,.lineCount," ; WARNING: This code is auto-generated. Do not update directly. Instead, call makeLibrary^hjPWCPCLLIBMAKER.")
+	d %zzGloAppend(rhsGlo,.lineCount," n searchType,eapID,extraInfo,orlID,ordID,encounterDate,code,codeType")
+	d %zzGloAppend(rhsGlo,.lineCount," d %"_"zcredpclUnpackLine(packedLine,.searchType,"""","""",.encounterDate,"""",.eapID,"""","""",.extraInfo,.ordID,.orlID,.code,.codeType)")
+	d %zzGloAppend(rhsGlo,.lineCount," s codeType=$s(codeType="""":"""",codeType=$$"_"credpclCodeTypeCpt():1,1:$$"_"zgetCatN($$"_"zgetCat(codeType,2,""PCL"",126),2,""EAP"",2005))")
+	d %zzGloAppend(rhsGlo,.lineCount," i code'="""" s eapID=$$"_"findEAPIdMatchingCode(encounterDate,code,codeType)")
+	d %zzGloAppend(rhsGlo,.lineCount," i eapID'=""""  ; do nothing, we have a matching EAP")
+	s searchType=""
+	f  s searchType=$o(procNameFormatter(searchType)) q:searchType=""  d
+	. d %zzGloAppend(rhsGlo,.lineCount," e  i searchType="_searchTypeTag(searchType)_" "_procNameFormatter(searchType))
+	d %zzGloAppend(rhsGlo,.lineCount," q $s(eapID="""":"""",1:$$"_"PxNam(eapID,$$"_"zDTE2DecimalDAT(encounterDate)))")
+	d %zzGloAppend(rhsGlo,.lineCount," ;;#"_"eof#")
+	s @rhsGlo@(0)=lineCount
+	d doCompareRoutine^CSSXDOCGEN(tagName,rouName,rhsGlo,rouGlo,.STOP)
+	i STOP GOTO eotMakeLibrary
+	;
+	s tagName="credpclGetProviderRole",lineCount=0
+	k @rhsGlo
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount," ; SCOPE:        EPIC")
+	d %zzGloAppend(rhsGlo,.lineCount," ; DESCRIPTION:  Given a case log entry, returns the role of the provider.")
+	d %zzGloAppend(rhsGlo,.lineCount," ; PARAMETERS:")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   packedLine (I,REQ) - Packed case log line, formatted using `credpclPackLine`.")
+	d %zzGloAppend(rhsGlo,.lineCount," ; RETURNS:      A string describing the provider's role in the encounter, or null if one could not be determined.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount,"credpclGetProviderRole(packedLine) ;")
+	d %zzGloAppend(rhsGlo,.lineCount," ; WARNING: This code is auto-generated. Do not update directly. Instead, call makeLibrary^hjPWCPCLLIBMAKER.")
+	d %zzGloAppend(rhsGlo,.lineCount," n searchType,role")
+	d %zzGloAppend(rhsGlo,.lineCount," d %"_"zcredpclUnpackLine(packedLine,.searchType,"""",.role)")
+	d %zzGloAppend(rhsGlo,.lineCount," i role="""" QUIT """"")
+	s searchType=""
+	f  s searchType=$o(roleFormatter(searchType)) q:searchType=""  d
+	. d %zzGloAppend(rhsGlo,.lineCount," i searchType="_searchTypeTag(searchType)_" "_roleFormatter(searchType))
+	d %zzGloAppend(rhsGlo,.lineCount," q role  ;;#"_"eof#")  ;*DNL 02/26 2268902 - return stored role instead of "" for unrecognized types (e.g. manual entries)
+	s @rhsGlo@(0)=lineCount
+	d doCompareRoutine^CSSXDOCGEN(tagName,rouName,rhsGlo,rouGlo,.STOP)
+	i STOP GOTO eotMakeLibrary
+	;
+	s tagName="%"_"zcredpclGetSearchTypes",lineCount=0
+	k @rhsGlo
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount," ; SCOPE:        EPIC")
+	d %zzGloAppend(rhsGlo,.lineCount," ; DESCRIPTION:  Initializes the list of supported provider case log search types used for iterating")
+	d %zzGloAppend(rhsGlo,.lineCount," ;               through encounter data (e.g., OpTime, Performed Procedure). Used when the list is not")
+	d %zzGloAppend(rhsGlo,.lineCount," ;               externally provided.")
+	d %zzGloAppend(rhsGlo,.lineCount," ; PARAMETERS:")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   searchTypes (O,REQ) - Array to populate with supported search types.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;                         <array structure>")
+	d %zzGloAppend(rhsGlo,.lineCount," ;                         searchTypes(searchType)=label/description")
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount,"%"_"zcredpclGetSearchTypes(searchTypes) ;")
+	d %zzGloAppend(rhsGlo,.lineCount," ; WARNING: This code is auto-generated. Do not update directly. Instead, call makeLibrary^hjPWCPCLLIBMAKER.")
+	d %zzGloAppend(rhsGlo,.lineCount," k searchTypes")
+	s searchType=""
+	f  s searchType=$o(searchTypeTag(searchType)) q:searchType=""  d
+	. d %zzGloAppend(rhsGlo,.lineCount," s searchTypes("_searchTypeTag(searchType)_")="""_docBlocks(searchType)_"""")
+	d %zzGloAppend(rhsGlo,.lineCount," q")
+	d %zzGloAppend(rhsGlo,.lineCount," ;;#"_"eof#")
+	s @rhsGlo@(0)=lineCount
+	d doCompareRoutine^CSSXDOCGEN(tagName,rouName,rhsGlo,rouGlo,.STOP)
+	i STOP GOTO eotMakeLibrary
+	;
+	s tagName="%"_"zcredpclGetInfo",lineCount=0
+	k @rhsGlo
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount," ; SCOPE:        EPIC")
+	d %zzGloAppend(rhsGlo,.lineCount," ; DESCRIPTION:  Retrieves packed case log data for a given search type and record ID. Delegates")
+	d %zzGloAppend(rhsGlo,.lineCount," ;               to the appropriate subroutine (e.g., ORL) based on the provided searchType.")
+	d %zzGloAppend(rhsGlo,.lineCount," ; PARAMETERS:")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   searchType (I,REQ) - Type of search, such as OpTime, determining which retrieval logic to apply.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   id (I,REQ) - Identifier (e.g., ORL ID) used to locate the case log data.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   dat (I,OPT) - Specific contact to load: only used for contact-specific entries (currently only in EPT)")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   packedData (O,REQ) - Output array containing the packed case log line(s): see (%"_"zcredpclUnpackLine).")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   skipInclusionCheck (I,OPT) - if true, don't check if the record should be included (presumably, you've already done so)")
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount,"%"_"zcredpclGetInfo(searchType,id,dat,packedData,skipInclusionCheck) ;")
+	d %zzGloAppend(rhsGlo,.lineCount," ; WARNING: This code is auto-generated. Do not update directly. Instead, call makeLibrary^hjPWCPCLLIBMAKER.")
+	d %zzGloAppend(rhsGlo,.lineCount," k packedData")
+	d %zzGloAppend(rhsGlo,.lineCount," i 'skipInclusionCheck,'$$"_"credpclIncludeRecord(searchType,id,dat) QUIT")
+	s searchType=""
+	f  s searchType=$o(getInfoLogic(searchType)) q:searchType=""  d
+	. d %zzGloAppend(rhsGlo,.lineCount," i searchType="_searchTypeTag(searchType)_" "_getInfoLogic(searchType)_" QUIT")
+	d %zzGloAppend(rhsGlo,.lineCount," q")
+	d %zzGloAppend(rhsGlo,.lineCount," ;;#"_"eof#")
+	s @rhsGlo@(0)=lineCount
+	d doCompareRoutine^CSSXDOCGEN(tagName,rouName,rhsGlo,rouGlo,.STOP)
+	i STOP GOTO eotMakeLibrary
+	;
+	s tagName="credpclGetPrimaryINI",lineCount=0
+	k @rhsGlo
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount," ; SCOPE:        EPIC")
+	d %zzGloAppend(rhsGlo,.lineCount," ; DESCRIPTION:  Determines the primary master file associated with a type of entry in a provider's case log.")
+	d %zzGloAppend(rhsGlo,.lineCount," ; PARAMETERS:")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   searchType (I,REQ) - PCL search type constant.")
+	d %zzGloAppend(rhsGlo,.lineCount," ; RETURNS:      Primary master file value (e.g., ORL, ORD, EPT), or null if none applies.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount,"credpclGetPrimaryINI(searchType) ;")
+	d %zzGloAppend(rhsGlo,.lineCount," ; WARNING: This code is auto-generated. Do not update directly. Instead, call makeLibrary^hjPWCPCLLIBMAKER.")
+	s searchType=""
+	f  s searchType=$o(primaryINI(searchType)) q:searchType=""  d
+	. d %zzGloAppend(rhsGlo,.lineCount," q:searchType="_searchTypeTag(searchType)_" """_primaryINI(searchType)_"""")
+	d %zzGloAppend(rhsGlo,.lineCount," q """"  ;;#"_"eof#")
+	s @rhsGlo@(0)=lineCount
+	d doCompareRoutine^CSSXDOCGEN(tagName,rouName,rhsGlo,rouGlo,.STOP)
+	i STOP GOTO eotMakeLibrary
+	;
+	s tagName="credpclIncludeRecord",lineCount=0
+	k @rhsGlo
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount," ; SCOPE:        EPIC")
+	d %zzGloAppend(rhsGlo,.lineCount," ; DESCRIPTION:  Check if a given record should be included in a provider's case log.")
+	d %zzGloAppend(rhsGlo,.lineCount," ; PARAMETERS:")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   searchType (I,REQ) - Type of search, such as OpTime, determining which retrieval logic to apply.")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   id (I,REQ) - internal record ID (e.g., ORL ID) that forms the source for the entry")
+	d %zzGloAppend(rhsGlo,.lineCount," ;   dat (I,OPT) - Specific contact to check: only used for contact-specific entries (currently only in EPT)")
+	d %zzGloAppend(rhsGlo,.lineCount," ; RETURNS:      True if the record should be included, false otherwise")
+	d %zzGloAppend(rhsGlo,.lineCount," ;---------")
+	d %zzGloAppend(rhsGlo,.lineCount,"credpclIncludeRecord(searchType,id,dat) ;")
+	d %zzGloAppend(rhsGlo,.lineCount," ; WARNING: This code is auto-generated. Do not update directly. Instead, call makeLibrary^hjPWCPCLLIBMAKER.")
+	s searchType=""
+	f  s searchType=$o(inclusionCheck(searchType)) q:searchType=""  d
+	. d %zzGloAppend(rhsGlo,.lineCount," QUIT:searchType="_searchTypeTag(searchType)_" "_inclusionCheck(searchType))
+	d %zzGloAppend(rhsGlo,.lineCount," q 1")
+	d %zzGloAppend(rhsGlo,.lineCount," ;;#"_"eof#")
+	s @rhsGlo@(0)=lineCount
+	d doCompareRoutine^CSSXDOCGEN(tagName,rouName,rhsGlo,rouGlo,.STOP)
+	i STOP GOTO eotMakeLibrary
+	;
+eotMakeLibrary ;
+	i err'="" w !,"Error: "_err
+	d %zRelTmpGlo(glo)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Parses a source line from a documentation block, extracting and normalizing the logic
+	;               string after the first colon. Populates the logicArray for the corresponding
+	;               searchType if the logic is valid (i.e., not empty or 'N/A'). Escaped library tag
+	;               references are unescaped before assignment.
+	; PARAMETERS:
+	;   logicArray (O,REQ) - Output array to populate with parsed logic expressions.
+	;                         <array structure>
+	;                         logicArray(searchType)=parsed logic string
+	;   searchType (I,REQ) - Index used to store logic in the logicArray.
+	;   sourceLine (I,REQ) - Documentation line to parse, in the format: "<label>: <logic>".
+	;---------
+addLogicToArray(logicArray,searchType,sourceLine) ;
+	n logic
+	s logic=$$zStrGetPieceToEnd(sourceLine,":",2)
+	s logic=$$zTrim(logic)
+	i (logic="")!($$up(logic)="N/A") quit
+	;
+	s logic=$$replace(logic,"($$)","$$")  ; "unescape" tag names that were escaped to avoid EZPARSE errors
+	s logic=$$replace(logic,"(%)","%")
+	s logicArray(searchType)=logic
+	q
+	q  ;;#eor#

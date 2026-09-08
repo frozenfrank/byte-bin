@@ -1,0 +1,652 @@
+HXDYWIPE2 ; ; ;2026-02-05 12:24:38;11.8;dsqeObTV0YeDPisVsHMTcUgY92ZsyOEiwrhldGgJHNg=;Copyright 2026 Epic Systems Corporation
+	q
+	;*********************************************************************
+	; TITLE:   HXDYWIPE2
+	; PURPOSE: Dynamic data wipe utility
+	; AUTHOR:  Terence Kam
+	; CALLABLE TAGS:
+	;   Called from HXDYWIPE or directly from Cache Prompt
+	; REVISION HISTORY:
+	; --- Older Comments Removed ---
+	;  *TGB 02/23 948495 - Removed ^AITVCIDX
+	;  *tm  02/23 952027 - Add ^HADECSOUTSTANDING
+	;  *CJT 02/23 861542 - Add ^HSNTEMPRISWLCNT
+	;  *KRT 02/23 941473 - Add ^XUTIL("LUTILDXRAUTOCONVERT")
+	;*taras 02/23 760798 - Add add ^HADCSC1("DuplDocIDs") to GetGlobals
+	;  *lgi 02/23 940929 - Add ^HLOCECSMTRCS
+	;  *vln 03/23 926851 - Add ^HLOCECSSURL
+	;  *mlb 03/23 954878 - Add ^HLOCNPRICERVIEW
+	;  *DVB 02/23 934562 - Add ^HSNTEMPHPMCACHE
+	;  *MDH 03/23 952660 - Add ^HADHHEVVTRK
+	;  *PDR 03/23 880905 - Add ^HADHCCCHAT
+	;  *PDR 03/23 958199 - Add ^HSNTEMPHCCCHAT
+	;  *SSV 04/23 947647 - Add ^HADNPTPROCSRCH
+	;  *mlb 04/23 960143 - Add ^HADNPTCMSFSC
+	;  *TRC 04/23 776782 - Remove ^HFLAG("RESIDENTIAL_CARE","ORDER") (getDynamicGlobalName^JORDRECRESPSWITCH)
+	;  *joc 05/23 967124 - Add ^HADCSC1("UPDATEPATIENT")
+	;  *BDB 05/23 921008 - Add ^HFLAG("INP","DUPLICATE_LDA_DEBUG")
+	;  *mtw 05/23 965262 - Add BIPMRETROTEST global
+	;  *ss  05/23 982845 - Add HADUTIL("CE","CONV","872718")
+	;  *BRW 05/23 983136 - Add ^HADUTIL("WBSIMPORT")
+	;  *JXT 05/23 970664 - Add ^HLOCLCHARTSUM
+	;  *JCS 06/23 964286 - Add ^HADFLAG("DATAGATEWAYPENDINGIMPORTREQUESTS")
+	;  *DJB 06/23 983460 - Add ^HADUTIL("OBCNV983460")
+	;  *CYW 06/23 948653 - Add ^HADFLAG("REG","DOCLINK")
+	;  *ZJM 07/23 953584 - Add ^HSNTEMPWCACHE("WB","ProvisionCode")
+	;  *tce 07/23 995780 - Add ^HADUTIL("ES","SEDAT_DEBUG")
+	;  *CMA 07/23 870776 - Add ^HADUTIL("HB","PSPPCONV")
+	;  *DDC 07/23 944082 - Add ^HADSTUTIL(103050)
+	;  *RDS 07/23 984864 - Add ^HLOCNLPSTATUS
+	;  *mra 08/23 998183 - Add ^HADFLAG("DisplayTextPurge")
+	;  *MPB 08/23 834506 - Add ^HADFLAG("ORDERS","JSCHEDMETA")
+	;  *NAU 08/23 1003127 - Add ^RISNLPUTILORD
+	;  *PMR 09/23 995349  - Add ^HFLAG("CCM","GAIMR") (URSecurityGlobalName^JCCMLLMCONFIG)
+	;  *tas 10/23 987012  - Add ^HADUTIL("RegAudit") & ^HADFLAG("FinAssist")
+	;   *ji 10/23 2015219 - Add ^HADEDCODE
+	;  *SCL 10/23 1010873 - Add ^HADCGORDFRIC
+	;  *BMK 10/23 994678 - Add ^HSNTEMPGEOTELEM
+	;  *SLW 10/23 1005683 - Add ^HADCGSRCHCDC*
+	;  *MAR 11/23 2020328 - Add ^HADCGBLOBSTAT, ^HLOCBLOBSTAT*
+	;  *PKL 11/23 997103  - Add ^HLOCECSNLP
+	;  *whj 11/23 989165  - Add ^HADFLAG("VBA","MeasureCalcStatus")
+	;  *gyc 11/23 983845 - Add ^HADFLAG("Cosmos","PHIlterReport")
+	;  *mra 11/23 2027544 - Add ^HADFLAG("ALTPURGE")
+	;  *JB  11/23 2016425 - Add ^HLOCORBLKTST
+	;  *tce 12/23 1002098 - Add ^HSNESCHATSESSION
+	;  *pwm 12/23 1002315 - Add ^HLOCESAUTOLINK
+	;  *aan 01/24 2051256 - Add ^HADCGJAMBFLO
+	;  *RJ  01/24 2043757 - Add ^XUTIL("CVCOSDCOUTIL")
+	;  *MCG 02/24 2059683 - Add ^HSNTEMPCOSBCQ
+	;  *jkr 02/24 2058396 - Add ^XUTIL("CEBULKPUSH")
+	;  *ynk 03/24 2025206 - Add ^HADFLAG("MYCHART","DLG2025206") - proBmRetryGlo^WPCOREQNRSERIESBMK
+	;  *BLO 03/24 2065539 - Add ^HADUTIL("VUSCONFIGTEMP")
+	;  *DAS 03/24 2026080 - Change ^HFLAG("CCM","GAIMR") to ^HFLAG("CCM","GDUR")
+	;  *VLN 03/24 2043993 - Add ^HLOCECSEMAIL and ^HADUTIL("ECS")
+	;  *JC  04/24 2070170 - Add ^HLOCLEVAANOMEVT
+	;  *TCB 04/24 2079022 - Add ^HLOCNAUTHSUM
+	;  *NAU 04/24 869914 - Add ^HSNTEMPRISLDBAL
+	;  *OJH 04/24 2082827 - Add ^XUTIL("FMK","Block Query SignalR Until Timestamp")
+	;  *bpr 04/24 2079610 - Move Hello World global list into Hello World code
+	;  *CPJ 04/24 2062035 - Add ^HADFLAG("RIS","PRIORITY_MODEL_LAST_RUN")
+	;  *MAR 05/24 864289 - Add ^HFLAG("WBSINTEGRITY"), ^HADUTIL("WBSINTEGRITY")
+	;  *MJM 05/24 2032467 - Add ^HADFLAG("COPS","LastEndpointUpdate")
+	;  *JAO 05/24 2069909 - Add ^HADREGNP
+	;  *spb 05/24 2033654 - Add ^HADUTIL("CE","DUP_DXT_CLEANUP")
+	;  *DKG 05/24 2088837 - Add ^HADFLAG("AUTOEXPPROC")
+	;  *SJD 05/24 2079431 - Add ^XUTIL("PSELEXVALIDATE")
+	;  *RJE 05/24 2046448 - Add ^HLOCX12
+	;  *DPY 06/24 2082765 - Add ^HADFLAG("ES_WQ_TRENDS_LAST_RUN")
+	;  *SLW 06/24 992531  - Add CSLLMQueueGlo
+	;  *ZSD 06/24 2094394 - Add ^HLOCCLGRPTDRV
+	;  *LGJ 06/24 2101377 - Add ^HADUTIL("DMS2BLOB")
+	;*taras 06/24 2084031 - Add HADUTIL("CE","DXT_EPT_MISMATCH_CLEANUP")
+	;  *AVG 06/24 2100587 - Add QM and OM temp globals
+	;  *LMB 06/24 2081760 - Add ^HLOCRISCOLS
+	;  *DNL 06/24 2098901 - Add ^HLOCCSRPTDATA
+	;  *CRW 06/24 901843  - Add ^BISDGEOPARSER
+	;  *GLD 07/24 2096187 - Add ^HLOCMISUMMARY
+	;  *AEP 07/24 2106183 - Add ^HADFLAG("ES_TICKET_PASS_LAST_RUN")
+	;  *GLM 07/24 2078962 - Add root global name for AVG conversion and creation
+	;  *BAG 07/24 2110349 - Update call to get Chart Summarization queue global
+	;  *SNO 07/24 2113714 - Add ^HLOCUCDATASYNC
+	;  *MAR 08/24 2067918 - Add ^HADCGWBFMAINT
+	;  *AV  08/24 2120898 - ADD ^HLOCNGLDML
+	;  *dis 09/24 2125967 - Add ^HLOCWMCONCEPTS
+	;  *GRL 09/24 2120187 - Add BCA listener timestamp HFLAG
+	;  *AD  09/24 2112085 - Add ^HSNTEMPESRESCHED
+	;  *tas 10/24 2073155 - Add ^HADCGPSRIAQ
+	;  *ddv 10/24 2113279 - Add ^HADCGWXIDPDMNQUEUE
+	;  *NTK 10/24 2127712 - Add ^HADCGCECB
+	;  *sxm 10/24 2112090 - Add ^RSHSTDYFNDRDATA
+	;  *SMM 10/24 2085101 - Add ^HLOCPROCINTRAOP
+	;  *sme 10/24 2130989 - Add ^HADUTIL("DIRECT SWEEP")
+	;  *RDK 10/24 2106063 - Add ^HADFLAG("RIS","PERFORMING_PRIORITY_LAST_RUN")
+	;  *JL  10/24 2125569 - Add ^HADFLAG("CEEXTNETDEACTIVATION")
+	;  *sch 10/24 2076493 - Add ^HADCGOTXERR
+	;  *GSR 10/24 2134372 - Add ^HLOCSSLTMODFTRS
+	;  *SF  10/29 2140920 - Add ^XUTIL("PGXOCRMAPUTIL")
+	;  *JCH 11/24 2137538 - Add ^HADCGHPMTO
+	;  *BEG 11/24 2145224 - Add ^HADCGAMBUSERS
+	;  *sdi 11/24 2139114 - Add ^HLOCGNOLLMQ
+	;  *lds 11/24 2104462 - Add ^HADCGCOSTRIGGER
+	;  *spb 11/24 2147055 - Add ^HADUTIL("CE","CONV",2147055)
+	;  *SAM 11/24 2151178 - Add ^HADJNOTEVIEWTM
+	;  *WJM 11/24 2141812 - Add ^XUTIL nodes ROSTERPRECONVHXDEMOGREMOVAL,ROSTERFILETYPE,ROSTERBACKOUT,IDBUNDLESVIEWER
+	;  *dje 12/24 2156847 - Add ^HLOCKWQF
+	;  *JJY 12/24 2140205 - Add ^HINITIALROLLOUT("RFLCONSULTSUMMARY")
+	;  *BDR 01/25 2133574 - Add ^HADCGBIPMENTITYQ
+	;  *CFK 01/25 2158901 - Add ^LHPDATA("HMTImportVisibility")
+	;  *MPD 01/25 2130453 - Add ^HADCGOBSTRGENQUEUE
+	;  *WHC 02/25 2177766 - Add ^HADUTIL("GNO","PDS_BULK_DEL")
+	;  *wjy 03/25 2109991 - Add ^HADCGNTRKWQ
+	;  *BMK 03/25 2117499 - Add ^HADCGHUSTTTRANSCRIPT
+	;  *JRC 04/25 2170520 - Add ^HADCGPULSYNC and ^HPROTECTPULSYNC
+	;  *BNG 04/25 2172718 - Add ^HSNTEMPORGUDID
+	;  *NAC 04/25 2193831 - Add ^HSTEMPORVENDOR
+	;  *BMW 04/25 2170933 - Add ^HLOCWBTVNOTIF
+	;  *RJS 04/25 2184384 - Add ^HADUTIL("WBSENCRYPTCONV")
+	;  *JDT 05/25 2164215 - Add ^HFLAG("GDM LEGACY PATIENTS EXIST")
+	;  *VVK 05/25 2198216 - Add ^HADUTIL("NX2198216")
+	;  *ajb 05/25 2194183 - Add ^HSNTEMPHBMANAGER
+	;  *KJH 05/25 2162504 - Add ^HADCGFLAG("HP","RACA")
+	;  *rfz 05/25 2202501 - Add ^HADCGCENEBDOCSTORE
+	;  *jbm 05/25 2206931 - Add ^PABCS("GC_LLM_PT_SCORE")
+	;  *SZ  06/25 2211768 - Add ^HADUTIL("WBSEXPORTUTIL")
+	;  *ljs 06/25 2204997 - Add ^HADCGPTCLOCKEVENTS
+	;  *kmk 06/25 2151278 - Add ^HLOCPSTESTMODE
+	;  *ajj 06/25 2219106 - Add ^HADCGFLAG("SLICERDICER","ASYNC","MAINTENANCE")
+	;  *WW  07/25 2218748 - Add ^HADFLAG("RIS","CALCULATE_VISIT_TYPES_LAST_RUN")
+	;  *SJD 07/25 2210371 - Add ^XUTIL("PGXPLANTESTER")
+	;  *PJD 07/25 2202879 - Add ^XUTIL("CORO_PLANNED_DATE_UTIL")
+	;*taras 07/25 2206913 - Add ^XUTIL("CE","REQUESTERIN")
+	;  *TLW 07/25 2220024 - Add ^HFLAG("GDM","ACQUISITION","BARCODE_SCAN_IN_IMPORT")
+	;  *JJP 07/25 2189114 - Add ^HADCGGOAUTOSCHED
+	;  *MBW 08/25 2227844 - Add ^HFLAG("RIS","TRACKBEFORESIGNLPPS") and ^HADUTIL("RIS","TRACKBEFORESIGNLPPS")
+	;  *THR 08/25 2226304 - ADD ^HADCGFLOAMBUSAGE
+	;  *MCG 09/25 2222417 - Add ^HADCGCOSBCCDMGEN
+	;  *SRD 09/25 2233179 - Add ^HSTEMPCOSCOMETREQ
+	;  *ABF 09/25 2231880 - Add ^HADFLAG("ES_BUILD_AUDIT_LAST_UPDATED")
+	;  *nas 09/25 2212005 - Add ^HFLAG("CE","CERTAUTH","MONITORINGSTARTUTC")
+	;  *SDH 09/25 2234426 - Add ^HSNTEMPJNUDGETIMESTAMP
+	;  *ZLT 09/25 2222196 - Add ^HADCGCEAUTORECDEBUG, ^HLOCCEDDLOG
+	;  *JAEW 09/25 2244133- Add ^HADCGLOPINSIGHTS
+	;  *TDB 10/25 2135610 - Add ^HADCGDELAYROUTE
+	;  *APV 10/25 2207829 - Add ^HADCGMYCSECLNK
+	;  *MRT 10/25 2249627 - Add ^HSNTEMPWCACHE("STDTREEMATCHES")
+	;  *CLC 10/25 2184977 - Add ^HADUTIL("CVRESEXTRACT")
+	;  *CTE 10/25 2246101 - Add ^XUTIL("ORCASELENGTHAI")
+	;  *TJP 10/25 2221076 - Add ^HSNTEMPAILOGANDTEST
+	;  *STR 11/25 2224829 - Add ^HADUTIL("DMS2BLOBBDR")
+	;  *fha 11/25 2228771 - Add ^HADCGCEAURA
+	;  *NGP 11/25 2256776 - Add ^HLOCKPPROCASSOC
+	;  *JWL 11/25 2262617 - Add ^HLOCNUMDUPEVAL
+	;  *SHC 11/25 2255235 - Add ^HSNTEMPWBTV*
+	;  *AWB 12/25 2219837 - Add ^HADCGFLAG("HIM","AUDIT TRAIL EXPORT")
+	;  *rsd 12/25 2263644 - Change ceDocStorageBaseGlo to a library tag
+	;  *SXG 12/25 2265182 - Add ^HADCGHSFHLVUPDT
+	;  *MEM 12/25 2232609 - Add ^XUTIL("OT_CALC")
+	;  *BSG 12/25 2232849 - Add ^HADFLAG("Cosmos","LastCleanedLookAlikesTeleport")
+	;  *CFP 12/25 2260645 - Add ^XUTIL("2260645")
+	;  *TJD 12/25 2273387 - Add ^%ZeLOCICOBSERVE
+	;  *KMW 12/25 2098719 - Add ^HSNTEMPAIOUTQIDX
+	;  *ALP 01/26 2274842 - Add ^HLOCLSDKEXTRACT
+	;  *KFE 01/26 2270676 - Add ^HADCGHTZ
+	;  *rwz 01/26 2273968 - Add ^HADCGCEIXBACKFILL
+	;  *DNL 01/26 2259608 - Add ^HADCGERPWF
+	;  *JB  01/26 2264012 - Add ^HLOCORBRCONFTST
+	;  *JM  02/26 2282757 - Add ^HADUTIL("GNO","SEQ_DOC_REHYDRATIONS")
+	;  *BAG 02/26 2221031 - Add ^HADCGLAVRLLM
+	;*********************************************************************
+	;---------
+	; NAME:         GetGlobals
+	; DESCRIPTION:  Initialize a default array of globals that will be
+	;               killed.
+	;               New globals to be killed should be added here. Can
+	;               take subscripts.
+	;               Called by GetGlobals^EZDYWIPE2
+	; PARAMETERS (passed by reference):
+	;  globAry - Array of globals to be killed
+	; ASSUMES:      log
+	; REVISIONS:
+	; --- Older Comments Removed ---
+	; *TGB 02/23 948495 - remove ^AITVCIDX
+	; *tm  02/23 952027 - Add ^HADECSOUTSTANDING
+	; *CJT 02/23 861542 - Add ^HSNTEMPRISWLCNT
+	; *KRT 02/23 941473 - Add ^XUTIL("LUTILDXRAUTOCONVERT")
+	; *taras 02/23 760798 - Add add ^HADCSC1("DuplDocIDs") to GetGlobals
+	; *lgi 02/23 940929 - Add ^HLOCECSMTRCS
+	; *vln 03/23 926851 - Add ^HLOCECSSURL
+	; *mlb 03/23 954878 - Add ^HLOCNPRICERVIEW
+	; *DVB 02/23 934562 - Add ^HSNTEMPHPMCACHE
+	; *MDH 03/23 952660 - Add ^HADHHEVVTRK
+	; *PDR 03/23 880905 - Add ^HADHCCCHAT
+	; *PDR 03/23 958199 - Add ^HSNTEMPHCCCHAT
+	; *SSV 04/23 947647 - Add ^HADNPTPROCSRCH
+	; *mlb 04/23 960143 - Add ^HADNPTCMSFSC
+	; *TRC 04/23 776782 - Remove ^HFLAG("RESIDENTIAL_CARE","ORDER") (getDynamicGlobalName^JORDRECRESPSWITCH)
+	; *joc 05/23 967124 - Add ^HADCSC1("UPDATEPATIENT")
+	; *BDB 05/23 921008 - Add ^HFLAG("INP","DUPLICATE_LDA_DEBUG")
+	; *mtw 05/23 965262 - Add BIPMRETROTEST global
+	; *ss  05/23 982845 - Add HADUTIL("CE","CONV","872718")
+	; *BRW 05/23 983136 - Add ^HADUTIL("WBSIMPORT")
+	; *JXT 05/23 970664 - Add ^HLOCLCHARTSUM
+	; *JCS 06/23 964286 - Add ^HADFLAG("DATAGATEWAYPENDINGIMPORTREQUESTS")
+	; *DJB 06/23 983460 - Add ^HADUTIL("OBCNV983460")
+	; *CYW 06/23 948653 - Add ^HADFLAG("REG","DOCLINK")
+	; *ZJM 07/23 953584 - Add ^HSNTEMPWCACHE("WB","ProvisionCode")
+	; *tce 07/23 995780 - Add ^HADUTIL("ES","SEDAT_DEBUG")
+	; *DDC 07/23 944082 - Add ^HADSTUTIL(103050)
+	; *RDS 07/23 984864 - Add ^HLOCNLPSTATUS
+	; *mra 08/23 998183 - Add ^HADFLAG("DisplayTextPurge")
+	; *MPB 08/23 834506 - Add ^HADFLAG("ORDERS","JSCHEDMETA") (getJschedMetaGlo^JAASCH4)
+	; *ICO 08/23 1001161 - Add IDPatDeletionGlo
+	; *NAU 08/23 1003127 - Add ^RISNLPUTILORD
+	; *PMR 09/23 995349  - Add ^HFLAG("CCM","GAIMR") (URSecurityGlobalName^JCCMLLMCONFIG)
+	;  *ji 10/23 2015219 - Add ^HADEDCODE
+	; *JAW 10/23 984864 - Modify ^HLOCNLPSTATUS to pull from source of truth
+	; *SCL 10/23 1010873 - Add ^HADCGORDFRIC
+	; *SLW 10/23 1005683 - Add ^HADCGSRCHCDC*
+	; *MAR 11/23 2020328 - Add ^HADCGBLOBSTAT, ^HLOCBLOBSTAT*
+	; *PKL 11/23 997103  - Add ^HLOCECSNLP
+	; *whj 11/23 989165  - Add ^HADFLAG("VBA","MeasureCalcStatus")
+	; *gyc 11/23 983845 - Add ^HADFLAG("Cosmos","PHIlterReport")
+	; *mra 11/23 2027544 - Add ^HADFLAG("ALTPURGE")
+	; *JB  11/23 2016425 - Add ^HLOCORBLKTST
+	; *tce 12/23 1002098 - Add ^HSNESCHATSESSION
+	; *pwm 12/23 1002315 - Add ^HLOCESAUTOLINK
+	; *jmp 12/23 2045820 - Add ^HADUTIL("INBASKET","XDM_VALIDATION")
+	; *aan 01/24 2051256 - Add ^HADCGJAMBFLO
+	; *RJ  01/24 2043757 - Add ^XUTIL("CVCOSDCOUTIL")
+	; *MCG 02/24 2059683 - Add ^HSNTEMPCOSBCQ
+	; *jkr 02/24 2058396 - Add ^XUTIL("CEBULKPUSH")
+	; *MWS 03/24 2042385 - Add ^HLOCLAMBANOMEVT
+	; *ynk 03/24 2025206 - Add ^HADFLAG("MYCHART","DLG2025206") - proBmRetryGlo^WPCOREQNRSERIESBMK
+	; *BLO 03/24 2065539 - Add ^HADUTIL("VUSCONFIGTEMP")
+	; *BMB 03/24 2046156 - Add ^HADUTIL("WBSPASSBACK")
+	; *DAS 03/24 2026080 - Change ^HFLAG("CCM","GAIMR") to ^HFLAG("CCM","GDUR")
+	; *KJA 03/24 2066407 - Add ^XUTIL("2066407")
+	; *VLN 03/24 2043993 - Add ^HLOCECSEMAIL and ^HADUTIL("ECS")
+	; *JC  04/24 2070170 - Add ^HLOCLEVAANOMEVT
+	;  *TCB 04/24 2079022 - Add ^HLOCNAUTHSUM
+	; *NAU 04/24 869914 - Add ^HSNTEMPRISLDBAL
+	; *OJH 04/24 2082827 - Add ^XUTIL("FMK","Block Query SignalR Until Timestamp")
+	; *bpr 04/24 2079610 - Move Hello World global list into Hello World code
+	; *CPJ 04/24 2062035 - Add ^HADFLAG("RIS","PRIORITY_MODEL_LAST_RUN")
+	; *JMR 08/24 2071294 - Add ^XUTIL("2071294")
+	;  *MAR 05/24 864289 - Add ^HFLAG("WBSINTEGRITY"), ^HADUTIL("WBSINTEGRITY")
+	; *MJM 05/24 2032467 - Add ^HADFLAG("COPS","LastEndpointUpdate")
+	;  *JAO 05/24 2069909 - Add ^HADREGNP
+	;  *jbh 05/24 2012707 - Add ^HLOCRXLOG
+	;  *spb 05/24 2033654 - Add ^HADUTIL("CE","DUP_DXT_CLEANUP")
+	;  *DKG 05/24 2088837 - Add ^HADFLAG("AUTOEXPPROC")
+	;  *SJD 05/24 2079431 - Add ^XUTIL("PSELEXVALIDATE")
+	;  *DPY 06/24 2082765 - Add ^HADFLAG("ES_WQ_TRENDS_LAST_RUN")
+	;  *SLW 06/24 992531  - Add CSLLMQueueGlo
+	;  *ZSD 06/24 2094394 - Add ^HLOCCLGRPTDRV
+	;  *LGJ 06/24 2101377 - Add ^HADUTIL("DMS2BLOB")
+	;*taras 06/24 2084031 - Add HADUTIL("CE","DXT_EPT_MISMATCH_CLEANUP")
+	;  *AVG 06/24 2100587 - Add QM and OM temp globals
+	;  *LMB 06/24 2081760 - Add ^HLOCRISCOLS
+	;  *DNL 06/24 2098901 - Add ^HLOCCSRPTDATA
+	;  *CRW 06/24 901843  - Add ^BISDGEOPARSER
+	;  *GLD 07/24 2096187 - Add ^HLOCMISUMMARY
+	;  *AEP 07/24 2106183 - Add ^HADFLAG("ES_TICKET_PASS_LAST_RUN")
+	;  *GLM 07/24 2078962 - Add global names for AVG conversion and creation
+	;  *BAG 07/24 2110349 - Update call to get Chart Summarization queue global
+	;  *cjz 07/24 2086111 - Add ^HADFLAG("RX","Re-Evaluate Adjudication")
+	;  *SNO 07/24 2113714 - Add ^HLOCUCDATASYNC
+	;  *HHN 07/24 2072971 - Add ^HLOCRXSTOCKTX
+	;  *GRL 08/24 2026794 - Add ^HADCGFLAG("BCA","HAD_RESERVED_MRN")
+	;  *MAR 08/24 2067918 - Add ^HADCGWBFMAINT
+	;  *AV  08/24 2120898 - Add ^HLOCNGLDML
+	;  *dis 09/24 2125967 - Add ^HLOCWMCONCEPTS
+	;  *GRL 09/24 2120187 - Add BCA listener timestamp HFLAG
+	;  *AD  09/24 2112085 - Add ^HSNTEMPESRESCHED
+	;  *tas 10/24 2073155 - Add ^HADCGPSRIAQ
+	;  *ddv 10/24 2113279 - Add ^HADCGWXIDPDMNQUEUE
+	;  *NTK 10/24 2127712 - Add ^HADCGCECB
+	;  *sxm 10/24 2112090 - Add ^RSHSTDYFNDRDATA
+	;  *SMM 10/24 2085101 - Add ^HLOCPROCINTRAOP
+	;  *sme 10/24 2130989 - Add ^HADUTIL("DIRECT SWEEP")
+	;  *RDK 10/24 2106063 - Add ^HADFLAG("RIS","PERFORMING_PRIORITY_LAST_RUN")
+	;  *JL  10/24 2125569 - Add ^HADFLAG("CEEXTNETDEACTIVATION")
+	;  *GSR 10/24 2134372 - Add ^HLOCSSLTMODFTRS
+	;  *SF  10/29 2140920 - Add ^XUTIL("PGXOCRMAPUTIL")
+	;  *JMR 11/24 2147530 - Add ^XUTIL("2147530")
+	;  *JCH 11/24 2137538 - Add ^HADCGHPMTO
+	;  *BEG 11/24 2145224 - Add ^HADCGAMBUSERS
+	;  *ZPL 11/24 2133591 - Add ^HSNTEMPWISCHAT
+	;  *sdi 11/24 2139114 - Add ^HLOCGNOLLMQ
+	;  *lds 11/24 2104462 - Add ^HADCGCOSTRIGGER
+	;  *GRL 11/24 2150158 - Add ^HFLAG("BCAAPP","DEBUG_HUDRBED_SKIP_VERIFY")
+	;  *spb 11/24 2147055 - Add ^HADUTIL("CE","CONV",2147055)
+	;  *SAM 11/24 2151178 - Add ^HADJNOTEVIEWTM
+	;  *WJM 11/24 2141812 - Add ^XUTIL nodes ROSTERPRECONVHXDEMOGREMOVAL,ROSTERFILETYPE,ROSTERBACKOUT,IDBUNDLESVIEWER
+	;  *dje 12/24 2156847 - Add ^HLOCKWQF
+	;  *JJY 12/24 2140205 - Add ^HINITIALROLLOUT("RFLCONSULTSUMMARY")
+	;  *BDR 01/25 2133574 - Add ^HADCGBIPMENTITYQ
+	;  *CFK 01/25 2158901 - Add ^LHPDATA("HMTImportVisibility")
+	;  *MPD 01/25 2130453 - Add ^HADCGOBSTRGENQUEUE
+	;  *WHC 02/25 2177766 - Add ^HADUTIL("GNO","PDS_BULK_DEL")
+	;  *wjy 03/25 2109991 - Add ^HADCGNTRKWQ
+	;  *BMB 03/25 2174533 - Add ^HADUTIL("WBFCLEANUP")
+	;  *BMK 03/25 2117499 - Add ^HADCGHUSTTTRANSCRIPT
+	;  *JRC 04/25 2170520 - Add ^HADCGPULSYNC and ^HPROTECTPULSYNC
+	;  *BNG 04/25 2172718 - Add ^HSNTEMPORGUDID
+	;  *NAC 04/25 2193831 - Add ^HSTEMPORVENDOR
+	;  *BMW 04/25 2170933 - Add ^HLOCWBTVNOTIF
+	;  *RJS 04/25 2184384 - Add ^HADUTIL("WBSENCRYPTCONV")
+	;  *JDT 05/25 2164215 - Add ^HFLAG("GDM LEGACY PATIENTS EXIST")
+	;  *VVK 05/25 2198216 - Add ^HADUTIL("NX2198216")
+	;  *KJH 05/25 2162504 - Add ^HADCGFLAG("HP","RACA")
+	;  *rfz 05/25 2202501 - Add ^HADCGCENEBDOCSTORE
+	;  *jbm 05/25 2206931 - Add ^PABCS("GC_LLM_PT_SCORE")
+	;  *SZ  06/25 2211768 - Add ^HADUTIL("WBSEXPORTUTIL")
+	;  *ljs 06/25 2204997 - Add ^HADCGPTCLOCKEVENTS
+	;  *kmk 06/25 2151278 - Add ^HLOCPSTESTMODE
+	;  *ajj 06/25 2219106 - Add ^HADCGFLAG("SLICERDICER","ASYNC","MAINTENANCE")
+	;  *WW  07/25 2218748 - Add ^HADFLAG("RIS","CALCULATE_VISIT_TYPES_LAST_RUN")
+	;  *SJD 07/25 2210371 - Add ^XUTIL("PGXPLANTESTER")
+	;  *PJD 07/25 2202879 - Add ^XUTIL("CORO_PLANNED_DATE_UTIL")
+	;*taras 07/25 2206913 - Add ^XUTIL("CE","REQUESTERIN")
+	;  *JP  07/25 2226421 - Add ^XUTIL("2226421")
+	;  *GRL 07/25 2225543 - Add BCA EPL update batching HFLAG
+	;  *TLW 07/25 2220024 - Add ^HFLAG("GDM","ACQUISITION","BARCODE_SCAN_IN_IMPORT")
+	;  *JJP 07/25 2189114 - Add ^HADCGGOAUTOSCHED
+	;  *MBW 08/25 2227844 - Add ^HFLAG("RIS","TRACKBEFORESIGNLPPS") and ^HADUTIL("RIS","TRACKBEFORESIGNLPPS")
+	;  *ZLT 08/25 2222196 - Add ^HADCGCEAUTORECDEBUG, ^HLOCCEDDLOG
+	;  *THR 08/25 2226304 - ADD ^HADCGFLOAMBUSAGE
+	;  *MCG 09/25 2222417 - Add ^HADCGCOSBCCDMGEN
+	;  *SRD 09/25 2233179 - Add ^HSTEMPCOSCOMETREQ
+	;  *ABF 09/25 2231880 - Add ^HADFLAG("ES_BUILD_AUDIT_LAST_RUN")
+	;  *nas 09/25 2212005 - Add ^HFLAG("CE","CERTAUTH","MONITORINGSTARTUTC")
+	;  *SDH 09/25 2234426 - Add ^HSNTEMPJNUDGETIMESTAMP
+	;  *JAEW 09/25 2244133- Add ^HADCGLOPINSIGHTS
+	;  *TDB 10/25 2135610 - Add ^HADCGDELAYROUTE
+	;  *APV 10/25 2207829 - Add ^HADCGMYCSECLNK
+	;  *MRT 10/25 2249627 - Add ^HSNTEMPWCACHE("STDTREEMATCHES")
+	;  *CLC 10/25 2184977 - Add ^HADUTIL("CVRESEXTRACT")
+	;  *OAO 10/25 2169759 - Add ^XUTIL("XIB_StableAbnormalUtil")
+	;  *CTE 10/25 2246101 - Add ^XUTIL("ORCASELENGTHAI")
+	;  *TJP 10/25 2221076 - Add ^HSNTEMPAILOGANDTEST
+	;  *STR 11/25 2224829 - Add ^HADUTIL("DMS2BLOBBDR")
+	;  *fha 11/25 2228771 - Add ^HADCGCEAURA
+	;  *NGP 11/25 2256776 - Add ^HLOCKPPROCASSOC
+	;  *JWL 11/25 2262617 - Add ^HLOCNUMDUPEVAL
+	;  *SHC 11/25 2255235 - Add ^HSNTEMPWBTV*
+	;  *AWB 12/25 2219837 - Add ^HADCGFLAG("HIM","AUDIT TRAIL EXPORT")
+	;  *rsd 12/25 2263644 - Change ceDocStorageBaseGlo to a library tag
+	;  *SXG 12/25 2265182 - Add ^HADCGHSFHLVUPDT
+	;  *MEM 12/25 2232609 - Add ^XUTIL("OT_CALC")
+	;  *BSG 12/25 2232849 - Add ^HADFLAG("Cosmos","LastCleanedLookAlikesTeleport")
+	;  *CFP 12/25 2260645 - Add ^XUTIL("2260645")
+	;  *TJD 12/25 2273387 - Add ^%ZeLOCICOBSERVE
+	;  *KMW 12/25 2098719 - Add ^HSNTEMPAIOUTQIDX
+	;  *ALP 01/26 2274842 - Add ^HLOCLSDKEXTRACT
+	;  *KFE 01/26 2270676 - Add ^HADCGHTZ
+	;  *rwz 01/26 2273968 - Add ^HADCGCEIXBACKFILL
+	;  *DNL 01/26 2259608 - Add ^HADCGERPWF
+	;  *JMR 01/26 2227325 - Add ^XUTIL("2227325")
+	;  *JB  01/26 2264012 - Add ^HLOCORBRCONFTST
+	;  *JM  02/26 2282757 - Add ^HADUTIL("GNO","SEQ_DOC_REHYDRATIONS")
+	;  *kaf 02/26 883493  - Add Cadence auto scheduler debug global
+	;  *BAG 02/26 2221031 - Add ^HADCGLAVRLLM
+	;---------
+GetGlobals(globAry) n x
+	;Add global to globAry to be wiped
+	;e.g.
+	;f glob="^XXX1","^XXX2" s globAry(glob)=1
+	s globAry($$PHIlterReportingGlo^COSPHILTERUTIL())=1
+	s globAry($$pmGetScoreGlobalName())=1
+	s globAry($$GetVARKBGlobal^LGNOVARASCCOMM())=1
+	s globAry($$claimGloName^LHPCLAIMENQUEUE())=1
+	s globAry($$utilGlo^CEBULKCCUTIL())=1
+	s globAry($$callbackGlobalName^CSCPNRCALLBACKAPI())=1
+	s globAry($$callbackIndexGlobalName^CSCPNRCALLBACKAPI())=1
+	s globAry($name(^HLOCFEED))=1
+	s globAry($$backStateGlobal^LHHLHOSNAP5())=1
+	s globAry($$hideMedsUtilGlobal^WPUTILHIDEMEDS())=1
+	s globAry($$logSchGlobal^BIPMLOGSCHAPI())=1
+	f x=0:1:9 s globAry($$baseFilerGlo^COSHOSTCHARTUPD(x))=1
+	s globAry($$shardCodesGlo^COSHOSTMAP())=1
+	s globAry($name(^HSNTEMPIDWQ))=1
+	s globAry($$getShortURLGlobal^WPCORESHORTURL())=1
+	s globAry($$bulkCommGloBaseName^LRWBULKCOMM2())=1
+	s globAry($$gloName^LHPBULKACTIONQUEUE())=1
+	s globAry($$ocrQueueGlobal^HOCR())=1
+	s globAry($$GetXMLGlobal^RISPACS7())=1
+	s globAry($$GetWaitQueueGlobal^SWAITQUEUE())=1
+	s globAry($$termMapGlo^COSMAPPRDTOPOC())=1
+	s globAry($name(^HLOCCOSMET))=1
+	s globAry($name(^HLOCAIBULKDATA))=1
+	s globAry($name(^HADUTIL("AI_BULK_DATA")))=1
+	s globAry($$ceGtwyMigrationGlo())=1
+	s globAry($$immQueryMonitorGlo^ASCLINUTIL08())=1
+	s globAry($$MetricGlobalName^LHPCLAIMDATACOLLECT())=1
+	s globAry($$utilGlo^CSCBULKRSND())=1
+	s globAry($$RWResultGlobalModernGlobal())=1
+	s globAry($$RWResultGlobalModernGlobal(1))=1
+	s globAry($$refCloudProspectsRoot^HCCPPPCORESEGMENT())=1
+	s globAry($$globalBase^HCCPPPPULL())=1
+	s globAry($$aggregateGlo^HCSRCHLOGPROC())=1
+	s globAry($name(^HSTEMPORDWQ))=1
+	s globAry($name(^HADFLAG("LPMVIJOB")))=1
+	s globAry($$RegInstGlobal())=1
+	s globAry($name(^HUORDVAL))=1
+	s globAry($name(^HADCOSREFIDCNT))=1
+	s globAry($name(^HADCOSREFIDS))=1
+	s globAry($name(^HADCSCMSG("PQCB")))=1
+	s globAry($name(^HADCSCMSG("PQCBIX")))=1
+	s globAry($name(^HADCSC1("CE","REBUILD")))=1
+	s globAry($name(^HADUTIL("ORDERS","SSTRACK")))=1
+	s globAry($name(^NNUR))=1
+	s globAry($name(^HADNPTNEGORATE))=1
+	s globAry($$GetRxInvCacheGlo^RXMIMUTILS())=1
+	s globAry($$getExtChangeLogGlobal^LNUActionPrechecks())=1
+	s globAry($$oncGetTraceLockAuditGlobal^LONDEBUG())=1
+	s globAry($name(^HADEHIEXPORT))=1
+	s globAry($name(^HADHHDAYPLANNER))=1
+	s globAry($name(^HADHHEVVTRK))=1
+	s globAry($name(^LNOPENDINFO))=1
+	s globAry($name(^HADLGLINFO))=1
+	s globAry($$ImmGloAIRDebug())=1
+	s globAry($name(^HADNPTCODECHECK))=1
+	s globAry($name(^HADNPTPROCSRCH))=1
+	s globAry($name(^HLOCNODESTUSG))=1
+	s globAry($name(^HADSTUSG))=1
+	s globAry($name(^HADSTUTIL(103050)))=1
+	d getInterfaceGlobalsToKill^AIDELGBL(.globAry)
+	s globAry($$zMigGetCoreDataGlo())=1
+	s globAry($name(^HSNTEMPCSCFHIRPG))=1
+	s globAry($$hashedSigsGlobal^JLTCXPHARMSIGRCMD())=1
+	s globAry($name(^HADFLAG("RIS","Worklist_Summary_Counts")))=1
+	s globAry($name(^HADFLAG("RIS","PRIORITY_MODEL_LAST_RUN")))=1
+	s globAry($name(^HADFLAG("RIS","PERFORMING_PRIORITY_LAST_RUN")))=1
+	s globAry($name(^HADFLAG("OrdersAutocomplete")))=1
+	s globAry($name(^HADFLAG("COPS","LastEndpointUpdate")))=1
+	s globAry($name(^HSNTEMPDBCGRPR))=1
+	s globAry($$reqDocBatchLastTimeGlo^JREQDOCBATCH())=1
+	s globAry($name(^HLOCLNOTEVIEWTM))=1
+	s globAry($name(^LEVAFEEDBACKDATA))=1
+	d getHelloWorldGlobalsToClear^HECS2DYWIPE(.globAry)
+	s globAry($$dupDXTCleanupGlo^CSCDUPDXTCLEANUP())=1
+	s globAry($na(^HADUTIL("CE","DXT_EPT_MISMATCH_CLEANUP")))=1
+	s globAry($na(^HADUTIL("CE","CONV",2147055)))=1
+	s globAry($$dataGatewayGlobalNode^CABDATAGATEWAY())=1
+	s globAry($$dataGatewayPendingReqGlobalNode^CABDATAGATEWAY())=1
+	s globAry($name(^HADRFLAUTOLINK))=1
+	s globAry($name(^HLOCESAUTOLINK))=1
+	s globAry($$GetValidationGloMain^HTIBMODELVALIDATION())=1
+	s globAry($name(^XUTIL("XIB_SMARTROUTE_DEBUG")))=1
+	s globAry($name(^XUTIL("XIB_StableAbnormalUtil")))=1
+	s globAry($$getIecCutoverUtilGlobalName^LBMTIECUTIL1())=1
+	s globAry($name(^HLOCRXEQVCACHE))=1
+	s globAry($$retriggerGloName^CETHRTBULKRSND())=1
+	s globAry($$qtPermGlo())=1
+	s globAry($name(^HADFLAG("TELEHEALTHUTILITIES")))=1
+	s globAry($name(^HLOCBPASUCCESSQ))=1
+	s globAry($$OncPlanHxGlobalName())=1
+	s globAry($$ceDicomIndexDeleteGlo())=1
+	s globAry($$gloOBDSLock^OBLD13())=1
+	s globAry($name(^HSNTEMPRISWLCNT))=1
+	s globAry($name(^XUTIL("LUTILDXRAUTOCONVERT")))=1
+	s globAry($$duplDocIDsSharedGloName^CSCICUTLDXR())=1
+	s globAry($$getViewSettingsGloName^NCLMPRICERUTIL())=1
+	s globAry($$RegOnTheFlyCacheGlobal())=1
+	s globAry($name(^HADHCCCHAT))=1
+	s globAry($name(^HSNTEMPHCCCHAT))=1
+	s globAry($name(^HLOCFIPSERRS))=1
+	s globAry($$fscDownloadGloRef())=1
+	s globAry($$getDxrToUpdateGloName^CEPNRLINKPAT())=1
+	s globAry($$baseGloName^BIPMRETROTEST())=1
+	s globAry($$getDuplicateLdaDebugGlo^JWOUNDUTIL())=1
+	s globAry($name(^HADUTIL("CE","CONV","872718")))=1
+	s globAry($name(^HADUTIL("CE","DUP_DXT_CLEANUP")))=1
+	s globAry($name(^HADUTIL("WBSIMPORT")))=1
+	s globAry($name(^HADUTIL("WBSPASSBACK")))=1
+	s globAry($$CSLLMGlO^CSLLMCHART())=1
+	s globAry($name(^HADUTIL("OBCNV983460")))=1
+	s globAry($name(^HADFLAG("REG","DOCLINK")))=1
+	s globAry($$gtProvisionCodeGRef^WBCOREPROVISION())=1
+	s globAry($name(^HADUTIL("ES","SEDAT_DEBUG")))=1
+	s globAry($name(^HADUTIL("HB","PSPPCONV")))=1
+	s globAry($$uploadStatusGlo^BINLPUPLOAD())=1
+	s globAry($$displayTextPurgeGloNode^CIALTPURGE())=1
+	s globAry($$getJschedMetaGlo^JAASCH4())=1
+	s globAry($$IDPatDeletionGlo())=1
+	s globAry($na(^RISNLPUTILORD))=1
+	s globAry($$URSecurityGlobalName^JCCMLLMCONFIG())=1
+	s globAry($na(^HADUTIL("RegAudit")))=1
+	s globAry($na(^HADFLAG("FinAssist")))=1
+	s globAry($$Global^JEDCODEGLO())=1
+	s globAry($$ordFrictionGlobalName())=1
+	s globAry($$geoTelemGlo())=1
+	s globAry($name(^HLOCORBLKTST))=1
+	s globAry($na(^HADFLAG("VBA","MeasureCalcStatus")))=1
+	s globAry($$altLastPurgedInfoGlobal^CIALTPURGE2())=1
+	d GetAllNodes^HCSRCHCLOUD(.globAry) ;Wildcard global so need to add the list of all matching globals
+	s globAry($na(^HADCGBLOBSTAT))=1
+	d AddAllNodes^HBLOBSTAT(.globAry) ;Wildcard global so need to add the list of all matching globals
+	s globAry($$getRootStateGloName^SCHATBOTSMS())=1
+	s globAry($na(^HADUTIL("INBASKET","XDM_VALIDATION")))=1
+	s globAry($$GetGlobalName^JAMBAPI())=1 ; ^JAMBIENTFLO
+	s globAry($name(^XUTIL("CVCOSDCOUTIL")))=1
+	s globAry($na(^HSNTEMPCOSBCQ))=1
+	s globAry($na(^XUTIL("CEBULKPUSH")))=1 ; Ignore EZParse error - XUTIL("CEBULKPUSH") is a real, released global
+	s globAry($$ambientEventsLogGlobal())=1
+	s globAry($$VAEventsLogGlobal())=1
+	s globAry($$proBmRetryGlo^WPCOREQNRSERIESBMK())=1
+	s globAry($na(^HADFLAG("VUSCONFIGTEMP")))=1
+	s globAry($name(^XUTIL("2066407")))=1 ; EZPARSE - XUTIL isn't a debug global
+	s globAry($$CSLLMGlO^NUMAUTHSUMMARYLLM())=1
+	s globAry($name(^HSNTEMPRISLDBAL))=1
+	s globAry($na(^XUTIL("FMK","Block Query SignalR Until Timestamp")))=1
+	s globAry($name(^XUTIL("2071294")))=1 ; EZPARSE - XUTIL isn't a debug global
+	s globAry($name(^XUTIL("2147530")))=1 ; EZPARSE - XUTIL isn't a debug global
+	s globAry($na(^HFLAG("WBSINTEGRITY")))=1
+	s globAry($na(^HADUTIL("WBSINTEGRITY")))=1
+	s globAry($$getRegNpSuperGlobal())=1
+	s globAry($name(^HLOCRXLOG))=1
+	s globAry($na(^HADFLAG("AUTOEXPPROC")))=1
+	s globAry($$utilityGlo^PSELEXVALIDATE())=1  ;*SJD 07/24 2079431 +$na(^XUTIL("PSELEXVALIDATE"))
+	s globAry($$utilityGlo^PGXPLANTESTER())=1    ;*SJD 07/25 2210371 +$na(^XUTIL("PGXPLANTESTER"))
+	s globAry($$utilityGlo^PGXOCRMAPUTIL2())=1   ;*SF  10/24 2140920
+	s globAry($name(^HLOCX12))=1
+	s globAry($name(^HADFLAG("ES_WQ_TRENDS_LAST_RUN")))=1
+	s globAry($$CSLLMQueueGlo())=1
+	s globAry($name(^HLOCCLGRPTDRV))=1
+	s globAry($name(^HADUTIL("DMS2BLOB")))=1
+	s globAry($$getQMGlobalNoJournal())=1   ;^HLOCMUTQM
+	s globAry($$getQMGlobalNoJournalPersistent())=1 ;^HLOCMUPQM
+	s globAry($name(^HLOCMUPOM))=1
+	s globAry($name(^HLOCMUTOM))=1
+	s globAry($name(^HLOCRISCOLS))=1
+	s globAry($name(^HLOCCSRPTDATA))=1  ;*DNL 06/24 2098901
+	s globAry($name(^BISDGEOPARSER))=1
+	s globAry($$MILLMGLO^NCMMILLMSUMMARY())=1
+	s globAry($name(^HADFLAG("ES_TICKET_PASS_LAST_RUN")))=1
+	s globAry($$globalNameForAvgRoot())=1
+	s globAry($name(^HADFLAG("RX","Re-Evaluate Adjudication")))=1
+	s globAry($$gDataGlobal^JNEBULASYNC())=1
+	s globAry($name(^HLOCRXSTOCKTX))=1
+	s globAry($name(^HADCGFLAG("BCA","HAD_RESERVED_MRN")))=1
+	s globAry($na(^HADCGWBFMAINT))=1
+	s globAry($na(^HLOCNGLDML))=1
+	s globAry($na(^HLOCWMCONCEPTS))=1
+	s globAry($$bcaListenerEnableInstName())=1  ; *GRL 09/24 2120187
+	s globAry($na(^HSNTEMPESRESCHED))=1
+	s globAry($na(^HADCGPSRIAQ))=1  ;*tas 10/24 2073155
+	s globAry($$myccDaemonQueueGlo())=1 ;*ddv 10/24 2113279
+	s globAry($$ceCbGlobal())=1
+	s globAry($name(^RSHSTDYFNDRDATA))=1 ;sxm 10/24 2112090
+	s globAry($name(^HLOCPROCINTRAOP))=1 ;SMM 10/24 2085101
+	s globAry($name(^HADUTIL("DIRECT SWEEP")))=1 ;sme 10/24 2130989
+	s globAry($name(^HADFLAG($$gloNodeID^CEEXTNETDEACTIVATION())))=1
+	s globAry($name(^HADCGOTXERR))=1  ;*sch 10/24 2076493
+	s globAry($name(^HLOCSSLTMODFTRS))=1  ;*GSR 10/24 2134372
+	s globAry($name(^HADCGHPMTO))=1
+	s globAry($$ambientActiveUsersGlobal())=1 ;*BEG 11/24 2145224
+	s globAry($$AmbientNursingUsageGlobal^JAMBILL())=1 ;*THR 08/25 2226304
+	s globAry($name(^HSNTEMPWISCHAT))=1 ;*ZPL 11/24 2133591
+	s globAry($$pheLLMQueueGlo^LGNOPHELLMQUEUE())=1  ;*sdi 11/24 2139114
+	s globAry($$baseGlo^COSCONSTCRQTRIGGER())=1  ;*lds 11/24 2104462
+	s globAry($na(^HFLAG("BCAAPP","DEBUG_HUDRBED_SKIP_VERIFY")))=1  ;*GRL 11/24 2150158
+	s globAry($name(^HADJNOTEVIEWTM))=1
+	s globAry($na(^XUTIL("ROSTERPRECONVHXDEMOGREMOVAL")))=1 ; EZPARSE - XUTIL isn't a debug global  *WJM 11/24 2141812
+	s globAry($na(^XUTIL("ROSTERBACKOUT")))=1 ; EZPARSE - XUTIL isn't a debug global  *WJM 11/24 2141812
+	s globAry($na(^XUTIL("ROSTERFILETYPE")))=1 ; EZPARSE - XUTIL isn't a debug global  *WJM 11/24 2141812
+	s globAry($na(^XUTIL("IDBUNDLESVIEWER")))=1 ; EZPARSE - XUTIL isn't a debug global  *WJM 11/24 2141812
+	s globAry($na(^HLOCKWQF))=1
+	s globAry($na(^HINITIALROLLOUT("RFLCONSULTSUMMARY")))=1 ; *JJY 12/24 2140205
+	s globAry($na(^HADCGBIPMENTITYQ))=1 ; *BDR 01/25 2133574
+	s globAry($na(^LHPDATA("HMTImportVisibility")))=1  ;*CFK 01/25 2158901
+	s globAry($$Glo^OBSTRGENQUEUEAPIS())=1  ;*MPD 01/25 2130453
+	s globAry($$BulkDeletionGlobal^LGNOPATDELETIONPDS())=1 ;*WHC 02/25 2177766
+	s globAry($name(^HADCGNTRKWQ))=1   ;*wjy 03/25 2109991
+	s globAry($name(^HADUTIL("WBFCLEANUP")))=1 ;*BMB 03/25 2174533
+	s globAry($$transcriptGlo^HUAMBSTTT8T())=1 ;*BMK 03/25 2117499
+	s globAry($na(^HADCGPULSYNC))=1            ;*JRC 04/25 2170520
+	s globAry($na(^HPROTECTPULSYNC))=1         ;*JRC 04/25 2170520
+	s globAry($$cnGlo^ORUDDICDAEMON())=1
+	s globAry($na(^HSTEMPORVENDOR))=1          ;*NAC 04/25 2193831
+	s globAry($na(^HLOCWBTVNOTIF))=1
+	s globAry($$gloEncryptConv^HBLOBUTILITY())=1  ;*SZ 06/25 2211768
+	s globAry($$gloExportUtil^HBLOBUTILITY())=1  ;*SZ 06/25 2211768
+	s globAry($na(^HFLAG($$hasLegacyPatientFlag^GDMLEGACYPATUTILITY())))=1
+	s globAry($na(^HADUTIL("NX2198216")))=1     ;*VVK 05/25 2198216
+	s globAry($$getRacaDataGlobal^LHPRAPREVISJOB())=1
+	s globAry($na(^HSNTEMPKHMANAGER))=1         ;*ajb 05/25 2194183
+	s globAry($$ceDocStorageBaseGlo())=1        ;*rsd 12/25 2263644
+	s globAry($na(^PABCS("GC_LLM_PT_SCORE")))=1   ;*jbm 05/25 2206931
+	s globAry($$WBSFileGlo^CSCCDT1())=1           ;*JJP 06/25 2178650
+	s globAry($na(^HADCGPTCLOCKEVENTS))=1
+	s globAry($$tmDataGlo^PSTESTMODE())=1
+	s globAry($$maintenceGlo^BISDASYNC())=1  ; *ajj 06/25 2219106
+	s globAry($name(^HADFLAG("RIS","CALCULATE_VISIT_TYPES_LAST_RUN")))=1
+	s globAry($na(^XUTIL("CORO_PLANNED_DATE_UTIL")))=1 ; *PJD 07/25 2202879
+	s globAry($$ceDebugRequesterGloName())=1           ; *taras 07/25 2206913
+	s globAry($name(^XUTIL("2226421")))=1 ; EZPARSE - XUTIL isn't a debug global
+	s globAry($$zBcaIsEplBatchDisabledHflagName())=1 ; *GRL 07/25 2225543
+	s globAry($name(^HFLAG("GDM","ACQUISITION","BARCODE_SCAN_IN_IMPORT")))=1
+	s globAry($$goAsDataGloName())=1
+	s globAry($na(^HFLAG("RIS","TRACKBEFORESIGNLPPS")))=1
+	s globAry($na(^HADUTIL("RIS","TRACKBEFORESIGNLPPS")))=1
+	s globAry($na(^HADCGCEAUTORECDEBUG))=1
+	s globAry($na(^HLOCCEDDLOG))=1
+	s globAry($$bccDMLoggingGlo^COSBCCFABGEN())=1
+	s globAry($$cometRequestGlo^COSHOSTDSAPIOUT3())=1
+	s globAry($na(^HADFLAG("ES_BUILD_AUDIT_LAST_UPDATED")))=1
+	s globAry($na(^HFLAG("CE","CERTAUTH","MONITORINGSTARTUTC")))=1
+	s globAry($name(^HSNTEMPJNUDGETIMESTAMP))=1
+	s globAry($$CSLLMFeedbackGlo())=1
+	s globAry($$delayedAutoRoutingGlo())=1  ;^HADCGDELAYROUTE
+	s globAry($na(^HADCGMYCSECLNK))=1
+	s globAry($$getDecisionTreeMatchesGlobal^WPAGENTSTHELPERS())=1
+	s globAry($$GetTodoGlobalName^CVUTILRESEXTRACT())=1
+	s globAry($na(^XUTIL("ORCASELENGTHAI")))=1 ;*CTE 10/25 2246101
+	s globAry($na(^HSNTEMPAILOGANDTEST))=1 ;TJP 10/25 2221076
+	s globAry($name(^HADUTIL("DMS2BLOBBDR")))=1
+	s globAry($$CEAuraSupDocsAutoGlo())=1 ;*fha 11/25 2228771
+	s globAry($na(^HLOCKPPROCASSOC))=1 ;*NGP 11/25 2256776
+	s globAry($na(^HLOCNUMDUPEVAL))=1 ;*JWL 11/25 2262617
+	d getAllBTVGlobals^WBTVCORETELEMETRY(.globAry) ;*SHC 11/25 225523 - Wildcard global so need to add the list of all matching globals
+	s globAry($$ExportGlobal^HAUDRPTEXPORT())=1   ;*AWB 12/25 2219837
+	s globAry($$%zHLVGlobal())=1 ;SXG 12/25 2265182
+	s globAry($$gloRoot^PTOVERTIMEDBG())=1  ;*MEM 12/25 2232609
+	s globAry($$lastCleanedLATeleportGlo^COSHOSTQTCLEAN())=1    ;*BSG 12/25 2232849
+	s globAry($na(^XUTIL("2260645")))=1  ;  *CFP 12/25 2260645
+	s globAry($na(^%ZeLOCICOBSERVE))=1 ; *TJD 12/25 2273387
+	s globAry($$aioqixGlobal())=1 ; *KMW 12/25 2098719
+	s globAry($na(^HLOCLSDKEXTRACT))=1 ;*ALP 01/26 2274842
+	s globAry($na(^HADCGHTZ))=1  ;*KFE 01/26 2270676
+	s globAry($$backfillRunGlo^CSCDICOMINDXUTIL())=1 ;*rwz 01/26 2273968
+	s globAry($na(^HADCGERPWF))=1  ;*DNL 01/26 2259608
+	s globAry($name(^HLOCORBRCONFTST))=1
+	s globAry($name(^XUTIL("2227325","failedLocks")))=1 ; EZPARSE - XUTIL isn't a debug global
+	s globAry($name(^XUTIL("2227325","tempEptAry")))=1 ; EZPARSE - XUTIL isn't a debug global
+	s globAry($name(^HADUTIL("GNO","SEQ_DOC_REHYDRATIONS")))=1
+	s globAry($$GetDataGlobal^SAUTOSCHEDDEBUG())=1  ;*kaf 02/26 883493
+	s globAry($$AVRLLMTextGlo())=1
+	q
+	;
+	q  ;;#eor#

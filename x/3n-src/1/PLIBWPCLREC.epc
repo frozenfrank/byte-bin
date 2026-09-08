@@ -1,0 +1,559 @@
+PLIBWPCLREC ; ; ;2026-02-06 17:53:55;11.8;BNiEK3nPPERpiPcYXKgc+dA9UdQziCkMBupyXFMrecc=;Copyright 2026 Epic Systems Corporation
+	q
+	;;#lglob#PLIB
+	;*********************************************************************
+	; PURPOSE:  Library tags for searching, creating, and modifying PCL records
+	; AUTHOR:   Daniel Leatherwood
+	; REVISIONS:
+	;  *DNL 01/26 2259608 Created
+	;*********************************************************************
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Given a provider, returns the next date for which we have an entry for them in their case logs.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External provider ID (SER).
+	;   serviceDate (I,REQ) - Reference date for traversal.
+	;   direction (I,OPT) - +1 for forward, -1 for backward.
+	; RETURNS:      Next available date, or null if none.
+	;---------
+credpclNextDate(serExtID,serviceDate,direction) ;
+	q $$zDKCIxNextSecondary("PCL","","",40,60,serExtID,serviceDate,direction)  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Given a provider and date, returns the next PCL record that stores entries for the provider's case logs
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External provider ID (SER).
+	;   serviceDate (I,REQ) - Reference date for traversal.
+	;   pclID (I,REQ) - Current PCL record ID.
+	;   direction (I,OPT) - +1 for forward, -1 for backward.
+	; RETURNS:      Next PCL ID, or null if none.
+	;---------
+credpclNextPCL(serExtID,serviceDate,pclID,direction) ;
+	q $$zDKCIxNextID("PCL",40,60,serExtID,serviceDate,pclID,direction)  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Given a provider, date, and PCL record, returns the next contact (DAT) within that PCL record
+	;               holding entries in the provider’s case logs.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External provider ID (SER).
+	;   serviceDate (I,REQ) - Reference date for traversal.
+	;   pclID (I,REQ) - PCL record ID.
+	;   pclDAT (I,REQ) - Current contact (DAT).
+	;   direction (I,OPT) - +1 for forward, -1 for backward.
+	; RETURNS:      Next contact DAT, or null if none.
+	;---------
+credpclNextContact(serExtID,serviceDate,pclID,pclDAT,direction) ;
+	q $$zDKCIxNextContact("PCL",40,60,serExtID,serviceDate,pclID,pclDAT,direction)  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Given a patient encounter CSN, returns the next PCL record associated with that
+	;               encounter.
+	; PARAMETERS:
+	;   patientCSN (I,REQ) - Patient encounter CSN.
+	;   pclID (I,REQ) - Current PCL record ID.
+	;   direction (I,OPT) - +1 for forward, -1 for backward.
+	; RETURNS:      Next PCL ID for the encounter, or null if none.
+	;---------
+credpclNextPclForPatCsn(patientCSN,pclID,direction) ;
+	q $$zCIxNextID("PCL",61,patientCSN,pclID,"",direction)  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Given a patient encounter CSN and case log record (PCL), returns the next contact (DAT) within that
+	;               record associated with that encounter.
+	; PARAMETERS:
+	;   patientCSN (I,REQ) - Patient encounter CSN.
+	;   pclID (I,REQ) - PCL record ID.
+	;   pclDAT (I,REQ) - Current contact (DAT).
+	;   direction (I,OPT) - +1 for forward, -1 for backward.
+	; RETURNS:      Next contact DAT for the encounter, or null if none.
+	;---------
+credpclNextPclDatForPatCsn(patientCSN,pclID,pclDAT,direction) ;
+	q $$zCIxNextContact("PCL",61,patientCSN,pclID,pclDAT,"",direction)  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Given a source order (ORD), returns the next PCL record associated with that order.
+	; PARAMETERS:
+	;   sourceORD (I,REQ) - Source order identifier (ORD).
+	;   pclID (I,REQ) - Current PCL record ID.
+	;   direction (I,OPT) - +1 for forward, -1 for backward.
+	; RETURNS:      Next PCL ID for the order, or null if none.
+	;---------
+credpclNextPclForOrd(sourceORD,pclID,direction) ;
+	q $$zCIxNextID("PCL",80,sourceORD,pclID,"",direction)  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Given a source order (ORD) and PCL record, returns the next contact (DAT) within that PCL record
+	;               associated with that order.
+	; PARAMETERS:
+	;   sourceORD (I,REQ) - Source order identifier (ORD).
+	;   pclID (I,REQ) - PCL record ID.
+	;   pclDAT (I,REQ) - Current contact (DAT).
+	;   direction (I,OPT) - +1 for forward, -1 for backward.
+	; RETURNS:      Next contact DAT for the order, or null if none.
+	;---------
+credpclNextPclDatForOrd(sourceORD,pclID,pclDAT,direction) ;
+	q $$zCIxNextContact("PCL",80,sourceORD,pclID,pclDAT,"",direction)  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Given a source OpTime surgical log (ORL), returns the next PCL record associated with it.
+	; PARAMETERS:
+	;   sourceORL (I,REQ) - Source ORL identifier.
+	;   pclID (I,REQ) - Current PCL record ID.
+	;   direction (I,OPT) - +1 for forward, -1 for backward.
+	; RETURNS:      Next PCL ID for the ORL, or null if none.
+	;---------
+credpclNextPclForOrl(sourceORL,pclID,direction) ;
+	q $$zCIxNextID("PCL",81,sourceORL,pclID,"",direction)  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Given a source OpTime surgical log (ORL) and PCL record, returns the next contact (DAT) within a PCL
+	;               record associated with that ORL and PCL.
+	; PARAMETERS:
+	;   sourceORL (I,REQ) - Source ORL identifier.
+	;   pclID (I,REQ) - PCL record ID.
+	;   pclDAT (I,REQ) - Current contact (DAT).
+	;   direction (I,OPT) - +1 for forward, -1 for backward.
+	; RETURNS:      Next contact DAT for the ORL, or null if none.
+	;---------
+credpclNextPclDatForOrl(sourceORL,pclID,pclDAT,direction) ;
+	q $$zCIxNextContact("PCL",81,sourceORL,pclID,pclDAT,"",direction)  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Given a source record (encounter, order, or ORL), advances to the next PCL record
+	;               and contact (DAT) associated with that source. This tag iterates through the PCL
+	;               hierarchy: first finding the next PCL record, then finding the next contact within
+	;               that record.
+	; PARAMETERS:
+	;   sourceINI (I,REQ) - INI of the source record type ("EPT", "ORD", or "ORL").
+	;   sourceIDorCSN (I,REQ) - Source record identifier: patient CSN for EPT, order ID for ORD, ORL ID for ORL.
+	;   pclID (IO,REQ) - Current PCL record ID. Updated to the next PCL ID, or empty if no more records exist.
+	;   pclDAT (IO,REQ) - Current contact DAT within the PCL record. Updated to the next DAT, or empty if no more contacts exist.
+	; RETURNS:      The next PCL ID if one was found.
+	;---------
+credpclNextPclForSourceRec(sourceINI,sourceIDorCSN,pclID,pclDAT) ;
+	i sourceINI="EPT" d
+	. f  d:pclID'=""  q:pclDAT'=""  s pclID=$$credpclNextPclForPatCsn(sourceIDorCSN,pclID) q:pclID=""
+	. . s pclDAT=$$credpclNextPclDatForPatCsn(sourceIDorCSN,pclID,pclDAT)
+	e  i sourceINI="ORD" d
+	. f  d:pclID'=""  q:pclDAT'=""  s pclID=$$credpclNextPclForOrd(sourceIDorCSN,pclID) q:pclID=""
+	. . s pclDAT=$$credpclNextPclDatForOrd(sourceIDorCSN,pclID,pclDAT)
+	e  i sourceINI="ORL" d
+	. f  d:pclID'=""  q:pclDAT'=""  s pclID=$$credpclNextPclForOrl(sourceIDorCSN,pclID) q:pclID=""
+	. . s pclDAT=$$credpclNextPclDatForOrl(sourceIDorCSN,pclID,pclDAT)
+	q pclID  ;;#eof#
+	;
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Updates or creates PCL records for a given source record. Retrieves all
+	;               entries associated with the source record, finds or creates corresponding PCL records, updates
+	;               them with current data, and removes any outdated entries that no longer reflect Chronicles data.
+	; PARAMETERS:
+	;   searchType (I,REQ) - PCL search type constant identifying the type of source record.
+	;   id (I,REQ) - Internal ID of the source record (ORL ID, ORD ID, or EPT ID depending on searchType).
+	;   dat (I,REQ) - DAT for the contact (used when searchType requires contact-level processing).
+	;   error (O,REQ) - Error message if the update fails, null otherwise. This is a packed error string you can split using (%)zcredutilErrorUnpack.
+	;   skipInclusionCheck (I,OPT) - If true, skips checking whether the source record should be included: use this if you've already checked this.
+	;   updateOnlyExisting (I,OPT) - If true, only add an entry if the provider already has a case log.
+	; RETURNS:      True if we updated successfully, false if we hit an error. The error message is in the output parameter. Note that
+	;               if we could not acquire the lock, we will automatically retry, so there is no need for the caller to handle that,
+	;               but we'll still return an error so that the caller knows that PCL is not fully up to date.
+	;---------
+credpclUpdateFromSource(searchType,sourceID,sourceDAT,error,skipInclusionCheck,updateOnlyExisting) ;
+	q $$updateLog^PWCPCLREC(searchType,sourceID,sourceDAT,.error,skipInclusionCheck,"",updateOnlyExisting) ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Extracts and returns the primary source record (ID and DAT) associated with an entry in a case log.
+	; PARAMETERS:
+	;   packedLine (I,REQ) - Packed PCL line containing encoded source data.
+	;   searchType (O,REQ) - Search type derived from the unpacked line.
+	;   ini (O,REQ) - INI representing the type of source record
+	;   id (O,REQ) - Source record internal ID
+	;   dat (O,REQ) - Contact DAT if applicable
+	;   returnIDasCSN (I,OPT) - If true, for cases that resolve to a specific record, return that encounter's CSN as the ID
+	;                           instead of looking up the record ID and DAT. DAT will be passed back as null in this case,
+	;                           since if you wanted the DAT looked up, you wouldn't use this parameter.
+	; RETURNS:      1 if the ID and DAT could be resolved successfully, 0 otherwise.
+	;---------
+credpclGetPrimaryRecord(packedLine,searchType,ini,id,dat,returnIDasCSN) ;
+	n patientCSN,sourceORD,sourceORL
+	d %zcredpclUnpackLine(packedLine,.searchType,"","","",.patientCSN,"","","","",.sourceORD,.sourceORL)
+	s ini=$$credpclGetPrimaryINI(searchType)
+	i ini="ORD" s id=sourceORD,dat=99999
+	e  i ini="ORL" s id=sourceORL,dat=99999
+	e  i ini="EPT",returnIDasCSN s id=patientCSN,dat=""
+	e  i ini="EPT" d %zzRecCSNToIDandDAT("EPT",patientCSN,.id,.dat) s:dat="" id=""
+	q id'=""
+	;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Creates a new PCL record for a given provider (SER) and service date, generating a name
+	;               based on provider and date. Locks the record upon creation. Fails gracefully if the SER ID
+	;               or date is invalid. Upon success, creates a new contact within the record and updates it
+	;               using the given data for SI PCL 2.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External ID for the provider (SER record).
+	;   serviceDate (I,REQ) - Contact date for which the record is being created.
+	;   siPCL2 (I,REQ) - Packed contact information to be unpacked and applied.
+	;   pclDAT (O,REQ) - Output DAT identifier for the created contact.
+	;   error (O,REQ) - Output error message string, if any error occurs.
+	; RETURNS:       The ID of the newly created and locked PCL record. Returns null on failure.
+	;---------
+credpclCreateAndLockNewRec(serExtID,serviceDate,siPCL2,pclDAT,error) ;
+	n serIdInt,pclName,formattedDate,pclID,serName,outErrs,result
+	s error="",pclDAT=""
+	s serIdInt=$$getidin(serExtID,"SER")
+	s serName=$$znam("SER",serIdInt)  ; this just going to be used for a record name, not really meant for display to the user
+	i serName="" s error=$$credutilErrorPack($$credpclErrorInvalidSer(),"",serExtID_" is not a valid SER record") QUIT ""
+	s formattedDate=$$zFmtDate(serviceDate,"MMMM yyyy")
+	i formattedDate="" s error=$$credutilErrorPack($$credpclErrorInvalidDate(),"","Service date "_serviceDate_" is not valid") QUIT ""
+	s pclName=serName_" - "_formattedDate
+	s pclID=$$zNIxNextID("PCL",pclName,"")
+	; if we've already recreated one for this provider this month, create one named after the full date. If that too is
+	; taken, that's okay: names don't have to be unique
+	i pclID'="" s pclName=serName_" - "_$$zFmtDate(serviceDate,"MMMM dd, yyyy")
+	s pclID=$$zRecCreateAndLock("PCL",pclName,serviceDate,.outErrs,"",.result)
+	s pclDAT=result("DAT")
+	i $$zStrChkAnyNull(2,pclID,pclDAT) s %=$$flattenArray(.outErrs," ",.error),error=$$credutilErrorPack($$credpclErrorCreateRecord(),"",error) QUIT ""
+	d updatePclContactInfo^PWCPCLREC(pclID,pclDAT,siPCL2)
+	q pclID  ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Attempts to lock an existing PCL record and create a new contact on the specified service
+	;               date. If a contact already exists or the date is taken, searches for a nearby date and
+	;               uses the most recent available DAT. Applies unpacked SI PCL2 data to the contact upon
+	;               creation. Will retry contact creation across multiple dates if necessary.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External ID for the provider (SER record).
+	;   pclID (I,REQ) - PCL record ID into which the contact will be created.
+	;   serviceDate (I,REQ) - Date for which the contact should be created.
+	;   siPCL2 (I,REQ) - Packed contact information to be unpacked and applied.
+	;   pclDAT (O,REQ) - Output DAT identifier for the created or reused contact.
+	;   error (O,REQ) - Output error message string, if any error occurs.
+	;   alreadyLocked (I,OPT,DEFAULT:0) - Whether the PCL record is already locked.
+	; RETURNS:
+	;   1 on success, 0 on failure.
+	;---------
+credpclLockAndCreateContact(serExtID,pclID,serviceDate,siPCL2,pclDAT,error,alreadyLocked) ;
+	n contactDTE,failCount
+	s error="",pclDAT=""
+	i 'alreadyLocked,'$$zlock("PCL",pclID,1) s error=$$credutilErrorPack($$credpclErrorCouldNotLock(),$$credutilErrorTypeNonFatal(),"Could not lock PCL record "_$$DisplayName("PCL",pclID,1)) QUIT 0
+	s contactDTE=serviceDate
+	s pclDAT=$$zRecCreateContact("PCL",pclID,contactDTE)
+	i pclDAT="" d
+	. s pclDAT=$$credpclNextContact(serExtID,contactDTE,pclID,"",1)
+	. ; If pclDAT is empty, that means a previous contact "took" our date. Find the last contact before ours, and its most recent DAT.
+	. i pclDAT="" d
+	. . s contactDTE=$$credpclNextDate(serExtID,contactDTE,-1)
+	. . i contactDTE="" s error=$$credutilErrorPack($$credpclErrorImpossible(),"","Invalid state: our contact date "_$$zFmtDate(serviceDate)_" is unavailable and no previous contact was found.") quit
+	. . s pclDAT=$$credpclNextContact(serExtID,contactDTE,pclID,"",1)
+	. . i pclDAT="" s error=$$credutilErrorPack($$credpclErrorImpossible(),"","Invalid index: no contact found for date "_$$zFmtDate(contactDTE)_" that was in the index") quit
+	. ;
+	. i error'="" quit
+	. ; pclDAT is now the smallest (most recent) DAT that has been created for this PCL record. Attempt to create a contact on that date.
+	. s contactDTE=$$zDAT2DTE(pclDAT)
+	. s pclDAT=$$zRecCreateContact("PCL",pclID,contactDTE)
+	. i pclDAT'="" quit
+	. ;
+	. ; If we still couldn't create one, we may have just filled up that previous contact. Attempt up to 10 more dates into the future. I don't think this can fail.
+	. f failCount=1:1:10 s pclDAT=$$zRecCreateContact("PCL",pclID,contactDTE+failCount) q:pclDAT'=""
+	. ;
+	. i pclDAT="" s error=$$credutilErrorPack($$credpclErrorImpossible(),"","Could not create contact for date "_$$zFmtDate(serviceDate))
+	;
+	i error'="" d  QUIT 0
+	. n message
+	. d %zcredutilErrorUnpack(error,"","",.message)
+	. d %zcredutilErrorUpdateMessage(error,"Error creating contact for PCL record "_$$DisplayName("PCL",pclID,1)_": "_message)
+	. i 'alreadyLocked s %=$$zunlock("PCL",pclID)
+	;
+	d updatePclContactInfo^PWCPCLREC(pclID,pclDAT,siPCL2)
+	q 1  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Constructs a packed error string from the provided code, type, and message.
+	;               The resulting string is caret-delimited and used to represent an error object in
+	;               compact form.
+	; PARAMETERS:
+	;   code (I,REQ) - Numeric or string error code representing the failure type. Must not contain a caret.
+	;   type (I,REQ) - Error category or classification (e.g., non-fatal, see credutilErrorTypeNonFatal). Must not contain a caret.
+	;   message (I,REQ) - Descriptive message explaining the error. This message may contain carets.
+	; RETURNS:      Packed error string in the format: code^type^message
+	;---------
+credutilErrorPack(code,type,message) ;
+	q code_"^"_type_"^"_message  ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Updates the message portion of a packed error string with a new message. The packed
+	;               error string must follow the format: code^type^message. Only the message segment is
+	;               modified; code and type remain unchanged.
+	; PARAMETERS:
+	;   packedError (IO,REQ) - Packed error string in the format code^type^message. Modified in-place
+	;                          to reflect the new message.
+	;   newMessage (I,REQ) - Replacement message string to overwrite the existing message portion.
+	;---------
+%zcredutilErrorUpdateMessage(packedError,newMessage) ;
+	s $p(packedError,"^",3,$l(packedError,"^"))=newMessage
+	q   ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Unpacks a caret-delimited error string into its component values: code, type,
+	;               and message. Designed to work with values created by credutilErrorPack.
+	; PARAMETERS:
+	;   packedError (I,REQ) - Packed error string formatted as code^type^message.
+	;   code (O,REQ) - Output variable receiving the error code.
+	;   type (O,REQ) - Output variable receiving the error type.
+	;   message (O,REQ) - Output variable receiving the error message.
+	;---------
+%zcredutilErrorUnpack(packedError,code,type,message) ;
+	s code=$p(packedError,"^",1)
+	s type=$p(packedError,"^",2)
+	s message=$$zStrGetPieceToEnd(packedError,"^",3)
+	q  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Increment a counter and flush an audit batch if the counter
+	;               reaches the batch size threshold. Resets the counter to 0 after
+	;               flushing.
+	; PARAMETERS:
+	;   counter (IO,REQ) - Current count of items in the batch. Incremented by this
+	;                      tag and reset to 0 when batch is flushed.
+	;   bid (I,REQ) - Batch identifier for the audit batch to flush.
+	;   increment (I,OPT,DEFAULT:1) - Amount to add to counter.
+	;   batchSize (I,OPT,DEFAULT:40) - Threshold at which to flush the batch.
+	;---------
+%zcredutilFlushBatchIfNeeded(counter,bid,increment,batchSize) ;
+	s counter=counter+$s(increment'="":increment,1:1)
+	s:counter>=$s(batchSize'="":batchSize,1:40) %=$$zAuditFlushBatch(bid),counter=0
+	q  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Determines whether the local environment will keep PCL records up to date. Currently requires
+	;               the Credentialing license to be enabled. We may add an ELF that could be switched on for HIM
+	;               in the future.
+	; RETURNS:      1 if PCL is enabled, 0 otherwise.
+	;---------
+credpclIsEnabled() ;
+	QUIT:$$isLicCredentialing() 1
+	q 0 ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Returns the standard value used to represent a non-fatal error type in packed
+	;               error objects.
+	; RETURNS:      1, representing a non-fatal error classification. The assumption is that null or default is fatal.
+	;---------
+credutilErrorTypeNonFatal() ;
+	q 1  ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Error code for when PCL is not enabled
+	;---------
+credpclErrorPclNotEnabled() ;
+	q "Not Enabled" ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Error code for an invalid date
+	;---------
+credpclErrorInvalidDate() ;
+	q "Invalid Date" ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Error code for invalid SER record
+	;---------
+credpclErrorInvalidSer() ;
+	q "Invalid SER" ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Error code for when a caller has passed an invalid parameter
+	;---------
+credpclErrorInvalidParameter() ;
+	q "Invalid Parameter" ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Error code for lock failure
+	;---------
+credpclErrorCouldNotLock() ;
+	q "Could Not Lock" ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Use this for errors that I thought were impossible
+	;---------
+credpclErrorImpossible() ;
+	q "Impossible" ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Error code when record creation fails in Chronicles
+	;---------
+credpclErrorCreateRecord() ;
+	q "Record Creation Failed" ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PWCPCL*
+	; DESCRIPTION:  Internal global used to tracking updates that need to be processed into PCL records.
+	; PARAMETERS:
+	;   type (I,OPT) - If given, return the global used to loop only over that specific type, e.g.
+	;                  credpclPendTypeSourceRec. If not given, return the global used to loop over all types (first
+	;                  subscript is type)
+	; RETURNS:      The name of the global.
+	;---------
+credpclPendGetGlo(type) ;
+	q $s(type="":$name(^HADCGERPWF("CRED","PendingLogs")),1:$name(^HADCGERPWF("CRED","PendingLogs",type)))  ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PWCPCL*
+	; DESCRIPTION:  Entries of this type represent records that need to be processed into PCL records.
+	;               Here's the structure:
+	;               ^HADCGERPWF("CRED","PendingLogs","R",serExtID,sourceType,sourceID,sourceDAT)=instant
+	; RETURNS:      The name of the global.
+	;---------
+credpclPendTypeSourceRec() ;
+	q "R"  ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PWCPCL*
+	; DESCRIPTION:  Entries of this type represent contacts where procedure codes need to be processed for
+	;               a given provider, service date, and contact. This structure is indexed by
+	;               provider first, making it efficient to check if a specific provider needs updates.
+	;               Here's the structure:
+	;               ^HADCGERPWF("CRED","PendingLogs","C",serExtID,serviceDate,patientCSN)=instant^sourceType^sourceID^sourceDAT
+	;               The source fields indicate which record triggered the need for code reload.
+	;               Note that an entry here should also have a corresponding entry in the "D" (by date) structure, and if it doesn't,
+	;               the "C" node can be safely cleared.
+	; RETURNS:      The pending type constant "C" for codes by provider.
+	;---------
+credpclPendTypeContactBySer() ;
+	q "C"  ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PWCPCL*
+	; DESCRIPTION:  Entries of this type represent contacts where procedure codes need to be reloaded,
+	;               indexed by date and patient only (without provider). This structure is optimal for
+	;               background jobs that loop through pending work by date. The same contact may appear
+	;               in both type "C" (indexed by provider) and type "D" (indexed by date) structures.
+	;               Here's the structure:
+	;               ^HADCGERPWF("CRED","PendingLogs","D",serviceDate,patientCSN)=instant^sourceType^sourceID^sourceDAT
+	;               The source fields indicate which record triggered the need for code reload.
+	; RETURNS:      The pending type constant "D" for codes by date.
+	;---------
+credpclPendTypeContactByDate() ;
+	q "D"  ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PWCPCL*
+	; DESCRIPTION:  Entries of this type flag that a provider's entries are incomplete and requires a full
+	;               search across all their records before it could be considered complete.
+	;               Here's the structure:
+	;               ^HADCGERPWF("CRED","PendingLogs","I",serExtID)=instant^sourceType^sourceID^sourceDAT
+	;               where instant is when the entry was flagged, and the source fields indicate what
+	;               triggered the incomplete flag.
+	; RETURNS:      The pending type constant "I" for incomplete.
+	;---------
+credpclPendTypeIncomplete() ;
+	q "I"  ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PWCPCL*
+	; DESCRIPTION:  Entries of this type flag that a provider's case log needs to be built. This is distinct from
+	;               incomplete entries: a provider may be flagged as incomplete without us deciding to actually DO that
+	;               full build. Entries are placed here once we've made the decision that yes, we're going to build this
+	;               one. Here's the structure:
+	;               ^HADCGERPWF("CRED","PendingLogs","B",serExtID)=instant^sourceType^sourceID^sourceDAT
+	;               where instant is when the entry was flagged, and the source fields indicate how far along we are in the
+	;               rebuild process.
+	; RETURNS:      The pending type constant "B" for building.
+	;---------
+credpclPendTypeBuilding() ;
+	q "B"  ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PWCPCL*
+	; DESCRIPTION:  Marks a source record as needing to be processed into PCL contacts.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External provider ID (SER).
+	;   sourceType (I,REQ) - PCL search type constant for the source record.
+	;   sourceID (I,REQ) - Internal ID of the source record.
+	;   sourceDAT (I,REQ) - DAT of the source record contact.
+	;---------
+%zcredpclPendMarkRecordDirty(serExtID,sourceType,sourceID,sourceDAT) ;
+	s @($$credpclPendGetGlo($$credpclPendTypeSourceRec()))@(serExtID,sourceType,sourceID,sourceDAT)=$$zTimeUTC()
+	q  ;;#eof#  ;;#inline#
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PWCPCL*
+	; DESCRIPTION:  Marks a contact as needing procedure codes to be loaded. Creates entries in both
+	;               the provider-indexed structure (for targeted lookups) and the date-indexed structure
+	;               (for background job processing).
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External provider ID (SER).
+	;   serviceDate (I,REQ) - Service date for the contact.
+	;   patientCSN (I,REQ) - Patient encounter CSN.
+	;   source (I,OPT) - description of the source triggering the need to update procedure codes.
+	;---------
+%zcredpclPendMarkCodesDirty(serExtID,serviceDate,patientCSN,source) ;
+	n gloByProvider
+	s gloByProvider=$$credpclPendGetGlo($$credpclPendTypeContactBySer())
+	i $d(@gloByProvider@(serExtID,serviceDate,patientCSN)) QUIT  ; already exists, no need to add again
+	d %zcredpclPendMarkForExtract(serviceDate,patientCSN,source,1)  ; mark by date first
+	;
+	; Note: by deferring the provider-indexed entry creation until after checking the date-indexed one,
+	; we avoid a race condition where the background job might conclude that the provider entry could be
+	; removed because there was no matching date entry.
+	s @gloByProvider@(serExtID,serviceDate,patientCSN)=$$zTimeUTC()_";"_source
+	q  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Marks that the procedure codes for a patient contact and service date are ready for extraction to the
+	;               provider's case log.
+	; PARAMETERS:
+	;   serviceDate (I,REQ) - Service date for the updated procedure(s)
+	;   patientCSN (I,REQ)
+	;   source (I,OPT) - Source identifier indicating what triggered marking
+	;                    for extraction
+	;   skipPclCheck (I,OPT,DEFAULT:0) - By default, we verify that PCL is enabled and that there are PCL records for this CSN before
+	;                                    marking for extraction. If this parameter is true, we skip those checks.
+	;---------
+%zcredpclPendMarkForExtract(serviceDate,patientCSN,source,skipPclCheck) ;
+	n gloByDate
+	i $$zStrChkAnyNull(2,serviceDate,patientCSN) QUIT  ; invalid parameters
+	i 'skipPclCheck,'$$credpclIsEnabled() QUIT
+	i 'skipPclCheck,$$credpclNextPclForPatCsn(patientCSN,"")="" QUIT  ; no PCL records for this CSN
+	s gloByDate=$$credpclPendGetGlo($$credpclPendTypeContactByDate())
+	i @gloByDate@(serviceDate,patientCSN)'="" QUIT  ; already exists, no need to add again
+	s @gloByDate@(serviceDate,patientCSN)=$$zTimeUTC()_";"_source
+	q  ;;#eof#
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Checks whether a provider's case log is complete and up to date. Returns false if
+	;               the provider has no entries at all, or if they have been flagged as having an
+	;               incomplete case log that requires rebuilding. Note that there could be entries that
+	;               need to be added or updated, but the main log has been fully built.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External provider ID (SER).
+	; RETURNS:      1 if the provider has a complete case log, 0 if some entries exist but the log is incomplete, null if no entries exist.
+	;---------
+credpclHasCompleteCaseLog(serExtID) ;
+	QUIT:$$credpclNextDate(serExtID,"")="" ""  ; no entries at all: not up to date
+	QUIT:@($$credpclPendGetGlo($$credpclPendTypeIncomplete()))@(serExtID)'="" 0  ; marked incomplete
+	q 1  ;;#eof#  ;;#inline#
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PWCPCL*
+	; DESCRIPTION:  Marks a given provider's case log as needing to be rebuilt.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External provider ID (SER).
+	;---------
+%zcredpclPendMarkIncomplete(serExtID) ;
+	n incompleteGlo
+	s incompleteGlo=$$credpclPendGetGlo($$credpclPendTypeIncomplete())
+	i @incompleteGlo@(serExtID)'="" QUIT  ; already marked incomplete
+	s @incompleteGlo@(serExtID)=$$zTimeUTC()
+	q  ;;#eof#
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PWCPCL*
+	; DESCRIPTION:  Marks that a given provider's case log is up to date, removing any incomplete flag.
+	; PARAMETERS:
+	;   serExtID (I,REQ) - External provider ID (SER).
+	;---------
+%zcredpclPendMarkDone(serExtID) ;
+	k @($$credpclPendGetGlo($$credpclPendTypeIncomplete()))@(serExtID)
+	q  ;;#eof#  ;;#inline#
+	q  ;;#eor#

@@ -1,0 +1,212 @@
+hjPWCPCLPERFTEST ; ; ;2026-03-02 13:31:32;11.8;/zal3d1oET5eYoZeBxtAuD9twodlmPuZTbGCHrnuj3A=;Copyright 2026 Epic Systems Corporation
+	q
+	;*********************************************************************
+	; PURPOSE:  Performance-testing code for case logs
+	; AUTHOR:   Daniel Leatherwood
+	; REVISIONS:
+	;  *DNL 01/26 2268290 Created
+	;  *DNL 02/26 2259608 Support reporting PCL status
+	;*********************************************************************
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Searches an environment's case log data, either for export to a spreadsheet or to gather performance data
+	;               on how long it it takes.
+	; PARAMETERS:
+	;   skipThrottling (I,OPT,DEFAULT:1) - If true, disables job throttling logic and runs at full speed.
+	;   skipPerfTest (I,OPT,DEFAULT:1) - If true, skips performance measurement and writes data to the screen instead.
+	;   skipCodeLookup (I,OPT,DEFAULT:"") - If true, skip looking up procedure codes, which is expensive.
+	;   maxSerCount (I,OPT,DEFAULT:"") - Limits number of SERs processed; empty string for no limit.
+	;   maxProceduresPerProv (I,OPT,DEFAULT:"") - Limits how many procedures of a given type per provider are included.
+	;                                             Default is no limit.
+	;   testGlo (I,OPT) - Global used for test data or logging; required for throttling
+	;                     and performance tracking, which are both disabled if you don't pass this.
+	;   scenario (I,OPT,DEFAULT:"Case Log Search") - Scenario name for EUPSNAP performance tracking.
+	;   serIDext (I,OPT) - Resume at this provider
+	; REVISIONS:
+	;  *DNL 02/26 2259608 - Support reporting PCL status
+	;---------
+search(skipThrottling,skipPerfTest,skipCodeLookup,maxSerCount,maxProceduresPerProv,testGlo,scenario,serIDext) ;
+	n caseLogGlo,code,codeSource,codeType,count,countByDate,dat,eafID,eapID,encounterDate,eptID
+	n hideThisLine,id,isAmbiguous,iterator,lastSearchType,line,mostRecentDate,orpIDext,ctrl
+	n packedDataArr,packedLine,procedureName,role,searchType,searchTypes,serCount,serID
+	n skipThisProvider,sourceORD,sourceORL,startDate,startTime,stop,totalCount,otherSerIdExt,formattedDate,patientCSN,hasProcedures,eptChecksum,hasPCL,pclStatus
+	;
+	s hasPCL=$$zTagExists("credpclHasCompleteCaseLog^elibPLIBWPCLREC")
+	;
+	i skipThrottling="" s skipThrottling=1  ; default to skipping throttling
+	i skipPerfTest="" s skipPerfTest=1  ; default to skipping performance test
+	;
+	i testGlo="" s skipPerfTest=1,skipThrottling=1  ; can't do performance testing or throttling without a global to store data in
+	;
+	s startDate=$$zdinISO("2022-03-12")  ; the performance environment's data end at 2024-03-12, so this is two years worth of data, the default.
+	s startDate=$$askDte^LUCT("Start date: ",$$zFmtDate(startDate),.ctrl,.stop)
+	i stop QUIT
+	i ctrl'="RET" QUIT  ; user hit the up arrow or some other control than the enter key
+	;
+	s caseLogGlo=$$zGtTmpGlo(1)
+	;
+	i 'skipThrottling d
+	. d %zzJobSetThrottleSettings(54042,"","@testGlo@(""STOP"")")
+	. d %zzJobThrottlePauseClean()  ; reset tracking state
+	;
+	i 'skipPerfTest d
+	. i scenario="" s scenario="Case Log Search"
+	. s @testGlo@(scenario,$j)=""
+	. d ^EUPSNAP($j,scenario,"","","","","",1)  ; reset counters
+	;
+	w !,"SER ID,Date,Search Type,Procedure,Role,EPT Checksum,EAP ID,ORP,EAF,ORD,ORL,Code,CodeType,CodeSource,Code Is Ambiguous"
+	i hasPCL w ",PCL Status"
+	;
+	i serIDext'="" s serID=$$getidin(serIDext,"SER")  ; set starting point
+	;
+	f  d:serID'=""  q:(maxSerCount'="")&(serCount>=maxSerCount)  q:stop  s serID=$$zoID("SER",serID) q:serID=""
+	. i 'skipThrottling,$$zJobThrottle() s stop=1 quit
+	. i skipThrottling,$$yStop(0) s stop=1 quit
+	. i $$geti("SER",serID,30,1)'=1 quit  ; only person-type SERs
+	. s serIDext=$$getidout(serID,"SER")
+	. s serCount=serCount+1
+	. i hasPCL s pclStatus=$$credpclHasCompleteCaseLog^elibPLIBWPCLREC(serIDext) s pclStatus=$s(pclStatus:"Complete",pclStatus=0:"Incomplete",1:"None")
+	. i 'skipPerfTest d ^EUPSNAP($j,scenario,"","","","START")  ; start tracking
+	. s count=0,lastSearchType="",totalCount=0,skipThisProvider=0
+	. k @caseLogGlo
+	. s startTime=$$zTimeUTCms()
+	. s searchType="",id="",dat="",iterator=""
+	. f  s id=$$credpclLookupNextID(serIDext,.searchType,id,.dat,startDate,.iterator,.searchTypes) q:id=""  d  q:stop  q:skipThisProvider
+	. . i 'skipThrottling,$$zJobThrottle() s stop=1 quit
+	. . i skipThrottling,$$yStop(0) s stop=1 quit
+	. . ;
+	. . ; In this case, the provider has ONLY treatment team entries, making it less likely that they're a provider with relevant case logs. Skip them.
+	. . i count<1,searchType=$$credpclTypeTreatmentTeam() s skipThisProvider=1 quit
+	. . i maxProceduresPerProv'="",count>=maxProceduresPerProv d  quit
+	. . . s searchType=$o(searchTypes(searchType))
+	. . . i searchType="" s skipThisProvider=1 quit
+	. . . k iterator
+	. . s count=count+1
+	. . i searchType'=lastSearchType d
+	. . . i lastSearchType'="",'skipPerfTest d ^EUPSNAP($j,scenario,"","","","STOP"_","_lastSearchType_","_(count-1)) s totalCount=totalCount+count
+	. . . s lastSearchType=searchType,count=1
+	. . d %zcredpclGetInfo(searchType,id,dat,.packedDataArr,1)  ; can skip inclusion check here since we're getting IDs from the lookup function
+	. . f line=1:1:packedDataArr(0) d
+	. . . s packedLine=packedDataArr(line)
+	. . . d %zcredpclUnpackLine(packedLine,"","","",.encounterDate,.patientCSN)
+	. . . i encounterDate="" s encounterDate="(blank)"
+	. . . e  i encounterDate>mostRecentDate s mostRecentDate=encounterDate
+	. . . i encounterDate<startDate q  ; skip entries before our start date
+	. . . s eptID=""
+	. . . i patientCSN'="" s eptID=$$zRecCSNToID("EPT",patientCSN)
+	. . . i eptID="" s eptID="(blank)"
+	. . . s countByDate=@caseLogGlo@(encounterDate,eptID,0)+1
+	. . . s @caseLogGlo@(encounterDate,eptID,countByDate)=packedLine
+	. . . s @caseLogGlo@(encounterDate,eptID,0)=countByDate
+	. ;
+	. s encounterDate="",eptID=""
+	. f  s encounterDate=$o(@caseLogGlo@(encounterDate)) q:encounterDate=""  d  q:stop
+	. . f  s eptID=$o(@caseLogGlo@(encounterDate,eptID)) q:eptID=""  d  q:stop
+	. . . i 'skipThrottling,$$zJobThrottle() s stop=1 quit
+	. . . i skipThrottling,$$yStop(0) s stop=1 quit
+	. . . s eptChecksum=$$zChkSum(eptID)
+	. . . s formattedDate=$$zFmtDate(encounterDate)
+	. . . k packedDataArr
+	. . . s hasProcedures=0
+	. . . s packedDataArr(0)=@caseLogGlo@(encounterDate,eptID,0)
+	. . . f line=1:1:packedDataArr(0) d
+	. . . . s packedLine=@caseLogGlo@(encounterDate,eptID,line)
+	. . . . s packedDataArr(line)=packedLine
+	. . . . d %zcredpclUnpackLine(packedLine,"","","","","",.eapID,.orpIDext)
+	. . . . i (eapID'="")!(orpIDext'="") s hasProcedures=1
+	. . . ;
+	. . . i hasProcedures,'skipCodeLookup d getProcedureCodes^PWCPCLLOADCODES(.packedDataArr,encounterDate)
+	. . . ;
+	. . . f line=1:1:packedDataArr(0) d
+	. . . . s packedLine=packedDataArr(line)
+	. . . . d %zcredpclUnpackLine(packedLine,.searchType,.otherSerIdExt,"","","",.eapID,.orpIDext,.eafID,"",.sourceORD,.sourceORL,.code,.hideThisLine)
+	. . . . i hideThisLine q
+	. . . . i otherSerIdExt'=serIDext q  ; only output lines for the current SER
+	. . . . d %zcredpclUnpackBillingInfo(packedLine,"",.codeType,.isAmbiguous)
+	. . . . d addBillingRecs^PWCPCLUTIL(packedLine,.codeSource,1)
+	. . . . s procedureName=$$credpclGetProcedureName(packedLine)
+	. . . . s procedureName=$$escapeCSV(procedureName)
+	. . . . s role=$$credpclGetProviderRole(packedLine)
+	. . . . s role=$$escapeCSV(role)
+	. . . . i eafID'="" s eafID=$$DisplayName("EAF",eafID),eafID=$$escapeCSV(eafID)
+	. . . . w !,serIDext_","_formattedDate_","_searchTypes(searchType)_","_procedureName_","_role_","_eptChecksum_","_eapID_","_orpIDext_","_eafID_","_sourceORD_","_sourceORL_","_code_","_$$credpclCodeTypeToOrcos(codeType)_","_codeSource_","_isAmbiguous
+	. . . . i hasPCL w ","_pclStatus
+	;
+	d %zRelTmpGlo(caseLogGlo)
+	;
+	i lastSearchType'="",'skipPerfTest d ^EUPSNAP($j,scenario,"","","","END"_","_lastSearchType_","_(count-1))
+	;
+	w !,"Most recent date: "_$$zdoutISO(mostRecentDate)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Displays performance statistics collected in the given global using EUPSNAP
+	; PARAMETERS:
+	;   glo (I,REQ) - Global containing performance data
+	;   clear (I,REQ) - If true, clears the data after displaying it. If null, prompts the user for their choice.
+	;---------
+displayStats(glo,clear) ;
+	n pid,scenario
+	i glo="" QUIT
+	i clear="" s clear=$$yn("Clear data")
+	d CONDENSE^EAMODE
+	f  s scenario=$o(@glo@(scenario)) q:scenario=""  d
+	. f  s pid=$o(@glo@(scenario,pid)) q:pid=""  d
+	. . d show^EUPSNAP(pid,scenario,1,"","",clear,1)
+	i clear k @glo
+	d RTN^%ZeUSU
+	d NORMAL^EAMODE
+	q
+	;---------
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Used in a loop, allows the user to press any key to interrupt the loop
+	; RETURNS:      True if the user wants to stop, false otherwise
+	; PARAMETERS:
+	;   timeout (I,OPT,DEFAULT:1) - how long we should wait before returning
+	;---------
+yStop(timeout) ;
+	n input
+	i timeout="" s timeout=1
+	r *input:timeout
+	i input'=-1 QUIT:$$yn("Stop") 1 w !,"Resuming"
+	q 0
+	;
+	;---------
+	; NAME:         escapeCSV
+	; SCOPE:        EPIC
+	; DESCRIPTION:  Utility tag for creating CSV files: escapes CSV data for a given "cell"
+	; CALLED BY:
+	; PARAMETERS:
+	;  val (I,REQ) - data to escape for CSV
+	; RETURNS:      ESV-escaped value: e.g A,B => "A,B", A"B ==> "A""B", A;B => A;B
+	;---------
+escapeCSV(val) i $s(val["""":1,val[",":1,1:0) q """"_$$replace(val,"""","""""")_""""
+	q val
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  This function simplifies the process of creating a single ^%ZeEPIC script, since that needs all the code in one routine and it's split across several.
+	;---------
+exportZeEPIC() ;
+	n rouGlo,line,rouName,code,done
+	w !,"d ^%ZeEPIC"
+	w !,";zcode"
+	w !,"0"
+	s rouGlo=$$zGtTmpGlo()
+	f rouName="HULIBPCLDEFS","HULIBPCLJED","HULIBPCLPWC","ORLIBPCL","PWCPCLUTIL","PWCPCLLOADCODES","hjPWCPCLPERFTEST" d
+	. k @rouGlo
+	. s %=$$rload(rouName,rouGlo,1)
+	. s done=0
+	. f line=2:1:@rouGlo@(rouName,0) d  q:done
+	. . s code=@rouGlo@(rouName,line)
+	. . i code[(";;#"_"eor#") s done=1 q
+	. . s code=$$replace(code,"^PWCPCLLOADCODES","")  ; this will be a local call in the ^%ZeEPIC routine
+	. . s code=$$replace(code,"^PWCPCLUTIL","")  ; this will be a local call in the ^%ZeEPIC routine
+	. . i code["lglob" quit  ; skip the lines that determine the routines we put thing in
+	. . i code[("@@"_"specialInline@@") w !," ;#"_"localInline#" q  ; mark beginning of local inline code
+	. . i code[("@@"_"endSpecialInline@@") w !," ;#"_"endLocalInline#" q  ; mark end of local inline code
+	. . w !,code
+	d %zRelTmpGlo(rouGlo)
+	w !,";;#"_"eor#"
+	w !,";zrun providerCaseLog()  ; ([seridext],[startDate],[endDate])"
+	q
+	q  ;;#eor#

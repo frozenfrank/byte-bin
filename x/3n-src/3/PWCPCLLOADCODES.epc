@@ -1,0 +1,682 @@
+PWCPCLLOADCODES ; ; ;2026-02-10 15:46:28;11.8;++I06K6jyH1wb3ZiiCFzMWS65KMpZt3be9mZSaaYN1M=;Copyright 2026 Epic Systems Corporation
+	q
+	;*********************************************************************
+	; PURPOSE:  Functions for retrieving codes billed against procedures in a provider's case log
+	; AUTHOR:   Daniel Leatherwood
+	; DEFINITIONS:
+	;  1. codeSource
+	;     A pipe-delimited list of sources where we found a particular code, where an individual source is an INI and then
+	;     an ID, e.g. "HTR-1234|HAR-456|UCL-789". In some cases, we may only know the INI (e.g. SER) without a specific ID,
+	;     in which case it would just be "SER".
+	;  2. codeType
+	;     The type of procedure code, stored as a PCL 126 category value (1=CPT, 2=OHIP).
+	;
+	; REVISIONS:
+	;  *DNL 01/26 2268290 Created
+	;  *DNL 02/26 2259608 - Use PCL 126 category values for code type instead of strings
+	;*********************************************************************
+	;
+	;---------
+	; SCOPE:        INTERNAL
+	;               ^PWCPCL*
+	; DESCRIPTION:  Given the case log entries for a particular contact and service date, this tag searches billing data
+	;               for appropriate codes to add. Note that additional lines might be added to arrPackedLines if we find
+	;               multiple codes associatd with a single procedure.
+	;
+	; PARAMETERS:
+	;   arrPackedLines (I,REQ) - An array of packed information about a set of case logs. The array should be all the
+	;                            entries for a given date and patient encounter. Individual lines should be in the form
+	;                            (%)zcredpclUnpackLine expects.
+	;                            arrPackedLines(n)=<packed line data>
+	;   serviceDate (I,REQ) - All the entries in arrPackedLines are for this date of service.
+	;---------
+getProcedureCodes(arrPackedLines,serviceDate) ;
+	n searchCSNs,searchHARs,linkedBillingRecs,sourceRecsToLines,providerToSourceRecs,codesFromSourceRecs,codesFromBilling,harID,csn,sourceRecsToProviders,codesGlo,orderToLinkedORL
+	;
+	s codesGlo=$$zGtTmpGlo()
+	d initializeCodeSearch(.arrPackedLines,serviceDate,.searchCSNs,.searchHARs,.linkedBillingRecs,.sourceRecsToLines,.providerToSourceRecs,.sourceRecsToProviders,.codesFromSourceRecs,.orderToLinkedORL)
+	;
+	s harID=""
+	f  s harID=$o(searchHARs(harID)) q:harID=""  d processOneHAR(.codesGlo,serviceDate,harID,.linkedBillingRecs,.providerToSourceRecs,.codesFromBilling)
+	;
+	s csn=""
+	f  s csn=$o(searchCSNs(csn)) q:csn=""  d loadETRUCLHTRCodes(serviceDate,csn,.linkedBillingRecs,.providerToSourceRecs,.codesFromBilling)
+	;
+	d processResults(.arrPackedLines,.sourceRecsToLines,.providerToSourceRecs,.sourceRecsToProviders,.orderToLinkedORL,.codesFromSourceRecs,.codesFromBilling)
+	;
+	d %zRelTmpGlo(codesGlo)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Initializes the various arrays needed to search for procedure codes.
+	; PARAMETERS:
+	;   arrPackedLines (I,REQ) - An array of packed information about a set of case logs. The array should be all the
+	;                            entries for a given date and patient encounter. Individual lines should be in the form
+	;                            (%)zcredpclUnpackLine expects.
+	;                            arrPackedLines(n)=<packed line data>
+	;   serviceDate (I,REQ) - All the entries in arrPackedLines are for this date of service.
+	;   searchCSNs (O,REQ) - Array that will be populated with patient CSNs (Contact Serial Numbers) that we should search
+	;                        for procedure codes. This supports cases like OpTime, the codes might be documeted against the
+	;                        admission contact instead of the surgery contact.
+	;                        searchCSNs(<CSN>)=1
+	;   searchHARs (O,REQ) - Array that will be populated with HARs (Hospital Account Records) to be searched for
+	;                        associated billing codes.
+	;                        searchHARs(<HAR ID>)=1
+	;   linkedBillingRecs (O,REQ) - Array populated with HTR, ETR, and UCL records linked to source ORL/ORD records.
+	;                               linkedBillingRecs(<INI>,<recordID>,<sourceINI>,<sourceID>)=""
+	;   sourceRecsToLines (O,REQ) - Maps each source record to the lines in arrPackedLines that reference it.
+	;                               sourceRecsToLines(<INI>,<ID>,<line>)=1
+	;   providerToSourceRecs (O,REQ) - Maps each provider to the source records associated with them.
+	;                                  providerToSourceRecs(<provider>,<INI>,<ID>)=1
+	;   sourceRecsToProviders (O,REQ) - Maps each source record to associated providers and their corresponding lines.
+	;                                  sourceRecsToProviders(<INI>,<ID>,<provider>,<line>)=1
+	;   codesFromSourceRecs (O,REQ) - Collection of all procedure codes pulled from source records: we want the codes that
+	;                                  were actually documented, but the codes associated with the records apart from
+	;                                  billing data can be useful for disambiguation or as a default to use until billing
+	;                                  codes are available.
+	;                                  codesFromSourceRecs(<code>,<codeType>,<INI>,<ID>)=<codeSource>
+	;   orderToLinkedORL (O,REQ) - Maps each ORD ID to its linked ORL ID if such a link is found.
+	;                              orderToLinkedORL(<ORD ID>)=<ORL ID>
+	;---------
+initializeCodeSearch(arrPackedLines,serviceDate,searchCSNs,searchHARs,linkedBillingRecs,sourceRecsToLines,providerToSourceRecs,sourceRecsToProviders,codesFromSourceRecs,orderToLinkedORL) ;
+	n arrEap,arrOrp,arrOrd,arrOrl,arrCsnAndTypes
+	k searchCSNs,searchHARs,linkedBillingRecs,sourceRecsToLines,providerToSourceRecs,codesFromSourceRecs,orderToLinkedORL,sourceRecsToProviders
+	d buildSourceRecordMaps(.arrPackedLines,.arrCsnAndTypes,.sourceRecsToLines,.providerToSourceRecs,.sourceRecsToProviders,.orderToLinkedORL,.arrEap,.arrOrp,.arrOrd,.arrOrl)
+	d mapCSNsAndHARs(.arrCsnAndTypes,.searchCSNs,.searchHARs)
+	d collectCodesFromRecords(serviceDate,.arrPackedLines,.arrEap,.arrOrp,.arrOrl,.codesFromSourceRecs)
+	d linkBillingRecords(.arrOrd,.arrOrl,.linkedBillingRecs)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Identifies primary records (ORL or ORD) within packed procedure lines and builds
+	;               mappings between those records, providers, and encounter data.
+	; PARAMETERS:
+	;   arrPackedLines (I,REQ) - Packed input lines containing procedure record data.
+	;   arrCsnAndTypes (O,REQ) - Maps patient CSNs to search types for later code searches.
+	;                             arrCsnAndTypes(<CSN>,<type>)=1
+	;   sourceRecsToLines (O,REQ) - Maps each source record to the input line numbers.
+	;   providerToSourceRecs (O,REQ) - Maps providers to the IDs of source records they're involved with.
+	;   sourceRecsToProviders (O,REQ) - Maps source records to associated providers and line numbers.
+	;   orderToLinkedORL (O,REQ) - Maps ORD IDs to ORL IDs if links are found.
+	;   arrEap (O,REQ) - Maps EAP (procedure master file) IDs to the primary records they are part of.
+	;   arrOrp (O,REQ) - Maps ORP (Order Procedure) IDs to the primary records they are linked to.
+	;   arrOrd (O,REQ) - Maps ORD record IDs to their corresponding line numbers.
+	;   arrOrl (O,REQ) - Maps ORL record IDs to their corresponding line numbers.
+	;---------
+buildSourceRecordMaps(arrPackedLines,arrCsnAndTypes,sourceRecsToLines,providerToSourceRecs,sourceRecsToProviders,orderToLinkedORL,arrEap,arrOrp,arrOrd,arrOrl) ;
+	n line,packedLine,searchType,eapID,orlID,ordID,orpIDext,serIDext,patientCSN,sourceINI,sourceID,packedCSNs
+	k arrEap,arrOrp,arrOrd,arrOrl
+	f line=1:1:arrPackedLines(0) d
+	. s packedLine=arrPackedLines(line)
+	. d %zcredpclUnpackLine(packedLine,.searchType,.serIDext,"","",.patientCSN,.eapID,.orpIDext,"","",.ordID,.orlID,"","",.packedCSNs)
+	. i orlID'="" s sourceINI="ORL",sourceID=orlID
+	. e  i ordID'="" s sourceINI="ORD",sourceID=ordID
+	. e  quit  ; no source record to link to
+	. i $$zStrChkAnyNull(2,serIDext,patientCSN) quit  ; provider and patient CSNs are required
+	. ;
+	. i searchType=$$credpclTypeOpTime() s arrCsnAndTypes(patientCSN,searchType,orlID)=packedCSNs
+	. e  s arrCsnAndTypes(patientCSN,"DEFAULT")=packedCSNs
+	. ;
+	. s sourceRecsToLines(sourceINI,sourceID,line)=1
+	. s providerToSourceRecs(serIDext,sourceINI,sourceID)=1
+	. s sourceRecsToProviders(sourceINI,sourceID,serIDext,line)=1
+	. i eapID'="" s arrEap(eapID,sourceINI,sourceID)=1
+	. i orpIDext'="" s arrOrp(orpIDext,sourceINI,sourceID)=1
+	. i ordID'="" s arrOrd(ordID,line)=1
+	. i orlID'="" s arrOrl(orlID,line)=1
+	. i orlID'="",ordID'="" s orderToLinkedORL(ordID)=orlID
+	q
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Maps CSNs and HARs that need to be searched.
+	; PARAMETERS:
+	;   arrCsnAndTypes (I,REQ) - Input array of CSNs and their associated search types.
+	;   searchCSNs (O,REQ) - Output array to store the CSNs to be searched.
+	;   searchHARs (O,REQ) - Output array to store the HARs derived from CSNs.
+	;---------
+mapCSNsAndHARs(arrCsnAndTypes,searchCSNs,searchHARs) ;
+	n line,searchType,orlID,patientCSN,instant,harID,harAry,csn,packedCSNs
+	f  s patientCSN=$o(arrCsnAndTypes(patientCSN)) q:patientCSN=""  d
+	. f  s searchType=$o(arrCsnAndTypes(patientCSN,searchType)) q:searchType=""  d
+	. . ; Figure out the CSNs and HARs that need to be searched for procedure codes
+	. . i searchType=$$credpclTypeOpTime() d
+	. . . f  s orlID=$o(arrCsnAndTypes(patientCSN,searchType,orlID)) q:orlID=""  d
+	. . . . s packedCSNs=arrCsnAndTypes(patientCSN,searchType,orlID)
+	. . . . ; logic adapted from loadHARHTRCodes^ORLOADBILLEDCODES: OpTime uses SurgeryHARs to find related HARs
+	. . . . s %=$$SurgeryHARs(orlID,.harAry)
+	. . . . f line=1:1:harAry(0) s harID=harAry(line) i harID'="" s searchHARs(harID)=1
+	. . . . ;
+	. . . . f line=1:1:$p(packedCSNs,$c(2),1) d
+	. . . . . s csn=$p(packedCSNs,$c(2),line+1)
+	. . . . . i csn="" quit  ; should not happen
+	. . . . . s searchCSNs(csn)=1
+	. . e  d
+	. . . s packedCSNs=arrCsnAndTypes(patientCSN,searchType)
+	. . . ; General case: add all CSNs and their HARs as found by aryHARsForCSN^PAUTLFCE
+	. . . f line=1:1:$p(packedCSNs,$c(2),1) d
+	. . . . s csn=$p(packedCSNs,$c(2),line+1)
+	. . . . i csn="" quit  ; should not happen
+	. . . . s searchCSNs(csn)=1
+	. . . . s %=$$aryHARsForCSN^PAUTLFCE(csn,.harAry)
+	. . . . s instant="",harID=""
+	. . . . f  s instant=$o(harAry(instant)) q:instant=""  d
+	. . . . . f  s harID=$o(harAry(instant,harID)) q:harID=""  d
+	. . . . . . i '$$isHBHAR(harID) q  ;Exclude non-HB HARs, only these are expected to have coded CPT codes. Logic borrwed from ($$)SurgeryHARs
+	. . . . . . s searchHARs(harID)=1
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Collects procedure codes from ORL, ORP, and EAP records.
+	; PARAMETERS:
+	;   serviceDate (I,REQ) - Date of service for which CPT codes are being evaluated.
+	;   arrPackedLines (I,REQ) - Array of packed record lines to extract codes from.
+	;   arrEap (IO,REQ) - Maps EAP IDs to primary records. This tag also populates the structure.
+	;   arrOrp (I,REQ) - Maps ORP IDs to primary records.
+	;   arrOrl (I,REQ) - Maps ORL IDs to record lines in arrPackedLines.
+	;   codesFromSource (O,REQ) - Output array populated with all found procedure codes by source and type.
+	;---------
+collectCodesFromRecords(serviceDate,arrPackedLines,arrEap,arrOrp,arrOrl,codesFromSourceRecs) ;
+	n orpIDext,orpIDint,sourceINI,sourceID,code,eapID,codeType,orlID,line,packedData,orl2000line,codeList,retrievedOrlLines,otherLine,extraInfo
+	; Get procedure codes stored directly in ORL records
+	f  s orlID=$o(arrOrl(orlID)) q:orlID=""  d
+	. f  s line=$o(arrOrl(orlID,line)) q:line=""  d
+	. . s packedData=arrPackedLines(line)
+	. . d %zcredpclUnpackLine(packedData,"","","","","","","","",.extraInfo)
+	. . d %zcredpclOpTimeUnpackExtraInfo(extraInfo,"",.orl2000line)
+	. . i orl2000line="" quit  ; should not happen
+	. . i retrievedOrlLines(orlID,orl2000line) quit  ; already processed this line
+	. . s retrievedOrlLines(orlID,orl2000line)=1
+	. . k codeList
+	. . s %=$$GetProcCodes("ORL",orlID,"",orl2000line,.codeList)
+	. . f otherLine=1:1:codeList(0) d
+	. . . s codeType=""
+	. . . i '$$validateProcedureCode(codeList(otherLine),.codeType,.code) q
+	. . . d %zAddCodeToList(.codesFromSourceRecs,code,codeType,"ORL",orlID,"ORL")
+	;
+	; Get codes from ORP records and calculate ORP->EAP links
+	f  s orpIDext=$o(arrOrp(orpIDext)) q:orpIDext=""  d
+	. s orpIDint=$$getidin(orpIDext,"ORP")
+	. s code=$$geti("ORP",orpIDint,41,1)
+	. s eapID=$$geti("ORP",orpIDint,40,1)
+	. i code="",eapID="" quit
+	. s codeType=""
+	. i code'="",'$$validateProcedureCode(code,.codeType,.code) s code=""  ; keep on to get EAP links even if code is invalid
+	. f  s sourceINI=$o(arrOrp(orpIDext,sourceINI)) q:sourceINI=""  d
+	. . f  s sourceID=$o(arrOrp(orpIDext,sourceINI,sourceID)) q:sourceID=""  d
+	. . . i code'="" d %zAddCodeToList(.codesFromSourceRecs,code,codeType,sourceINI,sourceID,"ORP")
+	. . . i eapID'="" s arrEap(eapID,sourceINI,sourceID)=1
+	;
+	; Get procedure codes from EAP records
+	s eapID="",sourceINI="",sourceID=""
+	f  s eapID=$o(arrEap(eapID)) q:eapID=""  d
+	. s code=""
+	. s %=$$getPxCdTypeHlpr^HULICEAP(eapID,.code,serviceDate,0)
+	. i '$$validateProcedureCode(code,.codeType,.code) quit
+	. f  s sourceINI=$o(arrEap(eapID,sourceINI)) q:sourceINI=""  d
+	. . f  s sourceID=$o(arrEap(eapID,sourceINI,sourceID)) q:sourceID=""  d
+	. . . d %zAddCodeToList(.codesFromSourceRecs,code,codeType,sourceINI,sourceID,"EAP")
+	q
+	;---------
+	; SCOPE:        INTERNAL
+	; DESCRIPTION:  Search for billing records that are discretely linked to ORL/ORD records. Searching now allows us to
+	;               avoid attempting the lookup later for any other HTR/ETR/UCL records that we find: if they're not in our
+	;               cached list, we know they're not relevant.
+	; PARAMETERS:
+	;   arrOrd (I,REQ) - Maps ORD IDs to line numbers in arrPackedLines.
+	;   arrOrl (I,REQ) - Maps ORL IDs to line numbers in arrPackedLines.
+	;   linkedBillingRecs (O,REQ) - Populated with mappings of billing records to primary records.
+	;                               linkedBillingRecs(<INI>,<billingID>,<primaryINI>,<primaryID>)=""
+	;---------
+linkBillingRecords(arrOrd,arrOrl,linkedBillingRecs) ;
+	n orlID,ordID,linkedBillingID
+	k linkedBillingRecs
+	; Search for billing records that are discretely linked to ORL/ORD records. Searching now here allows us to avoid attempting the
+	; lookup later for any other HTR/ETR/UCL records that we find
+	s orlID="",linkedBillingID=""
+	f  s orlID=$o(arrOrl(orlID)) q:orlID=""  d
+	. f  s linkedBillingID=$$zRIxNextID("HTR",470,orlID,linkedBillingID) q:linkedBillingID=""  d
+	. . s linkedBillingRecs("HTR",linkedBillingID,"ORL",orlID)=""
+	. ;
+	. f  s linkedBillingID=$$zRIxNextID("ETR",8100,orlID,linkedBillingID) q:linkedBillingID=""  d
+	. . s linkedBillingRecs("ETR",linkedBillingID,"ORL",orlID)=""
+	. ;
+	. f  s linkedBillingID=$$zRIxNextID("UCL",122,orlID,linkedBillingID) q:linkedBillingID=""  d
+	. . s linkedBillingRecs("UCL",linkedBillingID,"ORL",orlID)=""
+	;
+	s ordID="",linkedBillingID=""
+	f  s ordID=$o(arrOrd(ordID)) q:ordID=""  d
+	. f  s linkedBillingID=$$zRIxNextID("HTR",450,ordID,linkedBillingID) q:linkedBillingID=""  d
+	. . s linkedBillingRecs("HTR",linkedBillingID,"ORD",ordID)=""
+	. ;
+	. f  s linkedBillingID=$$zRIxNextID("ETR",80,ordID,linkedBillingID) q:linkedBillingID=""  d
+	. . s linkedBillingRecs("ETR",linkedBillingID,"ORD",ordID)=""
+	. ;
+	. f  s linkedBillingID=$$zRIxNextID("UCL",121,ordID,linkedBillingID) q:linkedBillingID=""  d
+	. . s linkedBillingRecs("UCL",linkedBillingID,"ORD",ordID)=""
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Match billing-derived procedure codes to source (primary) records and applies matched codes to case log
+	;               entries.
+	;
+	; PARAMETERS:
+	;   arrPackedLines (IO,REQ) - Array of packed case-log lines for the encounter, see initializeCodeSearch.
+	;   sourceRecsToLines (I,REQ) - Map of source record INI/ID to input line numbers.
+	;   providerToSourceRecs (I,REQ) - Provider ext ID to associated source records.
+	;   sourceRecsToProviders (I,REQ) - Source rec to providers and their lines.
+	;   orderToLinkedORL (I,REQ) - ORD-to-ORL links used to collapse linked records.
+	;   codesFromSourceRecs (I,REQ) - Procedure codes collected directly from source recs.
+	;   codesFromBilling (I,REQ) - Procedure codes from billing/tran records for assignment.
+	; REVISIONS:
+	;  *DNL 12/25 2268290 - Created
+	;---------
+processResults(arrPackedLines,sourceRecsToLines,providerToSourceRecs,sourceRecsToProviders,orderToLinkedORL,codesFromSourceRecs,codesFromBilling) ;
+	n ambiguousCodes,ambigousProviders,codesToAdd
+	;
+	d identifyAmbiguousProviders(.ambigousProviders,.providerToSourceRecs,.orderToLinkedORL)
+	d processBillingCodes(.codesToAdd,.ambiguousCodes,.codesFromBilling,.codesFromSourceRecs,.providerToSourceRecs,.ambigousProviders)
+	d resolveAmbiguousCodes(.codesToAdd,.ambiguousCodes,.orderToLinkedORL,.sourceRecsToLines)
+	d applyCodesToLines(.arrPackedLines,.codesToAdd,.ambiguousCodes,.sourceRecsToProviders)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Identifies providers who have performed multiple procedures for different primary records for the same date.
+	;               If we find billing codes for that provider that are not specific about which record they apply to, that makes
+	;               it ambiguous which records the code should be applied to.
+	;
+	; PARAMETERS:
+	;   ambigousProviders (O,REQ) - array of providers where ambiguity would exist about which procedure a code applies to
+	;                               ambigousProviders(<provider>)=1
+	;   providerToPrimaryIds (I,REQ) - Maps each provider to the primary records associated with them.
+	;                                  providerToPrimaryIds(<provider>,<INI>,<ID>)=1
+	;   orderToLinkedORL (I,REQ) - Maps each ORD ID to its linked ORL ID if such a link is found.
+	;                              orderToLinkedORL(<ORD ID>)=<ORL ID>
+	;---------
+identifyAmbiguousProviders(ambigousProviders,providerToSourceRecs,orderToLinkedORL) ;
+	n providerIDext,primaryINI,primaryID,uniqueLinkedIDs
+	;
+	f  s providerIDext=$o(providerToSourceRecs(providerIDext)) q:providerIDext=""  d
+	. s uniqueLinkedIDs=0
+	. s primaryINI="",primaryID=""
+	. f  s primaryINI=$o(providerToSourceRecs(providerIDext,primaryINI)) q:primaryINI=""  d
+	. . f  s primaryID=$o(providerToSourceRecs(providerIDext,primaryINI,primaryID)) q:primaryID=""  d
+	. . . ; Skip ORDs that are linked to ORLs - the ORL will be counted instead
+	. . . i primaryINI="ORD",orderToLinkedORL(primaryID)'="" quit
+	. . . s uniqueLinkedIDs=uniqueLinkedIDs+1
+	. ;
+	. i uniqueLinkedIDs>1 s ambigousProviders(providerIDext)=1
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Analyzes the billing codes we found and attempts to match them to primary records.
+	;               Unambiguous codes are added directly; ambiguous ones are saved for later resolution.
+	;
+	; PARAMETERS:
+	;   codesToAdd (O,REQ) - Array of codes successfully matched to primary records.
+	;                        codesToAdd(<INI>,<ID>,<code>,<codeType>)=<codeSource>
+	;   ambiguousCodes (O,REQ) - Array of codes requiring disambiguation, in this form:
+	;                        ambiguousCodes(<code>,<codeType>,<appliesToINI>,<appliesToIDext>)=<codeSource>
+	;   codesFromBilling (I,REQ) - Codes found in billing records
+	;                              codesFromBilling(<code>,<codeType>,<appliesToINI>,<appliesToIDext>)=<codeSource>
+	;   codesFromPrimaryRecs (I,REQ) - Codes found in primary records, see initializeCodeSearch
+	;   providerToPrimaryIds (I,REQ) - Map of providers to their primary record IDs, see initializeCodeSearch
+	;   ambigousProviders (I,REQ) - Array flagging ambiguous providers, see identifyAmbiguousProviders
+	;---------
+processBillingCodes(codesToAdd,ambiguousCodes,codesFromBilling,codesFromSourceRecs,providerToSourceRecs,ambigousProviders) ;
+	n code,codeType,appliesToINI
+	;
+	f  s code=$o(codesFromBilling(code)) q:code=""  d
+	. f  s codeType=$o(codesFromBilling(code,codeType)) q:codeType=""  d
+	. . f  s appliesToINI=$o(codesFromBilling(code,codeType,appliesToINI)) q:appliesToINI=""  d
+	. . . i appliesToINI="SER" d processProviderCodes(.codesToAdd,.ambiguousCodes,code,codeType,.codesFromBilling,.codesFromSourceRecs,.providerToSourceRecs,.ambigousProviders) i 1
+	. . . e  d processDirectCodes(.codesToAdd,code,codeType,appliesToINI,.codesFromBilling,.codesFromSourceRecs)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Processes codes where we know a provider did a procedure from the billing data, but not exactly which
+	;               source record that is. If from our other data we only have one procedure from that provider, then we can
+	;               unambiguously assign the code. Otherwise, we save it for later disambiguation.
+	;
+	; PARAMETERS:
+	;   codesToAdd (O,REQ) - Array of codes successfully matched to primary records
+	;   ambiguousCodes (O,REQ) - Array of codes requiring disambiguation
+	;   code (I,REQ) - Procedure code being processed
+	;   codeType (I,REQ) - Type of the procedure code
+	;   codesFromBilling (I,REQ) - Codes found in billing records
+	;   codesFromPrimaryRecs (I,REQ) - Codes found in primary records
+	;   providerToPrimaryIds (I,REQ) - Map of providers to their primary record IDs
+	;   ambigousProviders (I,REQ) - Array flagging ambiguous providers
+	;---------
+processProviderCodes(codesToAdd,ambiguousCodes,code,codeType,codesFromBilling,codesFromSourceRecs,providerToSourceRecs,ambigousProviders) ;
+	n serIdExt,codeSource,sourceINI,sourceID,combinedCodeSource,isAmbiguous,ambiguousRecords,matchedCodeFromSourceRec
+	;
+	f  s serIdExt=$o(codesFromBilling(code,codeType,"SER",serIdExt)) q:serIdExt=""  d
+	. s codeSource=codesFromBilling(code,codeType,"SER",serIdExt)
+	. s sourceINI="",sourceID=""
+	. s isAmbiguous=ambigousProviders(serIdExt)
+	. s matchedCodeFromSourceRec=0
+	. ;
+	. ; Match provider to all their primary records. You may ask, how can there be ever be more than one without it necessarily being ambiguous?
+	. ; It usually is, but some records can be considered connected and applying the same code to both is fine. For example, an ORD and its linked ORL.
+	. ; The reason we actually still store those as separate entries is that the billing data may be linked to one or the other, so having both entries
+	. ; present is helpful there, but causes some complexity here.
+	. f  s sourceINI=$o(providerToSourceRecs(serIdExt,sourceINI)) q:sourceINI=""  d
+	. . f  s sourceID=$o(providerToSourceRecs(serIdExt,sourceINI,sourceID)) q:sourceID=""  d
+	. . . s combinedCodeSource=codesFromSourceRecs(code,codeType,sourceINI,sourceID)
+	. . . ;
+	. . . ; If we found this same code as one of the options for one of our primary records, it's not ambiguous to apply to to this record, even if the provider has multiple procedures on this service date for for this patient.
+	. . . i combinedCodeSource'="" s combinedCodeSource=combinedCodeSource_"|"_codeSource,matchedCodeFromSourceRec=1
+	. . . e  i isAmbiguous s ambiguousRecords(sourceINI,sourceID)="" quit
+	. . . e  s combinedCodeSource=codeSource
+	. . . ;
+	. . . d %zAddCodeToList(.codesToAdd,code,codeType,sourceINI,sourceID,combinedCodeSource,1)
+	. ;
+	. i matchedCodeFromSourceRec quit  ; we were able to unambiguously match the code to one or more of the source records for this provider.
+	. ;
+	. f  s sourceINI=$o(ambiguousRecords(sourceINI)) q:sourceINI=""  d
+	. . f  s sourceID=$o(ambiguousRecords(sourceINI,sourceID)) q:sourceID=""  d
+	. . . d %zAddCodeToList(.ambiguousCodes,code,codeType,sourceINI,sourceID,codeSource)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Processes codes that apply directly to primary records (non-provider codes).
+	;
+	; PARAMETERS:
+	;   codesToAdd (O,REQ) - Array of codes successfully matched to primary records
+	;   code (I,REQ) - Procedure code being processed
+	;   codeType (I,REQ) - Type of the procedure code
+	;   appliesToINI (I,REQ) - INI the code applies to
+	;   codesFromBilling (I,REQ) - Codes found in billing records
+	;   codesFromPrimaryRecs (I,REQ) - Codes found in primary records
+	;---------
+processDirectCodes(codesToAdd,code,codeType,appliesToINI,codesFromBilling,codesFromSourceRecs) ;
+	n appliesToIDext,codeSource,combinedCodeSource
+	;
+	f  s appliesToIDext=$o(codesFromBilling(code,codeType,appliesToINI,appliesToIDext)) q:appliesToIDext=""  d
+	. s codeSource=codesFromBilling(code,codeType,appliesToINI,appliesToIDext)
+	. s combinedCodeSource=codesFromSourceRecs(code,codeType,appliesToINI,appliesToIDext)
+	. s combinedCodeSource=$s(combinedCodeSource'="":combinedCodeSource_"|"_codeSource,1:codeSource)
+	. ;
+	. d %zAddCodeToList(.codesToAdd,code,codeType,appliesToINI,appliesToIDext,combinedCodeSource,1)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Attempts to resolve ambiguous codes by checking if they link to only one unique record.
+	;               If a code only appears in one unique primary record, it's no longer ambiguous.
+	;
+	; PARAMETERS:
+	;   codesToAdd (IO,REQ) - Array of codes to apply (updated with resolved codes)
+	;   ambiguousCodes (IO,REQ) - Array of ambiguous codes (cleared for resolved codes)
+	;   orderToLinkedORL (I,REQ) - Map of orders linked to ORL records
+	;   primaryIDToLines (I,REQ) - Map of primary records to their lines
+	;---------
+resolveAmbiguousCodes(codesToAdd,ambiguousCodes,orderToLinkedORL,sourceRecsToLines) ;
+	n code,codeType,sourceINI,sourceID,uniqueLinkedIDs,line,matchedLines,isAmbiguous,codeSource
+	;
+	f  s code=$o(ambiguousCodes(code)) q:code=""  d
+	. f  s codeType=$o(ambiguousCodes(code,codeType)) q:codeType=""  d
+	. . ; Count how many unique primary records this code links to
+	. . s uniqueLinkedIDs=0
+	. . f  s sourceINI=$o(ambiguousCodes(code,codeType,sourceINI)) q:sourceINI=""  d
+	. . . f  s sourceID=$o(ambiguousCodes(code,codeType,sourceINI,sourceID)) q:sourceID=""  d
+	. . . . ; Skip ORDs that are linked to ORLs
+	. . . . i sourceINI="ORD",orderToLinkedORL(sourceID)'="" q
+	. . . . s uniqueLinkedIDs=uniqueLinkedIDs+1
+	. . . . ;
+	. . . . ; Check if this record has unmatched lines
+	. . . . s line=""
+	. . . . f  s line=$o(sourceRecsToLines(sourceINI,sourceID,line)) q:line=""  i 'matchedLines(line) quit
+	. . . . i line'="" s uniqueLinkedIDs=uniqueLinkedIDs+1  ; unmatched line found
+	. . ;
+	. . ; If only one unique link exists, the code is no longer ambiguous
+	. . s isAmbiguous=uniqueLinkedIDs>1
+	. . f  s sourceINI=$o(ambiguousCodes(code,codeType,sourceINI)) q:sourceINI=""  d
+	. . . f  s sourceID=$o(ambiguousCodes(code,codeType,sourceINI,sourceID)) q:sourceID=""  d
+	. . . . s codeSource=ambiguousCodes(code,codeType,sourceINI,sourceID)
+	. . . . d %zAddCodeToList(.codesToAdd,code,codeType,sourceINI,sourceID,codeSource,1)
+	. . . . i 'isAmbiguous k ambiguousCodes(code,codeType,sourceINI,sourceID)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Applies matched codes to case log lines. Creates new lines when there are more codes
+	;               than existing lines, and hides extra lines when there are fewer codes.
+	;
+	; PARAMETERS:
+	;   arrPackedLines (IO,REQ) - Array of packed case log lines to update
+	;   codesToAdd (I,REQ) - Array of codes to apply to lines
+	;   ambiguousCodes (I,REQ) - Array of codes still flagged as ambiguous
+	;   primaryIDToProviders (I,REQ) - Map of primary records to providers and lines
+	;---------
+applyCodesToLines(arrPackedLines,codesToAdd,ambiguousCodes,sourceRecsToProviders) ;
+	n sourceINI,sourceID,providerIDext,applyToLine,code,codeType
+	n codeSource,isAmbiguous,lineToCopy,packedData
+	;
+	f  s sourceINI=$o(codesToAdd(sourceINI)) q:sourceINI=""  d
+	. f  s sourceID=$o(codesToAdd(sourceINI,sourceID)) q:sourceID=""  d
+	. . s providerIDext=""
+	. . f  s providerIDext=$o(sourceRecsToProviders(sourceINI,sourceID,providerIDext)) q:providerIDext=""  d
+	. . . s applyToLine=$o(sourceRecsToProviders(sourceINI,sourceID,providerIDext,""))
+	. . . i applyToLine="" q  ; no existing line: shouldn't happen
+	. . . ;
+	. . . ; Apply each code to a line
+	. . . s code="",codeType=""
+	. . . f  s code=$o(codesToAdd(sourceINI,sourceID,code)) q:code=""  d
+	. . . . f  s codeType=$o(codesToAdd(sourceINI,sourceID,code,codeType)) q:codeType=""  d
+	. . . . . s codeSource=codesToAdd(sourceINI,sourceID,code,codeType)
+	. . . . . s isAmbiguous=ambiguousCodes(code,codeType,sourceINI,sourceID)'=""
+	. . . . . ;
+	. . . . . ; Get line to update or create new one
+	. . . . . i applyToLine'="" s lineToCopy=arrPackedLines(applyToLine)
+	. . . . . d %zcredpclPackProcecureCode(.lineToCopy,code,codeType,codeSource,isAmbiguous)
+	. . . . . ;
+	. . . . . ; Add new line or update existing line
+	. . . . . i applyToLine="" d
+	. . . . . . d %zzArrAppend(.arrPackedLines,lineToCopy)
+	. . . . . e  d
+	. . . . . . s arrPackedLines(applyToLine)=lineToCopy
+	. . . . . . s applyToLine=$o(sourceRecsToProviders(sourceINI,sourceID,providerIDext,applyToLine))
+	. . . ;
+	. . . ; Hide any remaining unused lines
+	. . . f  q:applyToLine=""  d  s applyToLine=$o(sourceRecsToProviders(sourceINI,sourceID,providerIDext,applyToLine))
+	. . . . s packedData=arrPackedLines(applyToLine)
+	. . . . d %zcredpclPackProcecureCode(.packedData,"","","","",1)
+	. . . . s arrPackedLines(applyToLine)=packedData
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Checks if a procedure code is valid for including in case logs and determines its type. Only
+	;               surgical codes are considered valid. If the caller provides codeType, the function does not validate it and does not modify the code given.
+	;
+	; PARAMETERS:
+	;   code (I,REQ) - Raw procedure code to be evaluated.
+	;   codeType (IO,OPT) - Returns the detected code type
+	;   formattedCode (O,REQ) - Returns a cleaned or shortened version of the input code, especially for
+	;                           OHIP codes which are truncated to 4 characters.
+	;
+	; RETURNS:      1 if the procedure code is valid and surgical; 0 otherwise.
+	;---------
+validateProcedureCode(code,codeType,formattedCode) ;
+	s formattedCode=code
+	i codeType'=""  ; nothing here intentionally; we only need to evaluate the ELSE conditions if this is false
+	e  i $$isCptFormat^COSLOADBILLINGDATA(code) s codeType=$$credpclCodeTypeCpt()
+	e  i $$isOhipFormat^COSLOADBILLINGDATA(code) s codeType=$$credpclCodeTypeOhip(),formattedCode=$e(code,1,4)
+	e  QUIT 0  ; unknown code type
+	q 1
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Packs procedure code information into the data for a line in a provider's case log.
+	; PARAMETERS:
+	;   packedLine (O,REQ) - Target data where the packed data will be stored.
+	;   code (I,OPT) - Procedure code associated with the entry. If null, all the remaining entries except hideThisLine should also be null.
+	;   codeType (I,OPT) - Type of the procedure code as a PCL 126 category value (1=CPT, 2=OHIP)
+	;   codeSource (I,OPT) - Pipe-delimited list of data sources where this code was found.
+	;   isAmbiguous (I,OPT) - 1 if the code is ambiguous and may not apply to this specific
+	;                        entry.
+	;   hideThisLine (I,OPT) - 1 if this line should be hidden from display in the case log.
+	;---------
+%zcredpclPackProcecureCode(packedLine,code,codeType,codeSource,isAmbiguous,hideThisLine) ;
+	n ini,id,harIDs,htrIDs,uclIDs,etrIDs,recordInfo,piece
+	f piece=1:1:$l(codeSource,"|") d
+	. s recordInfo=$p(codeSource,"|",piece)
+	. s ini=$p(recordInfo,"-",1)
+	. s id=$p(recordInfo,"-",2)
+	. i id="" quit
+	. i ini="HAR" d %zzArrAppend(.harIDs,id) i 1
+	. e  i ini="HTR" d %zzArrAppend(.htrIDs,id) i 1
+	. e  i ini="UCL" d %zzArrAppend(.uclIDs,id) i 1
+	. e  i ini="ETR" d %zzArrAppend(.etrIDs,id) i 1
+	;
+	s $p(packedLine,$c(1),12,15)=$c(2)_code_$c(1,2)_codeType_$c(1,2)_isAmbiguous_$c(1,2)_hideThisLine
+	s $p(packedLine,$c(1),16)=$$credutilPackItem(.harIDs)
+	s $p(packedLine,$c(1),17)=$$credutilPackItem(.htrIDs)
+	s $p(packedLine,$c(1),18)=$$credutilPackItem(.uclIDs)
+	s $p(packedLine,$c(1),19)=$$credutilPackItem(.etrIDs)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Adds a CPT code to a specified codeList structure, updating the list of sources for a given code.
+	;               If the code already exists for the target record and code type with the same source,
+	;               it will not be duplicated. Otherwise, the new source is appended to the existing
+	;               list of sources using "|" as a delimiter. The structure of codeList depends on whether
+	;               indexing is done by INI.
+	;
+	; PARAMETERS:
+	;   codeList (IO,REQ) - The array or global receiving the code entries, passed by reference.
+	;                       Structure depends on indexByINI flag.
+	;   code (I,REQ) - CPT code being added.
+	;   codeType (I,REQ) - Type of code, see routine header.
+	;   appliesToINI (I,REQ) - INI to which the code applies.
+	;   appliesToIDext (I,REQ) - External Record ID within the INI the code should be associated code with.
+	;   codeSource (I,REQ) - Source or sources (pipe-delimited) from which the code was derived (e.g., "HTR|ETR").
+	;   indexByINI (I,OPT,DEFAULT:0 - index by code) - If true, index the array by record, otherwise index by code.
+	;                        1 = codeList(appliesToINI,appliesToIDext,code,codeType)
+	;                        0 = codeList(code,codeType,appliesToINI,appliesToIDext)
+	;---------
+%zAddCodeToList(codeList,code,codeType,appliesToINI,appliesToIDext,codeSource,indexByINI) ;
+	n existingTypes,piece,needsUpdate,oneCodeSource
+	i indexByINI s existingTypes=codeList(appliesToINI,appliesToIDext,code,codeType)
+	e  s existingTypes=codeList(code,codeType,appliesToINI,appliesToIDext)
+	f piece=1:1:$l(codeSource,"|") d
+	. s oneCodeSource=$p(codeSource,"|",piece)
+	. i existingTypes[oneCodeSource quit  ; already have this source recorded. If oneCodeSource was empty, this would skip adding it too, since all strings contain the empty string.
+	. s needsUpdate=1
+	. i existingTypes="" s existingTypes=oneCodeSource
+	. e  s existingTypes=existingTypes_"|"_oneCodeSource
+	i 'needsUpdate QUIT  ; nothing to do
+	i appliesToINI="ORL",'$$orcosIsSurgicalCode(code,$$credpclCodeTypeToOrcos(codeType)) QUIT  ; don't add non-surgical codes from ORL records
+	i indexByINI s codeList(appliesToINI,appliesToIDext,code,codeType)=existingTypes
+	e  s codeList(code,codeType,appliesToINI,appliesToIDext)=existingTypes
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Finds CPT codes associated with a single HAR (Hospital Account Record)
+	; PARAMETERS:
+	;   codesGlo (I,REQ) - Global used to store intermediate CPT code data from getHARCPTCodes.
+	;                      Will be wiped before calling the API.
+	;   serviceDate (I,REQ) - Date of service for which CPT codes are being evaluated.
+	;   harId (I,REQ) - The Hospital Account Record identifier used to retrieve associated CPT codes.
+	;   linkedBillingRecs (I,REQ) - Array of known links between HTRs and primary records.
+	;                               linkedBillingRecs("HTR",htrId,primaryINI,primaryID)=1
+	;   providerToSourceRecs (I,REQ) - Mapping of service providers to associated primary IDs.
+	;                                  providerToPrimaryIds(providerID,primaryID)=1
+	;   codesFromBilling (O,REQ) - Output array to receive CPT codes and context info associated to primary logs.
+	;                              codesFromBilling(code,"type",primaryINI,primaryID)=dataSrc
+	;---------
+processOneHAR(codesGlo,serviceDate,harId,linkedBillingRecs,providerToSourceRecs,codesFromBilling) ;
+	n type,code,ln,linkedToSourceRec,dataSrc,htrList,htrLn,htrId,serviceProvider,codeType,formattedCode,firstHtrId
+	n primaryINI,primaryID
+	k @codesGlo
+	d getHARCPTCodes^KHUAPICODING1(harId,codesGlo,1,"",0,1)
+	f  s type=$o(@codesGlo@(type)) q:$$zStrIsNull(type)  d
+	. q:type="TOTAL"
+	. f  s code=$o(@codesGlo@(type,code)) q:$$zStrIsNull(code)  d
+	. . q:code="Count"
+	. . s codeType=""
+	. . i '$$validateProcedureCode(code,.codeType,.formattedCode) quit  ; not a procedure code we're tracking
+	. . s primaryINI="",primaryID=""
+	. . f ln=1:1:@codesGlo@(type,code) d
+	. . . ; HTRs can be directly linked to a log, so check for that first
+	. . . s htrList=@codesGlo@(type,code,ln,"htrList")
+	. . . s linkedToSourceRec=0
+	. . . s firstHtrId=""
+	. . . i htrList'="" f htrLn=1:1:$l(htrList,",") d
+	. . . . s htrId=$p(htrList,",",htrLn)
+	. . . . i htrId="" quit
+	. . . . i firstHtrId="" s firstHtrId=htrId
+	. . . . f  s primaryINI=$o(linkedBillingRecs("HTR",htrId,primaryINI)) q:primaryINI=""  d
+	. . . . . f  s primaryID=$o(linkedBillingRecs("HTR",htrId,primaryINI,primaryID)) q:primaryID=""  d
+	. . . . . . d %zAddCodeToList(.codesFromBilling,formattedCode,codeType,primaryINI,primaryID,"HTR"_"-"_htrId)
+	. . . . . . s linkedToSourceRec=1
+	. . . ;
+	. . . i linkedToSourceRec quit  ; already found an HTR link to one of the primary records
+	. . . ; Try to disambiguate by comparing service date/provider to those on the log
+	. . . i @codesGlo@(type,code,ln,"svcDte")'=serviceDate quit  ; service date does not match
+	. . . s serviceProvider=@codesGlo@(type,code,ln,"svcProv")
+	. . . i $d(providerToSourceRecs(serviceProvider))=0 quit  ; this provider isn't associated with any of the logs being processed
+	. . . s dataSrc=@codesGlo@(type,code,ln,"dataSrc")
+	. . . i dataSrc=1 s dataSrc=$s(firstHtrId'="":"HTR-"_firstHtrId,1:"HAR-"_harId)
+	. . . e  i dataSrc=2 s dataSrc="HAR-"_harId
+	. . . e  quit  ; unknown data source
+	. . . d %zAddCodeToList(.codesFromBilling,formattedCode,codeType,"SER",serviceProvider,dataSrc)
+	q
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Loads CPT codes from filed transactions originating from ETR, UCL, or HTR INIs associated
+	;               with a given CSN and service date.
+	; PARAMETERS:
+	;   svcDte (I,REQ) - Service date for the case logs being analyzed.
+	;   csn (I,REQ) - Contact Serial Number identifying the encounter being processed.
+	;   linkedBillingRecs (I,REQ) - Array of previously associated billing records mapped to
+	;                               their primary records.
+	;                               linkedBillingRecs(chargeIni,chargeId,primaryINI,primaryID)=1
+	;   providerToPrimaryIds (I,REQ) - Array linking service providers to primary IDs for
+	;                                  fallback matching when no direct record link is found.
+	;                                  providerToPrimaryIds(providerID,primaryID)=1
+	;   codesFromBilling (O,REQ) - Output array to be populated with CPT codes and context info.
+	;                              codesFromBilling(code,type,primaryINI,primaryID)=<codeSources>
+	;---------
+loadETRUCLHTRCodes(svcDte,csn,linkedBillingRecs,providerToPrimaryIds,codesFromBilling) ;
+	n fileOption,code,chargeInfo,chargeIni,chargeId,codeType,primaryINI,primaryID,matchedPrimaryRec,serviceProvider,formattedCode
+	s fileOption=2  ;2 - filed transactions in Epic + UCLs filed externally
+	; Interesting notes from John King: HTR and ETR are the best sources for organizations that use Resolute for their
+	; billing, but there are some organizations that don't use Resolute. Some of them create UCLs and send them
+	; through the Charge Router, but then they use an interface to send the charges to an external systems. Those orgs would
+	; only have UCL records. For example, international groups like Australia and Singapore wouldn't. Within NextCPT,
+	; charges from UCL that have already been sent to Resolute are filtered out to avoid find the same code from multiple
+	; sources. So don't be overly perturbed about UCL links being rare in most envrionments.
+	f  s code=$$NextCPT^KEUHADPHX5(csn,2,svcDte,code,fileOption) q:code=""  d
+	. s codeType=""
+	. i '$$validateProcedureCode(code,.codeType,.formattedCode) q
+	. f  s chargeInfo=$$NextCharge^KEUHADPHX5(csn,2,svcDte,code,chargeInfo,fileOption,.chargeIni,.chargeId) q:chargeInfo=""  d
+	. . i '$$in(chargeIni,"ETR,UCL,HTR") q
+	. . i (chargeIni="UCL"),$$filterDestinations^COSLOADBILLINGDATA(chargeId) q     ; Filter UCLs filed to certain destinations
+	. . ;
+	. . s matchedPrimaryRec=0
+	. . f  s primaryINI=$o(linkedBillingRecs(chargeIni,chargeId,primaryINI)) q:primaryINI=""  d
+	. . . f  s primaryID=$o(linkedBillingRecs(chargeIni,chargeId,primaryINI,primaryID)) q:primaryID=""  d
+	. . . . d %zAddCodeToList(.codesFromBilling,formattedCode,codeType,primaryINI,primaryID,chargeIni_"-"_chargeId)
+	. . . . s matchedPrimaryRec=1
+	. . ;
+	. . i matchedPrimaryRec quit  ; already matched to a primary record
+	. . ;
+	. . s serviceProvider=$$getServiceProvider(chargeIni,chargeId)
+	. . i '$d(providerToPrimaryIds(serviceProvider)) quit  ; this provider isn't associated with any of the logs being processed
+	. . ; No direct link to a primary record, but provider matches - associate with provider
+	. . d %zAddCodeToList(.codesFromBilling,formattedCode,codeType,"SER",serviceProvider,chargeIni_"-"_chargeId)
+	q
+	;#localInline#
+	;---------
+	; SCOPE:        PRIVATE
+	; DESCRIPTION:  Returns the service provider ID for a given charge.
+	; PARAMETERS:
+	;   chargeIni (I,REQ) - Database INI where the charge is stored. Must be one of ETR, UCL, or HTR.
+	;   chargeId (I,REQ) - Internal ID of the charge record in the given INI.
+	; RETURNS:      The service provider ID (SER external ID) associated with the charge.
+	;---------
+getServiceProvider(chargeIni,chargeId) ;
+	q:chargeIni="ETR" $$geti("ETR",chargeId,110,1)
+	q:chargeIni="UCL" $$geti("UCL",chargeId,214,1)
+	q:chargeIni="HTR" $$geti("HTR",chargeId,110,1)
+	q ""
+	;#endLocalInline#
+	q  ;;#eor#
