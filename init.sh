@@ -2,7 +2,10 @@
 
 if git config --get remote.epc.url >/dev/null ; then
     echo "This initialization script can only be run once."
-    echo "Invoke the other init*.sh scripts individually to play around."
+    echo "Invoke the other scripts individually to play around."
+    echo ""
+    echo "Available scripts:"
+    ls -1 *.sh | grep -v init
     exit 1
 fi
 
@@ -65,4 +68,10 @@ echo "Generating sample commits on server branches..."
 
     wait
 } > /dev/null
-echo "Added sample commits to several server-tracking branches."
+COMMITS_CREATED=$(git shortlog -s --remotes=epc | cut -f1 | awk '{$1=$1};1')
+BRANCHES_CREATED=$(git for-each-ref --format="%(refname)" refs/remotes/epc | wc -l | awk '{$1=$1};1')
+echo "Created $COMMITS_CREATED total commits across $BRANCHES_CREATED branches."
+echo "View the commits with:  git log --oneline --graph --remotes=epc"
+echo ""
+
+echo "Done."
