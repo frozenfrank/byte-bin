@@ -96,13 +96,22 @@ commits to a real remote; setting `remote.pushDefault` avoids selecting `epc` by
   * https://git-scm.com/book/en/v2/Git-Branching-Remote-Branches
 * Git Plumbing - Read refs
   * https://git-scm.com/docs/git-rev-parse
+  * https://git-scm.com/docs/git-cat-file
   * https://git-scm.com/docs/git-show-ref
   * https://git-scm.com/docs/git-ls-files
 * Git Plumbing - Write refs
   * https://git-scm.com/docs/git-hash-object
   * https://git-scm.com/docs/git-read-tree
   * https://git-scm.com/docs/git-update-index
+  * https://git-scm.com/docs/git-diff-index
   * https://git-scm.com/docs/git-write-tree
   * https://git-scm.com/docs/git-commit-tree
   * https://git-scm.com/docs/git-update-ref
-
+* Git Porcelain
+  * https://git-scm.com/docs/git-config
+  * https://git-scm.com/docs/git-remote
+  * https://git-scm.com/docs/git-status
+  * https://git-scm.com/docs/git-show
+  * https://git-scm.com/docs/git-commit
+  * https://git-scm.com/docs/git-log
+  * https://git-scm.com/docs/git-shortlog
