@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if ! git config --get remotes.epc.url; then
+if git config --get remote.epc.url >/dev/null ; then
     echo "This initialization script can only be run once."
     echo "Invoke the other init*.sh scripts individually to play around."
     exit 1
