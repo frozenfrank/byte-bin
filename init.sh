@@ -7,24 +7,31 @@ if ! git config --get remotes.epc.url; then
 fi
 
 # Init the special EPC remote
-./init-remote.sh epc
+echo "Initializing special 'epc' remote..."
+./init-remote.sh epc > /dev/null
 
 # Init several server-tracking branches
-./init-server-branch.sh epc/env/861
-./init-server-branch.sh epc/env/5325
-./init-server-branch.sh epc/env/40
-./init-server-branch.sh epc/env/Presto1492
-./init-server-branch.sh epc/env/Presto0008
-./init-server-branch.sh epc/env/Presto1979
-./init-server-branch.sh epc/env/CdeDyn
-./init-server-branch.sh epc/env/Stage1Dyn
-./init-server-branch.sh epc/env/NorthMetro
-
-# Generate sample data on the branches
-./commit-folder-to-all-remote-refs.sh epc/env x/3n-src/1
-
-# Construct realistic diffs on different environments
+echo "Initializing server branches..."
 {
+    ./init-server-branch.sh epc/env/861 &
+    ./init-server-branch.sh epc/env/5325 &
+    ./init-server-branch.sh epc/env/40 &
+    ./init-server-branch.sh epc/env/Presto1492 &
+    ./init-server-branch.sh epc/env/Presto0008 &
+    ./init-server-branch.sh epc/env/Presto1979 &
+    ./init-server-branch.sh epc/env/CdeDyn &
+    ./init-server-branch.sh epc/env/Stage1Dyn &
+    ./init-server-branch.sh epc/env/NorthMetro &
+
+    wait
+} > /dev/null
+
+echo "Generating sample commits on server branches..."
+{
+    # Generate sample data on the branches
+    ./commit-folder-to-all-remote-refs.sh epc/env x/3n-src/1
+
+    # Construct realistic diffs on different environments
     (
         ./commit-folder-to-ref-src-dir.sh x/3n-src/1 refs/remotes/epc/env/861
         ./commit-folder-to-ref-src-dir.sh x/3n-src/2 refs/remotes/epc/env/861
