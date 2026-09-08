@@ -42,6 +42,19 @@ for file in "$TARGET_DIR"/*; do
     fi
 done
 
+if git diff-index --cached --quiet $GIT_REF; then
+    # NOTE: There are situations where developers would appreciate the existence
+    # of a snapshot in time capturing the current state of an environment...
+    # even if that diff hadn't actually changed since the last snapshot.
+    # This is feasible since the server files are not currently natively tracked in 'git'.
+    # Consider including an 'epc fetch --always-commit' flag that would bypass this check;
+    # Git offers the functionality in the porcelain layer with 'git commit --allow-empty'.
+    echo "No changes to commit."
+    unset GIT_INDEX_FILE
+    rm -f $TEMP_INDEX_FILE
+    exit 1
+fi
+
 TREE_HASH=$(git write-tree)
 COMMIT_HASH=$(git commit-tree $TREE_HASH -p $PREV_SHA -m "Programmatically generated from $TARGET_DIR")
 unset GIT_INDEX_FILE
