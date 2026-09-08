@@ -18,6 +18,9 @@ if git config --get remote.epc.url >/dev/null ; then
     exit 1
 fi
 
+# Verify the tag has been pulled
+git show-ref --verify test-initial-tree || exit 1
+
 # Init the special EPC remote
 echo "Initializing special 'epc' remote..."
 ./init-remote.sh epc > /dev/null
