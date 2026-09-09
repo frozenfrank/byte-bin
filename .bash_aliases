@@ -107,18 +107,29 @@ alias mergeu="git merge --no-ff --no-edit @{u}"
 
 function range-diff() {
   # Compares two versions of the same branch after rebasing onto a base branch
-  # Usage: range-diff OLD_BRANCH [BASE_BRANCH] [NEW_BRANCH] [NEW_BASE_BRANCH]
+  # Usage: range-diff [OLD_BRANCH] [BASE_BRANCH] [NEW_BRANCH] [NEW_BASE_BRANCH] [--] [GIT_RANGE_DIFF_OPTIONS...]
   # The branches are considered as only the commits not reachable from the base branch.
   # This is equivalent to BASE..OLD, or BASE ^OLD, from from the `git log` realm
   # With only OLD_BRANCH given, compares its upstream (older) against itself (newer)
-  local OLD="${1:-@}"
-  local OLD_BASE="${2:-stage1}"
-  local NEW="$3"
-  local NEW_BASE="${4:-$OLD_BASE}"
+  # Any remaining args (anything starting with `-`, or everything after a literal `--`)
+  # are passed straight through to `git range-diff`. Eg: range-diff @ stage1 -w -s
+  local POS=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --) shift; break ;;
+      -*) break ;;
+      *)  POS+=("$1"); shift ;;
+    esac
+  done
+
+  local OLD="${POS[0]:-@}"
+  local OLD_BASE="${POS[1]:-stage1}"
+  local NEW="${POS[2]}"
+  local NEW_BASE="${POS[3]:-$OLD_BASE}"
 
   [ -z "$NEW" ] && NEW="$OLD" && OLD="$OLD@{upstream}"
 
-  git range-diff $(git merge-base "$OLD" "$OLD_BASE").."$OLD" $(git merge-base "$NEW" "$NEW_BASE").."$NEW"
+  git range-diff $(git merge-base "$OLD" "$OLD_BASE").."$OLD" $(git merge-base "$NEW" "$NEW_BASE").."$NEW" "$@"
 }
 
 # Git refspec management
