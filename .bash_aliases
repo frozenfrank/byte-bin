@@ -163,4 +163,4 @@ function mktouch() {
 alias hello="Echo 'World (v5)'"
 alias publish="epc publish --changed --make-lib"
 alias publishc="epc publish --changed --make-lib && git commit -am 'Publish changes'"
-alias logdlg='--pretty=format:"%C(auto)%h DLG=%Cred%(trailers:key=DLG,valueonly=true,separator=,)%Creset %ad %an" --date=short'
+alias logdlg='git log --pretty=format:"%C(auto)%h DLG=%Cred%(trailers:key=DLG,valueonly=true,separator=,)%Creset %ad %an" --date=short'
