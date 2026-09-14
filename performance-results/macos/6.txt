@@ -1,0 +1,46 @@
+Reproduction #1 (current)...
+commit 2799ad455e3c52c781e5f3eab59aa1e1a252c8ed
+Author: James Finlinson <the30clues@gmail.com>
+Date:   Mon Sep 14 00:29:22 2026 -0500
+
+    Switch to last commit from a week ago
+
+real	0m1.464s
+user	0m1.075s
+sys	0m1.305s
+
+real	0m0.634s
+user	0m1.068s
+sys	0m1.267s
+
+real	0m0.555s
+user	0m1.014s
+sys	0m1.167s
+
+real	0m0.625s
+user	0m1.061s
+sys	0m1.253s
+
+
+Reproduction #2 (baseline)...
+commit 009480dada32e9b13de3deacff2842bca863e419
+Author: James Finlinson <the30clues@gmail.com>
+Date:   Tue Sep 8 07:39:01 2026 -0500
+
+    Add interactive testing commands
+
+real	0m2.207s
+user	0m2.566s
+sys	0m2.826s
+
+real	0m1.297s
+user	0m2.478s
+sys	0m2.632s
+
+real	0m1.235s
+user	0m2.447s
+sys	0m2.552s
+
+real	0m1.208s
+user	0m2.422s
+sys	0m2.522s

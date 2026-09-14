@@ -116,6 +116,16 @@ commits to a real remote; setting `remote.pushDefault` avoids selecting `epc` by
   DLG, and the objects belonging to it). Ref-to-environment mapping could live here, in
   `.git/config`, or be encoded in the ref name itself.
 
+## Performance Testing
+
+Reproduction command:
+
+```sh
+RESULTS_DIR="performance-results/macos"
+mkdir -p $RESULTS_DIR
+for i in {1..10}; do echo "Trial #$i"; ./reproduction-performance.sh > $RESULTS_DIR/$i.txt 2>&1; done
+```
+
 ## References
 
 * The Git Book
