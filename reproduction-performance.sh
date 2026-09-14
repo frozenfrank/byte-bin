@@ -22,7 +22,7 @@ echo ""
 echo "Reproduction #2 (baseline)..."
 
 source reproduction-launch.sh > /dev/null 2>&1
-git checkout fec583a --quiet # pre-performance-optimization
+git checkout --quiet 009480dada32e9b13de3deacff2842bca863e419  # pre-performance-optimization
 git show -s --no-decorate
 
 {
