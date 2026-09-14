@@ -39,6 +39,65 @@ format expresses deletions natively, so removals and additions ride the same str
 000000 SP 0000...0000 TAB <path>     # delete  (mode 0 / null sha)
 ```
 
+<details>
+<summary>Expand to view the intermediary input format passed to <code>git update-index</code></summary>
+<p>
+
+Here's an example of input fed to `git update-index --index-info`:
+
+```txt
+000000 0000000000000000000000000000000000000000	src/1.txt
+000000 0000000000000000000000000000000000000000	src/10.txt
+000000 0000000000000000000000000000000000000000	src/2.txt
+000000 0000000000000000000000000000000000000000	src/3.txt
+000000 0000000000000000000000000000000000000000	src/4.txt
+000000 0000000000000000000000000000000000000000	src/5.txt
+000000 0000000000000000000000000000000000000000	src/6.txt
+000000 0000000000000000000000000000000000000000	src/7.txt
+000000 0000000000000000000000000000000000000000	src/8.txt
+000000 0000000000000000000000000000000000000000	src/9.txt
+100644 23cc4ff5fa61c3c40b6fe69ea11c094ba7f4704b	src/ORLPOST1.epc
+100644 784af2bfc14fa205f1b9f98c6d70adc320ea022a	src/HXDYWIPE2.epc
+100644 356f120ecdcdc6628eec3bd08d9a581831c9dd9f	src/hjPWCPCLREC.epc
+100644 58406ec84c3b7ebf4a57b7b3d6eacb89637c67d8	src/hjPWCPCLPERFTEST.epc
+100644 6431d90e4f826c9e92c3fb38cf64da74c9ad252b	src/HULIBPCLPWC.epc
+100644 e020171ed2d654c220753afbac4336aaa0fa1c41	src/hjPWCPCLLIBMAKER.epc
+100644 4cbffea5d23eab8505b59f4743768a67ed201e5a	src/PLIBWPCLREC.epc
+100644 2a8ba9dfb8d2cdd98d474b3630a4200851785581	src/PWCPCLREC.epc
+100644 099137b14781abfd1f600d6d4b0a57d3844a0e13	src/HULIBKP2.epc
+100644 5e29aa3993628a43f1c9940a9c4121bf1f590f7f	src/hjPWCPCLRECEXPENSIVE1.epc
+100644 a45840bf0352e2056fe94d9491d7396cd25f360e	src/PWCPCLLOADCODES.epc
+100644 80b4e6f99c4164114938e39df7d76c0ae152a0bd	src/OREDIT1.epc
+100644 1989ec1eabc8360695a3e8563dd653ab2560c4d2	src/PWCPCLUTIL.epc
+```
+
+Reproduction command (with variables replaced with specific references):
+
+```sh
+# This lists out all the files in the current src/ directory
+FILE_LIST=$(mktemp)
+find "src" -maxdepth 1 -type f > "$FILE_LIST"
+
+# Reference a known tree instead of the current directory for interesting results
+# This specific tree is known to exist because it is included in multiple commits by the init script.
+git ls-tree a520082ca39b35e8cba88fb2bd76bb01253e642a --name-only -r -- "src" |
+    awk '{print "000000 0000000000000000000000000000000000000000\t" $0}'
+
+git hash-object -w --stdin-paths < "$FILE_LIST" |
+    paste - <(sed 's|.*/||' "$FILE_LIST") |
+    awk -F'\t' -v mode=100644 -v dir="src/" '{print mode " " $1 "\t" dir $2}'
+```
+
+For the curious, this will list all the commits which use the _top-level_ tree from the example:
+
+```sh
+git log --all --format="%H %T" | grep a520082 | awk '{print $1}' | xargs git log --no-walk --oneline --no-decorate
+```
+
+</p>
+</details>
+
+
 The first block emits a deletion for every entry currently under `src/`; the second hashes the
 whole new folder with a single `git hash-object -w --stdin-paths` (one SHA per line, in input
 order), pastes those SHAs back against the file names, and emits the additions. Order matters and
