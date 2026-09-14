@@ -10,7 +10,7 @@ time ./init.sh --re-init
 time ./init.sh --re-init
 time ./init.sh --re-init
 
-source reproduction-exit.sh
+git show main:reproduction-exit.sh | source /dev/stdin
 
 
 ### REPRO #2 ###
@@ -24,4 +24,4 @@ time ./init.sh --re-init
 time ./init.sh --re-init
 time ./init.sh --re-init
 
-source reproduction-exit.sh
+git show main:reproduction-exit.sh | source /dev/stdin
