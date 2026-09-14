@@ -25,22 +25,28 @@ if ! git show-ref --verify --quiet "$GIT_REF"; then
     exit 1
 fi
 
-# 4. Enable nullglob so the loop doesn't run if the folder is empty
+# 4. Build the new tree in a scratch index seeded from the current commit
 PREV_SHA=$(git rev-parse $GIT_REF)
-shopt -s nullglob
 TEMP_INDEX_FILE=$(mktemp)
 export GIT_INDEX_FILE=$TEMP_INDEX_FILE
 git read-tree "$PREV_SHA^{tree}"
-git ls-files -z "$PLACEMENT_DIR" | git update-index  --force-remove -z --stdin
 
-# 5. Loop through every item inside the directory
-for file in "$TARGET_DIR"/*; do
-    # Ensure we are only processing files (skips subdirectories)
-    if [ -f "$file" ]; then
-        FILE_HASH=$(git hash-object -w $file)
-        git update-index --add --cacheinfo 100644,$FILE_HASH,"$PLACEMENT_DIR/$(basename $file)"
-    fi
-done
+# 5. List every file directly inside the directory (skips subdirectories)
+FILE_LIST=$(mktemp)
+find "$TARGET_DIR" -maxdepth 1 -type f > "$FILE_LIST"
+
+# 6. Apply the whole update as a single '--index-info' stream: every existing
+# entry under PLACEMENT_DIR is removed (mode 0 / null sha) and every new file is
+# added afterwards. One index read/write, and one 'hash-object' spawn for all
+# files via --stdin-paths, instead of ~4 processes per file.
+{
+    git ls-files "$PLACEMENT_DIR" |
+        awk '{print "000000 0000000000000000000000000000000000000000\t" $0}'
+
+    git hash-object -w --stdin-paths < "$FILE_LIST" |
+        paste - <(sed 's|.*/||' "$FILE_LIST") |
+        awk -F'\t' -v mode=100644 -v dir="$PLACEMENT_DIR/" '{print mode " " $1 "\t" dir $2}'
+} | git update-index --index-info
 
 if git diff-index --cached --quiet $GIT_REF; then
     # NOTE: There are situations where developers would appreciate the existence
@@ -51,14 +57,14 @@ if git diff-index --cached --quiet $GIT_REF; then
     # Git offers the functionality in the porcelain layer with 'git commit --allow-empty'.
     echo "No changes to commit."
     unset GIT_INDEX_FILE
-    rm -f $TEMP_INDEX_FILE
+    rm -f $TEMP_INDEX_FILE $FILE_LIST
     exit 1
 fi
 
 TREE_HASH=$(git write-tree)
 COMMIT_HASH=$(git commit-tree $TREE_HASH -p $PREV_SHA -m "Programmatically generated from $TARGET_DIR")
 unset GIT_INDEX_FILE
-rm -f $TEMP_INDEX_FILE
+rm -f $TEMP_INDEX_FILE $FILE_LIST
 
 git update-ref $GIT_REF $COMMIT_HASH $PREV_SHA -m "replace src/ folder" || exit 1
 
