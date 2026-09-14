@@ -1,40 +1,67 @@
 # A Note on Performance
 
-If you have just read the [README](./README.md) and run `./init.sh`, you may notice the scripts
-take a moment — possibly quite a long moment, if you are on Windows. That is expected, and this
-page explains why.
+If you have just read the [README](./README.md) and run `./init.sh`, you may wonder how a pile of
+plumbing commands behaves on a real directory — especially on Windows, where the usual
+shell-script tricks are expensive. This page explains where the time goes, what the scripts do
+about it, and what was deliberately left on the table.
 
 ## This is a proof-of-concept, not a product
 
 The goal of this repo is to show that **arbitrary files can be committed into an arbitrary git ref
-without ever touching your working directory or your real index**. Every script here is written to
-make that idea as legible as possible: one plumbing command at a time, in the order a person would
+without ever touching your working directory or your real index**. Every script is written to make
+that idea as legible as possible: one plumbing command at a time, in the order a person would
 reason about it.
 
-`commit-folder-to-ref-src-dir.sh` is the clearest example. For each file in the folder it runs
-`git hash-object` to store the file's contents, then `git update-index` to place that content at a
-path inside a scratch index. You can read the loop and see exactly what git is being asked to do.
+`commit-folder-to-ref-src-dir.sh` is the clearest example — and it is also the one place where the
+naive version was slow enough to matter, so it has been optimized. The optimization turned out to
+cost very little readability, which is the interesting part.
 
-That is also the slow way to do it. A production version would hand git the whole batch at once,
-and would look considerably less like an explanation. **We chose the explanation.** If you are
-here to understand how git's index works, the scripts are doing their job.
+## What the core script does now
+
+The whole `src/` replacement is expressed as **one `git update-index --index-info` stream**:
+
+```sh
+{
+    git ls-files "$PLACEMENT_DIR" |
+        awk '{print "000000 0000000000000000000000000000000000000000\t" $0}'
+
+    git hash-object -w --stdin-paths < "$FILE_LIST" |
+        paste - <(sed 's|.*/||' "$FILE_LIST") |
+        awk -F'\t' -v dir="$PLACEMENT_DIR/" '{print "100644 " $1 "\t" dir $2}'
+} | git update-index --index-info
+```
+
+`--index-info` reads index entries on stdin and applies them all in **one** index read/write. Its
+format expresses deletions natively, so removals and additions ride the same stream:
+
+```
+<mode> SP <sha1> TAB <path>          # add/replace
+000000 SP 0000...0000 TAB <path>     # delete  (mode 0 / null sha)
+```
+
+The first block emits a deletion for every entry currently under `src/`; the second hashes the
+whole new folder with a single `git hash-object -w --stdin-paths` (one SHA per line, in input
+order), pastes those SHAs back against the file names, and emits the additions. Order matters and
+is what makes the mix safe: every old entry is removed before the new ones land.
+
+Net effect versus the original: **~2 processes instead of ~4N, and 1 index rewrite instead of
+N+1.**
+
+> The original per-file version is preserved on the **`pre-performance-optimization`** branch:
+> `git show pre-performance-optimization:commit-folder-to-ref-src-dir.sh`, or
+> `git diff pre-performance-optimization main -- commit-folder-to-ref-src-dir.sh` to see exactly
+> what changed. It is worth reading first if you want the unoptimized, one-command-per-concept
+> narration.
 
 ## What to expect when you run it
 
-* **On macOS and Linux:** essentially instant for the sample data. You are unlikely to notice.
-* **On Windows (Git Bash / MSYS2):** noticeably slower — seconds rather than milliseconds, and it
-  scales with the number of files. A few hundred files can take many seconds.
+* **On macOS and Linux:** instant for the sample data.
+* **On Windows (Git Bash / MSYS2):** fast, and no longer scaling with process-spawn cost. What
+  still scales with file count is writing one loose object per file into `.git/objects` — thousands
+  of small file creates that NTFS and antivirus both dislike.
 
-Nothing is wrong when this happens. The scripts are doing the same correct work in both places;
-Windows is simply much more expensive at the particular things this approach does a lot of.
-
-The short version of *why*: the loop starts several separate programs for every single file, and
-rewrites the entire index file each time. Starting programs and creating/renaming files are cheap
-on Unix and expensive on Windows, and antivirus software inspects each one. Multiply that by the
-file count and the difference becomes visible.
-
-If the wait is bothering you and you only want the demo, two things help immediately and require
-no code changes:
+If a large folder still feels slow on Windows, the two things that help most require no code
+changes:
 
 1. Add an antivirus exclusion for this repository folder and your temp directory. This is
    frequently the single largest factor.
@@ -46,12 +73,12 @@ The rest of this document is background for the curious. None of it is required 
 
 ## Technical details
 
-### Where the time actually goes
+### Where the time went
 
-The current loop spawns **~4 processes per file**: `git hash-object -w`, `git update-index
+The original loop spawned **~4 processes per file**: `git hash-object -w`, `git update-index
 --cacheinfo`, `basename`, and the `$(...)` command substitution wrapping them.
 
-Three costs stack up on Windows that are nearly free on macOS:
+Three costs stacked up on Windows that are nearly free on macOS:
 
 1. **Process creation.** `CreateProcess` is roughly 10–50× more expensive than `fork`/`exec`,
    and MSYS2's fork emulation under Git Bash makes `$(...)` worse still. Every `git`
@@ -61,38 +88,30 @@ Three costs stack up on Windows that are nearly free on macOS:
    renames. For N files you rewrite the index N times. The per-invocation lock create +
    rename is the part NTFS handles poorly.
 3. **Antivirus.** Defender real-time scanning inspects every `index.lock` create/rename and
-   every loose object written under `.git/objects` — often 5–20 ms per file operation. This
-   is frequently the single largest factor.
+   every loose object written under `.git/objects` — often 5–20 ms per file operation.
 
-"Many seconds" for a few hundred files is exactly the expected shape.
+"Many seconds for a few hundred files" was exactly the expected shape. Batching removes the first
+two costs entirely. The third survives in reduced form: there is no more `index.lock` churn, but
+the loose objects are still written one file at a time.
 
-### Main fix: batch everything through `--index-info`
+### Details worth knowing about the current implementation
 
-`git update-index --index-info` reads a stream of index entries on stdin and applies them in
-**one** index read/write. Its format also expresses deletions natively:
+- **`--force-remove` is the other way to delete.** `git update-index --remove` refuses to drop an
+  entry while the file still exists in the worktree; `--force-remove` does it anyway. Either works,
+  but `--index-info` is what lets deletions and additions share a single pass.
+- **A simpler variant exists.** Since Git 2.0, `update-index --add --cacheinfo` accepts *multiple*
+  triples per invocation, so accumulating them in an array and passing them all at once gets the
+  same single-rewrite win with less restructuring. `--index-info` was chosen because it also
+  handles the removals.
+- **`find -maxdepth 1 -type f` writes the file list to a temp file** so it can be consumed twice:
+  once as `hash-object` input, once as the basename column for `paste`. That also replaced the
+  `basename` subshell and the unquoted `$file` expansions, which broke on paths with spaces —
+  something Windows paths have constantly.
+- **Newlines in filenames would break the stream.** The list is newline-delimited, so a filename
+  containing a newline desynchronizes the `paste`. Handling it means `find -print0` plus `-z` on
+  the index stream; the sample data has no such paths, so the simpler form was kept.
 
-```
-<mode> SP <sha1> TAB <path>          # add/replace
-000000 SP 0000...0000 TAB <path>     # delete  (mode 0 / null sha)
-```
-
-Adds and removals go in a single stream: one process, one index rewrite. N index rewrites
-collapse to 1.
-
-`--force-remove` is the other correct way to delete an entry whose file is absent from the
-worktree (`--remove` refuses while the file still exists), but `--index-info` lets you mix
-both kinds of operation in one pass.
-
-Pair it with `git hash-object -w --stdin-paths`, which takes a newline-separated list of
-paths on stdin and emits one SHA per line — N `hash-object` spawns become 1. Zip the SHAs
-back against the paths in shell or awk and pipe into `--index-info`. Net: ~2 processes total
-instead of ~4N.
-
-Simpler variant with the same win and less rework: since Git 2.0, `update-index --add
---cacheinfo` accepts **multiple** triples per invocation. Accumulate them in an array and
-pass them all at once.
-
-### Better: skip the per-file index churn entirely
+### Not done: skip the per-file index churn entirely
 
 Since the script replaces the whole `src/` subtree wholesale, individual index entries don't
 need touching at all:
@@ -102,15 +121,18 @@ need touching at all:
 - Splice it in: `git read-tree --prefix=src/ <subtree-sha>` into the main temp index (valid
   because the prefix was just emptied).
 
-Constant process count regardless of file count.
+Constant process count regardless of file count. With the batching already in place, this is a
+smaller win than it sounds — the index is only rewritten once either way.
 
 **The ceiling is `git fast-import`.** A single process consumes a stream containing
 `filedeleteall`/`filedelete`, `filemodify` with inline blob data, the commit, and the ref
 update. It writes one *packfile* instead of thousands of loose objects, and needs no index,
 no `write-tree`, no `commit-tree`, no `update-ref`. For a script whose entire job is
-"snapshot this directory into a ref," it's the natural plumbing choice.
+"snapshot this directory into a ref," it's the natural plumbing choice — and it is the one
+remaining change that would meaningfully help the loose-object cost on Windows. It is not done
+here because the resulting script teaches nothing about the index, which is the point of the repo.
 
-### Does reusing an index file help?
+### Not done: does reusing an index file help?
 
 **Yes, but not with the current commands.** `--cacheinfo` and `--index-info` never look at
 the worktree — the content is already hashed by hand, so there's nothing for a stat cache to
@@ -143,9 +165,9 @@ rebuild from the tree.
 
 ### Incremental diff vs. bulk remove-then-re-add
 
-Remove-all-then-add-all is not itself expensive — as a single `--index-info` stream it's one
-index rewrite either way. The quadratic cost comes from per-file process spawning, not the
-remove/add semantics.
+The script still removes everything and re-adds everything, and that is fine: as a single
+`--index-info` stream it is one index rewrite either way. The quadratic cost came from per-file
+process spawning, not the remove/add semantics.
 
 Computing the delta by hand pays off in one place: it lets you skip `hash-object` for
 unchanged files. But that is precisely the stat-cache logic git already implements, better
@@ -160,35 +182,33 @@ entries beats any stat heuristic.
 Config, most impactful first on Windows:
 
 - `index.skipHash = true` (Git 2.40+) — skips the trailing SHA-1 over the whole index on every
-  write. Measurable on large indexes, and this script rewrites the index a lot.
+  write. Less significant now that the script writes the index once rather than N times, but still
+  free.
 - `index.version = 4` — path-prefix compression; smaller index means less to read and write.
 - `core.fscache = true`, `core.fsmonitor = true`, `core.untrackedCache = true`.
   `feature.manyFiles = true` sets several of these together.
 - `core.preloadIndex = true` (default on) parallelizes the stat pass.
 - `GIT_OPTIONAL_LOCKS=0` prevents incidental index refreshes/writes from read-only commands.
 
-Script-level:
+Script-level, still outstanding:
 
-- Replace `$(basename $file)` with `${file##*/}` — pure shell, no process. Same for any other
-  subshell in the loop.
-- Quote `"$file"` in `hash-object -w $file`, and quote `$FILE_HASH`. Unquoted paths break on
-  spaces, which Windows paths have constantly. (Correctness, not performance, but it bites
-  there first.)
-- `mktemp` puts the index in `%TEMP%`, a directory AV watches aggressively and which may be on
-  a different volume. Put the temp index inside `.git/` instead.
+- `mktemp` puts the scratch index and the file list in `%TEMP%`, a directory AV watches
+  aggressively and which may be on a different volume. Putting them inside `.git/` instead would
+  avoid both.
 - Loose objects mean thousands of small NTFS file creates. If staying with `hash-object`, run
   `git gc` / `git repack` periodically — or move to `fast-import` and get a packfile for free.
-- `rm -f $TEMP_INDEX_FILE` only runs on the success paths; a failure between `read-tree` and
-  the end leaks the file. A `trap ... EXIT` covers all exits.
+- `rm -f $TEMP_INDEX_FILE $FILE_LIST` only runs on the success paths; a failure partway through
+  leaks both files. A `trap ... EXIT` would cover all exits.
 
-### If you were to optimize this, in order
+### If you were to keep optimizing, in order
 
 1. AV exclusions for the repo and temp dir — zero code, often the largest single factor.
-2. Batch to one `hash-object --stdin-paths` + one `update-index --index-info` — removes the
-   O(N²) and the spawn storm.
+2. ~~Batch to one `hash-object --stdin-paths` + one `update-index --index-info`~~ — **done**;
+   removed the O(N²) index I/O and the spawn storm.
 3. Set `index.skipHash`, `index.version=4`, `feature.manyFiles`.
 4. Persistent index + path-based `update-index --add` so unchanged files are never read.
-5. If still not fast enough, rewrite as a single `git fast-import` stream.
+5. If still not fast enough, rewrite as a single `git fast-import` stream — the only remaining fix
+   for the loose-object write cost.
 
-Steps 1–2 should get to "unnoticeable." Steps 4–5 would also make the scripts much harder to
-read, which is why this repo does neither.
+Steps 1–2 should get to "unnoticeable." Steps 4–5 would make the scripts much harder to read,
+which is why this repo stops here.
