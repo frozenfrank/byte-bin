@@ -61,6 +61,13 @@ if git diff-index --cached --quiet $GIT_REF; then
     exit 1
 fi
 
+# Override the default commit author information for the script.
+# The "committer" will still be registered as the user who invoked the script using default 'git' logic.
+# The author/committer date are left unspecified and will be populated with the current timestamp.
+# Inspect these details in the final commit with: git show --format=fuller SHA
+export GIT_AUTHOR_NAME="Commit Folder Script"
+export GIT_AUTHOR_EMAIL="devnull@example.com"
+
 TREE_HASH=$(git write-tree)
 COMMIT_HASH=$(git commit-tree $TREE_HASH -p $PREV_SHA -m "Programmatically generated from $TARGET_DIR")
 unset GIT_INDEX_FILE
