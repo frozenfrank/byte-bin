@@ -6,4 +6,3 @@ NEW_DIR=$(mktemp -d)
 git clone --single-branch --no-local . "$NEW_DIR"
 cd "$NEW_DIR"
 echo "$START_DIR" > .START_DIR
-git fetch --tags
