@@ -114,6 +114,8 @@ N+1.**
 
 ## What to expect when you run it
 
+![Platform Performance Comparison](./visualization/platform-comparison.png)
+
 * **On macOS and Linux:** instant for the sample data.
 * **On Windows (Git Bash / MSYS2):** fast, and no longer scaling with process-spawn cost. What
   still scales with file count is writing one loose object per file into `.git/objects` — thousands
