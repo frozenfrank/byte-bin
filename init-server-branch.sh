@@ -16,6 +16,13 @@ if ! git rev-parse --verify --quiet "$1^{tree}" >/dev/null 2>&1; then
     BASE_TREE="4b825dc642cb6eb9a060e54bf8d69288fbee4904"
 fi
 
+# Override the default commit author information for the script.
+# The "committer" will still be registered as the user who invoked the script using default 'git' logic.
+# The author/committer date are left unspecified and will be populated with the current timestamp.
+# Inspect these details in the final commit with: git show --format=fuller SHA
+export GIT_AUTHOR_NAME="Init Branch Script"
+export GIT_AUTHOR_EMAIL="devnull@example.com"
+
 REF_NAME="refs/remotes/$BRANCH"
 INITIAL_COMMIT=$(git commit-tree $BASE_TREE -m "Root commit for $REF_NAME")
 git update-ref $REF_NAME $INITIAL_COMMIT "" -m "Init server branch" || exit 1
