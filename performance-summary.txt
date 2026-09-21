@@ -1,0 +1,18 @@
+Platform: macos (10 samples)
+  Avg Initial Run (Improved):       1.399s
+  Avg Reinitialization (Improved):  0.585s
+  Avg Initial Run (Original):       2.084s
+  Avg Reinitialization (Original):  1.289s
+
+Platform: windows (10 samples)
+  Avg Initial Run (Improved):       9.541s
+  Avg Reinitialization (Improved):  9.692s
+  Avg Initial Run (Original):       21.346s
+  Avg Reinitialization (Original):  21.080s
+
+Platform: wsl (10 samples)
+  Avg Initial Run (Improved):       0.219s
+  Avg Reinitialization (Improved):  0.218s
+  Avg Initial Run (Original):       0.470s
+  Avg Reinitialization (Original):  0.520s
+
