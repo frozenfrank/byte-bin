@@ -84,8 +84,8 @@ echo "Generating sample commits on server branches..."
 
     wait
 } > /dev/null
-COMMITS_CREATED=$(git shortlog -s --remotes=epc | cut -f1 | awk '{$1=$1};1')
-BRANCHES_CREATED=$(git for-each-ref --format="%(refname)" refs/remotes/epc | wc -l | awk '{$1=$1};1')
+COMMITS_CREATED=$(git rev-list --count --remotes=epc)
+BRANCHES_CREATED=$(git for-each-ref --format="%(refname)" refs/remotes/epc | wc -l)
 echo "Created $COMMITS_CREATED total commits across $BRANCHES_CREATED branches."
 echo "View the commits with:  git log --oneline --graph --remotes=epc"
 echo ""
