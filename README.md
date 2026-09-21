@@ -118,13 +118,15 @@ commits to a real remote; setting `remote.pushDefault` avoids selecting `epc` by
 
 ## Performance Testing
 
-Reproduction command:
+Reproduction command, where the argument names the platform being measured:
 
 ```sh
-RESULTS_DIR="performance/results/macos"
-mkdir -p $RESULTS_DIR
-for i in {1..10}; do echo "Trial #$i"; ./reproduction-performance.sh > $RESULTS_DIR/$i.txt 2>&1; done
+./performance/run.sh macos
 ```
+
+That runs `reproduction-performance.sh` 10 times and captures each trial to
+`performance/results/macos/1.txt` … `10.txt`. See [performance/README.md](./performance/README.md)
+for what the numbers mean.
 
 ## References
 
