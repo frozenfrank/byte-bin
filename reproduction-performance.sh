@@ -13,7 +13,7 @@ git show -s --no-decorate
   time ./init.sh --re-init
 } > /dev/null
 
-git show main:reproduction-exit.sh | source /dev/stdin
+eval "$(git show main:reproduction-exit.sh)"
 
 
 ### REPRO #2 ###
@@ -32,4 +32,4 @@ git show -s --no-decorate
   time ./init.sh --re-init
 } > /dev/null
 
-git show main:reproduction-exit.sh | source /dev/stdin
+eval "$(git show main:reproduction-exit.sh)"
