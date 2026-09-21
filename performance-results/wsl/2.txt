@@ -1,0 +1,54 @@
+Reproduction #1 (current)...
+commit 659185133f24a207f0b56d71eb61755886ec9b2c
+Author: James Finlinson <the30clues@gmail.com>
+Date:   Sun Sep 20 19:41:50 2026 -0500
+
+    Switch to 'eval' which works on Windows/Bash
+    
+    The '| source' only happened to work on MacOs
+    because the zsh shell runs the last command in a pipeline
+    in the current shell. Bash shells (used by Windows)
+    run every command in a subshell. This makes the 'cd'
+    command get lost which makes the command ineffective.
+
+real	0m0.180s
+user	0m0.485s
+sys	0m0.241s
+
+real	0m0.182s
+user	0m0.506s
+sys	0m0.252s
+
+real	0m0.186s
+user	0m0.490s
+sys	0m0.267s
+
+real	0m0.175s
+user	0m0.492s
+sys	0m0.242s
+fatal: invalid object name 'main'.
+
+
+Reproduction #2 (baseline)...
+commit 009480dada32e9b13de3deacff2842bca863e419
+Author: James Finlinson <the30clues@gmail.com>
+Date:   Tue Sep 8 07:39:01 2026 -0500
+
+    Add interactive testing commands
+
+real	0m0.429s
+user	0m0.851s
+sys	0m0.645s
+
+real	0m1.862s
+user	0m0.857s
+sys	0m0.611s
+
+real	0m0.385s
+user	0m0.744s
+sys	0m0.525s
+
+real	0m0.369s
+user	0m0.709s
+sys	0m0.454s
+fatal: invalid object name 'main'.
