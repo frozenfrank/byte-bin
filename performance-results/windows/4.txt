@@ -1,0 +1,49 @@
+Reproduction #1 (current)...
+commit 43e07d9dc499b880036816de0010f6b9f519bb7c
+Merge: 94937f0 6591851
+Author: James Finlinson <jfinlins@epic.com>
+Date:   Sun Sep 20 19:56:56 2026 -0500
+
+    Merge remote-tracking branch 'frozenfrank/git-index-exploration'
+
+real	0m9.342s
+user	0m11.556s
+sys	0m15.611s
+
+real	0m9.495s
+user	0m11.204s
+sys	0m16.279s
+
+real	0m9.845s
+user	0m10.873s
+sys	0m16.982s
+
+real	0m9.704s
+user	0m11.097s
+sys	0m16.068s
+Returned to start directory and cleaned up temp repo.
+
+
+Reproduction #2 (baseline)...
+commit 009480dada32e9b13de3deacff2842bca863e419
+Author: James Finlinson <the30clues@gmail.com>
+Date:   Tue Sep 8 07:39:01 2026 -0500
+
+    Add interactive testing commands
+
+real	0m21.037s
+user	0m18.983s
+sys	0m30.759s
+
+real	0m20.817s
+user	0m17.814s
+sys	0m31.060s
+
+real	0m21.237s
+user	0m18.792s
+sys	0m30.984s
+
+real	0m21.298s
+user	0m18.239s
+sys	0m31.683s
+Returned to start directory and cleaned up temp repo.

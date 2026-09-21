@@ -1,0 +1,50 @@
+Reproduction #1 (current)...
+commit 43e07d9dc499b880036816de0010f6b9f519bb7c
+Merge: 94937f0 6591851
+Author: James Finlinson <jfinlins@epic.com>
+Date:   Sun Sep 20 19:56:56 2026 -0500
+
+    Merge remote-tracking branch 'frozenfrank/git-index-exploration'
+rm: cannot remove '/tmp/tmp.2AE1ritEjP': Device or resource busy
+
+real	0m9.685s
+user	0m10.987s
+sys	0m17.377s
+
+real	0m9.813s
+user	0m11.291s
+sys	0m16.749s
+
+real	0m9.483s
+user	0m11.225s
+sys	0m16.426s
+
+real	0m9.439s
+user	0m12.016s
+sys	0m16.653s
+Returned to start directory and cleaned up temp repo.
+
+
+Reproduction #2 (baseline)...
+commit 009480dada32e9b13de3deacff2842bca863e419
+Author: James Finlinson <the30clues@gmail.com>
+Date:   Tue Sep 8 07:39:01 2026 -0500
+
+    Add interactive testing commands
+
+real	0m21.738s
+user	0m20.166s
+sys	0m30.479s
+
+real	0m21.811s
+user	0m18.558s
+sys	0m32.885s
+
+real	0m20.828s
+user	0m18.737s
+sys	0m30.652s
+
+real	0m21.752s
+user	0m17.557s
+sys	0m32.563s
+Returned to start directory and cleaned up temp repo.
