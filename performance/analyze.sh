@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Usage: ./performance-analysis.sh [results-dir] [output-file]
+# Usage: ./performance/analyze.sh [results-dir] [output-file]
 #
 # Summarizes the timings captured by reproduction-performance.sh.
 # Each result file holds 8 'real' lines: 4 for the improved build
 # (initial + 3 re-inits) followed by 4 for the original build.
 
-RESULTS_DIR="${1:-performance-results}"
-OUTPUT_FILE="${2:-performance-summary.txt}"
+RESULTS_DIR="${1:-performance/results}"
+OUTPUT_FILE="${2:-performance/results-summary.txt}"
 
 # Pull the 8 'real' lines out of one result file and print them as
 # plain seconds, one per line.

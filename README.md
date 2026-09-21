@@ -121,7 +121,7 @@ commits to a real remote; setting `remote.pushDefault` avoids selecting `epc` by
 Reproduction command:
 
 ```sh
-RESULTS_DIR="performance-results/macos"
+RESULTS_DIR="performance/results/macos"
 mkdir -p $RESULTS_DIR
 for i in {1..10}; do echo "Trial #$i"; ./reproduction-performance.sh > $RESULTS_DIR/$i.txt 2>&1; done
 ```
