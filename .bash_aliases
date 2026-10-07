@@ -106,6 +106,7 @@ alias rebaseu="git rebase --autosquash @{u}"
 alias diffu="git diff @{u}..@"
 alias mergeu="git merge --no-ff --no-edit @{u}"
 
+alias rangediffu="git range-diff @{u}..."
 function range-diff() {
   # Compares two versions of the same branch after rebasing onto a base branch
   # Usage: range-diff [OLD_BRANCH] [BASE_BRANCH] [NEW_BRANCH] [NEW_BASE_BRANCH] [--] [GIT_RANGE_DIFF_OPTIONS...]
