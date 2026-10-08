@@ -44,6 +44,7 @@ alias reword="git history reword"
 alias merge="git merge --no-ff --no-edit"
 alias reset="git reset --hard"
 alias undo="git reset --hard HEAD^"
+function worktreet() { local dir=$(mktemp -d); git worktree add "$dir"; cd "$dir"; }
 function worktreeo() { local dir=$(mktemp -d); git worktree add "$dir" --orphan; cd "$dir"; }
 function worktreed() { local dir=$(pwd); cd -; git worktree remove "$dir"; }
 function mergeinto() { local BRANCH=$(git branch --show-current); git checkout $1; git merge $BRANCH --no-ff --no-edit; }
